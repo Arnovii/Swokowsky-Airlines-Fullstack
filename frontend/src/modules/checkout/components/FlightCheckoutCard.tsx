@@ -33,8 +33,8 @@ const FlightCheckoutCard: React.FC<FlightCheckoutCardProps> = ({
   // dentro de FlightCheckoutCard, donde calculas precio:
 const precioUnitario =
   cartItem.clase === "economica"
-    ? flight.tarifas?.find(t => t.clase === "economica")?.precio_base || 0
-    : flight.tarifas?.find(t => t.clase === "primera_clase")?.precio_base || 0;
+    ? flight.tarifas?.find((t: { clase: string; precio_base: number }) => t.clase === "economica")?.precio_base || 0
+    : flight.tarifas?.find((t: { clase: string; precio_base: number }) => t.clase === "primera_clase")?.precio_base || 0;
 
 const descuento = flight.promocion?.descuento ?? 0; // 0.2 = 20%
 const precioTotal = precioUnitario * cartItem.cantidad_de_tickets * (1 - descuento);

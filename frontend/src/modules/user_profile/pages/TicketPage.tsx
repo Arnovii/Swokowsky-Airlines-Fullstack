@@ -1,6 +1,6 @@
 // frontend/src/modules/user_profile/pages/TicketPage.tsx
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../../../api/axios";
 import { useNavigate } from "react-router-dom";
 

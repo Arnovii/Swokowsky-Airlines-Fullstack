@@ -369,16 +369,20 @@ const validarYBuscarVuelo = async () => {
   setLoading(true);
   setMensaje("Buscando vuelos disponibles...");
 
+  // En este punto sabemos que ambas ciudades están seleccionadas
+  const origenCiudadData = ciudadOrigenSeleccionada!;
+  const destinoCiudadData = ciudadDestinoSeleccionada!;
+
   try {
     // Construir parámetros de búsqueda para la URL
     const searchParams = new URLSearchParams({
-      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
-      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
+      originId: origenCiudadData.id_ciudad.toString(),
+      destinationId: destinoCiudadData.id_ciudad.toString(),
       departureDate: ida,
       roundTrip: (modo === "ida_vuelta").toString(),
       passengers: totalPasajeros.toString(),
-      origen: ciudadOrigenSeleccionada.nombre,
-      destino: ciudadDestinoSeleccionada.nombre,
+      origen: origenCiudadData.nombre,
+      destino: destinoCiudadData.nombre,
     });
 
     // Agregar fecha de vuelta si aplica

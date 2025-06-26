@@ -14,6 +14,8 @@ export interface Flight {
   aircraft: string;
   image: string;
   isInternational: boolean;
+  availableSeats?: number;
+  airline?: string;
   promotion?: {
     discount: number;
     originalPrice: number;

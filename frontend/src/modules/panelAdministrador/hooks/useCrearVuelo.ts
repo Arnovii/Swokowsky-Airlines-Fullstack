@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { getAeropuertos, getAeronaves, crearVuelo } from "../services/flights";
-import type { CrearVueloPayload, Aeropuerto, Aeronave } from "../pages/CrearVueloPage";
+import type { CrearVueloPayload, Tarifa } from "../types/vuelo";
+import type { Aeropuerto } from "./useAeropuertoValidation";
+
+export interface Aeronave {
+  id_aeronave: number;
+  modelo: string;
+}
 
 export interface UseCrearVueloResult {
   aeropuertos: Aeropuerto[];
@@ -65,7 +71,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
   const handleTarifaChange = (clase: string, precio: number) => {
     setForm((prev: CrearVueloPayload) => ({
       ...prev,
-      tarifa: prev.tarifa.map((t: { clase: string; precio_base: number }) =>
+      tarifa: prev.tarifa.map((t: Tarifa) =>
         t.clase === clase ? { ...t, precio_base: precio } : t
       ),
     }));
@@ -90,7 +96,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       !form.id_aeropuerto_destinoFK ||
       !salidaDate ||
       !llegadaDate ||
-      form.tarifa.some((t: { clase: string; precio_base: number }) => t.precio_base <= 0)
+      form.tarifa.some((t: Tarifa) => t.precio_base <= 0)
     ) {
       setError("Todos los campos son obligatorios y los precios deben ser mayores a 0.");
       setLoading(false);
@@ -103,9 +109,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       return;
     }
     // Validaciones de vuelos internacionales
-    const capitalesNacionales = [
-      "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Armenia", "Santa Marta", "Cúcuta", "Ibagué", "Villavicencio", "Pasto", "Montería", "Neiva", "Popayán", "Sincelejo", "Riohacha", "Quibdó", "Tunja", "Florencia", "Yopal", "Mocoa", "San Andrés", "Leticia", "Mitú", "Puerto Carreño", "Inírida", "San José del Guaviare"
-    ];
+    // Las capitales nacionales se incluyen como referencia de ciudades válidas
     const origenInternacional = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
     const destinoInternacional = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
     const origen = aeropuertos.find(a => a.id_aeropuerto === form.id_aeropuerto_origenFK)?.nombre;

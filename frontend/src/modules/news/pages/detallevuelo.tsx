@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Plane, Calendar, MapPin, Tag, ShoppingCart } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import AddToCartButton from "@/common/AddToCartButton";
-import { ClassSelectorModal } from "@/modules/flightsearch/components/ClassSelectorModal";
+import AddToCartButton from "../../../common/AddToCartButton";
+import { ClassSelectorModal } from "../../flightsearch/components/ClassSelectorModal";
 import { useCart } from "../../../context/CartContext";
 import { toast } from "react-toastify";
 
@@ -99,7 +99,7 @@ export default function DetalleVuelo() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [cantidadTickets, setCantidadTickets] = useState(1); // 👈 Por si quieres permitir seleccionar cantidad
+  const [cantidadTickets, _setCantidadTickets] = useState(1); // 👈 Por si quieres permitir seleccionar cantidad
 
   useEffect(() => {
     const fetchData = async () => {

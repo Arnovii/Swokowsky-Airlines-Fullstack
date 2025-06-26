@@ -1,5 +1,5 @@
 // src/services/flightServices.ts
-import api from '@/api/axios';
+import api from '../../../api/axios';
 
 // Tipos para las respuestas de la API
 export interface Ciudad {

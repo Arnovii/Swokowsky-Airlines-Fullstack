@@ -10,6 +10,9 @@ const Carrito: React.FC = () => {
     const { cart, removeFromCart, clearCart, refreshCart, updateSingleItem } = useCart();
 
     const [quantities, setQuantities] = useState<{ [id: number]: number }>({});
+    
+    // Impuestos: por ahora un valor fijo del 0% (cambiar según necesidad)
+    const tax = 0;
 
     React.useEffect(() => {
         const q: { [id: number]: number } = {};
@@ -45,33 +48,18 @@ const Carrito: React.FC = () => {
         [cart, quantities]
     );
 
-
-    // Calcula el mayor descuento aplicado en el carrito
-    const maxDescuento = useMemo(() => {
-        const descuentos = cart
-            .map(it => it.vuelo?.promocion?.descuento ?? 0)
-            .filter(d => d > 0);
-        if (descuentos.length === 0) return 0;
-        return Math.max(...descuentos);
-    }, [cart]);
-
-    const tax = 0;
-
     const handleRemove = (id: number) => removeFromCart(id);
     const handleClear = () => clearCart();
 
     const handleTimerReset = (itemId: number) => {
         if (updateSingleItem) {
-            updateSingleItem(itemId);
+            const currentQty = quantities[itemId] ?? 1;
+            updateSingleItem(itemId, currentQty);
         }
     };
 
     const handleCheckout = () => {
         navigate('/checkout');
-    };
-
-    const handleGoBack = () => {
-        navigate(-1);
     };
 
     const handleQtyChange = async (itemId: number, newQty: number) => {
@@ -143,8 +131,8 @@ const Carrito: React.FC = () => {
                                         key={it.id_item_carrito}
                                         item={it}
                                         onRemove={handleRemove}
-                                        onQtyChange={handleQtyChange} // 
-                                        onTimerReset={handleTimerReset} // ⭐ Pasar callback mejorado
+                                        onQtyChange={handleQtyChange}
+                                        onTimerReset={() => handleTimerReset(it.id_item_carrito)}
                                     />
                                 ))}
 
@@ -185,7 +173,6 @@ const Carrito: React.FC = () => {
                                 
                                 {cart.map((it: CartItem) => {
                                     const descuento = it.vuelo?.promocion?.descuento ?? 0;
-                                    const tarifa = it.vuelo?.tarifas?.find((t: any) => t.clase === it.clase);
                                     return (
                                         
                                         <div key={it.id_item_carrito} className="flex justify-between items-baseline py-1">
