@@ -1,35 +1,25 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { FaPlaneDeparture } from "react-icons/fa";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#123361] text-white">
+      {/* Logo y título */}
+      <header className="flex items-center space-x-3 text-3xl font-bold">
+        <FaPlaneDeparture className="text-[#39A5D8]" />
+        <h1>Swokosky Airlines</h1>
+      </header>
+
+      {/* Subtítulo */}
+      <p className="mt-4 text-lg text-[#39A5D8]">
+        Volando alto, siempre contigo ✈️
       </p>
-    </>
-  )
+
+      {/* Botón de acción */}
+      <button className="mt-6 px-6 py-3 rounded-lg bg-[#39A5D8] text-[#123361] font-semibold shadow-lg hover:bg-[#1180B8] transition">
+        Explorar vuelos
+      </button>
+    </div>
+  );
 }
 
-export default App
+export default App;
