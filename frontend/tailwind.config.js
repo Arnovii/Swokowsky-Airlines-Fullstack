@@ -14,6 +14,10 @@ export default {
           darkcyan: "#1180B8",
         },
       },
+      fontFamily: {
+        title: ["Montserrat", "sans-serif"], // headers, títulos
+        body: ["Poppins", "sans-serif"],     // párrafos, botones
+      },
     },
   },
   plugins: [],
