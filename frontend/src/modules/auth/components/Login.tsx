@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 
 export default function Login() {
@@ -10,7 +10,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -29,47 +28,46 @@ export default function Login() {
   };
 
   return (
-    <div className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <div className="relative backdrop-blur-2xl bg-black/60 border border-white/10 rounded-3xl shadow-2xl p-8 w-full max-w-md">
       {/* Logo */}
       <div className="text-center mb-8">
-        <img src={logo} alt="Swokosky Airlines" className="h-16 mx-auto mb-4" />
-        <h1 className="text-2xl font-light text-white">Swokosky Airlines</h1>
-        <p className="text-white/60 text-sm">Bienvenido de vuelta</p>
+        <img src={logo} alt="Swokowsky Airlines" className="h-40 mx-auto mb-4" />
+        <h1 className="text-2xl font-title text-white tracking-wide">
+          Swokowsky Airlines
+        </h1>
+        <p className="text-brand-cyan text-sm font-body">Bienvenido de vuelta</p>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 font-body">
         {/* Email */}
         <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white" />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onFocus={() => setFocusedInput("email")}
-            onBlur={() => setFocusedInput(null)}
             placeholder="correo@empresa.com"
-            className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl text-gray-900"
+            className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-cyan"
           />
           {errors.email && <p className="text-red-400 text-sm mt-2">{errors.email}</p>}
         </div>
 
         {/* Password */}
         <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white" />
           <input
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onFocus={() => setFocusedInput("password")}
-            onBlur={() => setFocusedInput(null)}
             placeholder="••••••••"
-            className="w-full pl-12 pr-12 py-4 bg-white rounded-2xl text-gray-900"
+            className="w-full pl-12 pr-12 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-cyan"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white
+             hover:text-white"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -77,16 +75,17 @@ export default function Login() {
         </div>
 
         {/* Remember me */}
-        <div className="flex justify-between items-center">
-          <label className="flex items-center gap-2 text-white/80 text-sm">
+        <div className="flex justify-between items-center text-sm">
+          <label className="flex items-center gap-2 text-white/80">
             <input
               type="checkbox"
               checked={remember}
               onChange={() => setRemember(!remember)}
+              className="accent-brand-cyan"
             />
             Recuérdame
           </label>
-          <button className="text-blue-400 text-sm hover:underline">
+          <button className="text-brand-cyan hover:underline">
             ¿Olvidaste tu contraseña?
           </button>
         </div>
@@ -95,16 +94,17 @@ export default function Login() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 py-4 rounded-2xl text-white font-medium hover:from-blue-600 hover:to-cyan-600"
+          className="w-full bg-gradient-to-r from-brand-cyan to-blue-600 py-4 rounded-2xl text-white font-title tracking-wide hover:from-blue-500 hover:to-brand-cyan transition-all"
         >
           {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
         </button>
       </form>
 
       {/* Footer */}
-      <div className="text-center mt-8 text-white/40 text-sm">
+      <div className="text-center mt-8 text-white/60 text-sm font-body">
         ¿No tienes cuenta?{" "}
-        <button className="text-blue-400 hover:underline">Crear cuenta</button>
+        <button className="text-white
+        hover:underline">Crear cuenta</button>
       </div>
     </div>
   );
