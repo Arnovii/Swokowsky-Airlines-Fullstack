@@ -7,16 +7,17 @@ export default {
     extend: {
       colors: {
         brand: {
-          black: "#000",
-          white: "#fff",
+          black: "#000000",
+          white: "#ffffff",
           darkblue: "#123361",
           cyan: "#39A5D8",
           darkcyan: "#1180B8",
         },
       },
       fontFamily: {
-        title: ["Montserrat", "sans-serif"], // headers, títulos
-        body: ["Poppins", "sans-serif"],     // párrafos, botones
+        title: ["Montserrat", "sans-serif"],
+        body: ["Poppins", "sans-serif"],
+        oswald: ["Oswald", "sans-serif"],
       },
     },
   },

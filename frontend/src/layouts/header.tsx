@@ -1,13 +1,13 @@
 import { ShoppingCart, Settings, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import logo from "@/assets/images/logo.png";
+import logo from "@/assets/logo.png";
 
 export default function Header() {
   return (
     <nav className="bg-black text-white px-8 py-4 flex items-center justify-between">
-      {/* Logo y navegación /}
+      {/* Logo y navegación */}
       <div className="flex items-center space-x-8">
-        <img src={logo} alt="Logo" className="h-30 w-auto" />
+        <img src={logo} alt="Logo" className="h-20 w-auto" />
         <div className="flex space-x-6 text-lg font-semibold">
           <Link to="/noticias" className="hover:text-cyan-400">
             Noticias
@@ -21,7 +21,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/ Iconos */}
+      {/* Iconos */}
       <div className="flex items-center space-x-6">
         <Link to="/carrito">
           <ShoppingCart className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
@@ -33,6 +33,7 @@ export default function Header() {
           <User className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
         </Link>
       </div>
+
     </nav>
   );
 }
