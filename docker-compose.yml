@@ -19,6 +19,9 @@ services:
       - DATABASE_NAME=swokosky
     depends_on:
       - db
+    volumes:
+    - ./backend:/app # monta tu código local
+    command: npm run start:dev   # usa hot reload
 
   db:
     image: mysql:8.0
