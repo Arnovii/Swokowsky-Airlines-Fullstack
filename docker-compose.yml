@@ -20,8 +20,10 @@ services:
     depends_on:
       - db
     volumes:
-    - ./backend:/app # monta tu código local
-    command: npm run start:dev   # usa hot reload
+      - ./backend:/app       # tu código local
+      - /app/node_modules    # evita conflictos con node_modules. Evita sobrescribir los node_modules del contenedor (No necesital los locales, si no necesita para su sistema operativo)
+    command: npm run start:dev
+
 
   db:
     image: mysql:8.0
