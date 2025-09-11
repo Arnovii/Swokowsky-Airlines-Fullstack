@@ -209,7 +209,7 @@ export default function BuscadorVuelosModerno() {
           <div className="flex items-center gap-3 mb-6">
             <button
               onClick={() => setModo("ida_vuelta")}
-              className={`px-5 py-2.5 text-base font-semibold rounded-full transition-colors ${
+              className={`px-5 py-2.5 text-base font-sans rounded-full transition-colors ${
                 modo === "ida_vuelta"
                   ? "bg-blue-600 text-white shadow-lg"
                   : "text-gray-600 hover:bg-blue-50"
@@ -219,7 +219,7 @@ export default function BuscadorVuelosModerno() {
             </button>
             <button
               onClick={() => setModo("solo_ida")}
-              className={`px-5 py-2.5 text-base font-semibold rounded-full transition-colors ${
+              className={`px-5 py-2.5 text-base font-sans rounded-full transition-colors ${
                 modo === "solo_ida"
                   ? "bg-blue-600 text-white shadow-lg"
                   : "text-gray-600 hover:bg-blue-50"
@@ -243,7 +243,7 @@ export default function BuscadorVuelosModerno() {
                     placeholder="Bogotá"
                     value={origen}
                     onChange={(e) => filtrarOrigen(e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-medium text-gray-900"
+                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                   />
                   <ChevronDownIcon />
                 </div>
@@ -276,7 +276,7 @@ export default function BuscadorVuelosModerno() {
                     placeholder="Madrid"
                     value={destino}
                     onChange={(e) => filtrarDestino(e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-medium text-gray-900"
+                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                   />
                   <ChevronDownIcon />
                 </div>
@@ -316,7 +316,7 @@ export default function BuscadorVuelosModerno() {
                     onChange={(e) => setIda(e.target.value)}
                     min={hoy}
                     max={unAñoDespues}
-                    className="w-full bg-transparent outline-none text-base font-medium text-gray-900"
+                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                   />
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function BuscadorVuelosModerno() {
                       onChange={(e) => setVuelta(e.target.value)}
                       min={ida || hoy}
                       max={unAñoDespues}
-                      className="w-full bg-transparent outline-none text-base font-medium text-gray-900"
+                      className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                     />
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default function BuscadorVuelosModerno() {
                   className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-4 cursor-pointer shadow-sm"
                 >
                   <UserIcon />
-                  <span className="text-base font-medium text-gray-900">
+                  <span className="text-base font-sans text-gray-900">
                     {totalPasajeros}
                   </span>
                   <ChevronDownIcon
@@ -359,13 +359,13 @@ export default function BuscadorVuelosModerno() {
                 {mostrarPasajeros && (
                   <div className="absolute top-full right-0 mt-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-6 min-w-[320px]">
                     <div className="space-y-5">
-                      <div className="text-lg font-semibold text-gray-900">
+                      <div className="text-lg font-sans text-gray-900">
                         ¿Quiénes viajan?
                       </div>
                       {/* Adultos */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-base font-medium text-gray-900">
+                          <div className="text-base font-sans text-gray-900">
                             Adultos
                           </div>
                           <div className="text-sm text-gray-500">
@@ -383,7 +383,7 @@ export default function BuscadorVuelosModerno() {
                           >
                             <MinusIcon />
                           </button>
-                          <span className="w-6 text-center font-semibold">
+                          <span className="w-6 text-center font-sans">
                             {pasajeros.adultos}
                           </span>
                           <button
@@ -402,7 +402,7 @@ export default function BuscadorVuelosModerno() {
                       {/* Menores */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-base font-medium text-gray-900">
+                          <div className="text-base font-sans text-gray-900">
                             Menores
                           </div>
                           <div className="text-sm text-gray-500">
@@ -420,7 +420,7 @@ export default function BuscadorVuelosModerno() {
                           >
                             <MinusIcon />
                           </button>
-                          <span className="w-6 text-center font-semibold">
+                          <span className="w-6 text-center font-sans">
                             {pasajeros.menores}
                           </span>
                           <button
@@ -444,7 +444,7 @@ export default function BuscadorVuelosModerno() {
 
                       <button
                         onClick={() => setMostrarPasajeros(false)}
-                        className="w-full mt-3 py-2.5 bg-blue-600 text-white rounded-xl text-base font-semibold hover:bg-blue-700 transition-colors shadow-md"
+                        className="w-full mt-3 py-2.5 bg-blue-600 text-white rounded-xl text-base font-sans hover:bg-blue-700 transition-colors shadow-md"
                       >
                         Confirmar
                       </button>
@@ -456,7 +456,7 @@ export default function BuscadorVuelosModerno() {
               {/* Botón */}
               <button
                 onClick={validarVuelo}
-                className="px-6 py-4 flex items-center justify-center bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-colors text-lg"
+                className="px-6 py-4 flex items-center justify-center bg-blue-600 text-white font-sans rounded-xl shadow-lg hover:bg-blue-700 transition-colors text-lg"
               >
                 Buscar
               </button>
@@ -465,7 +465,7 @@ export default function BuscadorVuelosModerno() {
 
           {/* Mensaje */}
           {mensaje && (
-            <div className="mt-8 p-5 text-center font-semibold text-base text-gray-800 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="mt-8 p-5 text-center font-sans text-base text-gray-800 bg-blue-50 rounded-xl border border-blue-200">
               {mensaje}
             </div>
           )}

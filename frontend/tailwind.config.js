@@ -17,11 +17,9 @@ export default {
         },
       },
       fontFamily: {
-        title: ["Montserrat", "sans-serif"],
-        body: ["Poppins", "sans-serif"],
-        oswald: ["Oswald", "sans-serif"],
+        sans: ["Oswald", "sans-serif"]
       },
     },
   },
-  plugins: [ ],
+  plugins: [],
 };

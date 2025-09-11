@@ -7,7 +7,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-black text-white px-6 py-4 flex items-center justify-between z-50 shadow-lg">
+    <nav className="fixed top-0 left-0 w-full bg-black text-white px-6 py-4 flex items-center justify-between z-50 shadow-lg font-sans">
       {/* Logo */}
       <div className="flex items-center space-x-3">
         <Link to="/" className="flex items-center space-x-3">
@@ -16,13 +16,11 @@ export default function Header() {
             alt="Logo"
             className="h-14 w-auto cursor-pointer hover:opacity-80 transition"
           />
-          <span className="text-2xl font-bold font-[cursive] tracking-wide hover:text-cyan-400 transition">
+          <span className="text-2xl font-bold tracking-wide hover:text-cyan-400 transition">
             Swokowsky Airlines
           </span>
         </Link>
       </div>
-
-
 
       {/* Botón menú hamburguesa (solo en móviles) */}
       <button
@@ -60,7 +58,7 @@ export default function Header() {
 
       {/* Menú desplegable (móvil) */}
       {open && (
-        <div className="absolute top-20 left-0 w-full bg-black flex flex-col items-center space-y-4 py-6 lg:hidden">
+        <div className="absolute top-20 left-0 w-full bg-black flex flex-col items-center space-y-4 py-6 lg:hidden font-sans">
           <Link to="/noticias" className="hover:text-cyan-400">
             Noticias
           </Link>
