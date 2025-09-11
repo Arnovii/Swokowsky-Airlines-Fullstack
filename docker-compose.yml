@@ -1,9 +1,15 @@
 version: "3.9"
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     ports:
-      - "5173:80"
+      - "5173:5173"
+    volumes:
+    - ./frontend:/app           # monta el código local
+    - /app/node_modules         # evita conflictos con node_modules
+    command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend
 
