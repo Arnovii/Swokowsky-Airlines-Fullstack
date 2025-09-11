@@ -10,8 +10,8 @@ import NotFound from "../modules/error/pages/NotFound"
 export default function AppRoutes() {
   return (
     <Routes>
-        
-      <Route element={<MainLayout />}> {/* Aquí estamos creando la navegación teniendo de base al MainLayout y definiendo las páginas hijas*/}
+      {/* Rutas principales con header/footer */}
+      <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/login" element={<Login />} />
@@ -19,8 +19,8 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<NotFound/> }/>
+      {/* Página 404 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
