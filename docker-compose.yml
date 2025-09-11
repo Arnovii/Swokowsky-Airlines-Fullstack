@@ -1,9 +1,15 @@
 version: "3.9"
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     ports:
-      - "5173:80"
+      - "5173:5173"
+    volumes:
+    - ./frontend:/app           # monta el código local
+    - /app/node_modules         # evita conflictos con node_modules
+    command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend
 
@@ -19,6 +25,11 @@ services:
       - DATABASE_NAME=swokosky
     depends_on:
       - db
+    volumes:
+      - ./backend:/app       # tu código local
+      - /app/node_modules    # evita conflictos con node_modules. Evita sobrescribir los node_modules del contenedor (No necesital los locales, si no necesita para su sistema operativo)
+    command: npm run start:dev
+
 
   db:
     image: mysql:8.0
