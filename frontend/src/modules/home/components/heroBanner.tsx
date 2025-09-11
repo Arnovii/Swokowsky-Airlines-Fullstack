@@ -23,13 +23,13 @@ const HeroBanner: React.FC = () => {
           <h2 className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-sans drop-shadow-lg mt-3 mb-6 tracking-wide">
             Vuelos desde 2 millones
           </h2>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white font-sans py-2 px-4 sm:py-3 sm:px-6 rounded-full shadow-lg transition duration-300 ease-in-out">
+          <Button className="px-6 py-4 flex items-center justify-center bg-azul text-brand-white font-sans rounded-xl shadow-lg hover:bg-[#0e254d] transition-colors text-lg ">
             Reserva Ahora
           </Button>
         </div>
 
         {/* Buscador de vuelos */}
-        <div className="w-full max-w-lg sm:max-w-2xl px-2 sm:px-0">
+        <div className="w-full max-w-full px-4">
           <FilterSearchBar />
         </div>
 

@@ -7,7 +7,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-black text-white px-6 py-4 flex items-center justify-between z-50 shadow-lg font-sans">
+    <nav className="fixed top-0 left-0 w-full bg-[#081225] text-white px-6 py-4 flex items-center justify-between z-50 shadow-lg font-sans">
       {/* Logo */}
       <div className="flex items-center space-x-3">
         <Link to="/" className="flex items-center space-x-3">

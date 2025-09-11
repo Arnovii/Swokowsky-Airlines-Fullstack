@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { PlaneTakeoff, PlaneLanding } from "lucide-react";
+
 
 const PlaneDepartureIcon = () => (
   <svg
-    className="w-6 h-6 text-blue-500"
+    className="w-6 h-6 text-[#0e254d]"
     aria-hidden="true"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -38,7 +40,7 @@ const ChevronDownIcon = ({ className = "" }) => (
 
 const CalendarIcon = () => (
   <svg
-    className="w-6 h-6 text-blue-500"
+    className="w-6 h-6 text-[#0e254d]"
     aria-hidden="true"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -56,7 +58,7 @@ const CalendarIcon = () => (
 
 const UserIcon = () => (
   <svg
-    className="w-6 h-6 text-blue-500"
+    className="w-6 h-6 text-[#0e254d]"
     aria-hidden="true"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -72,7 +74,7 @@ const UserIcon = () => (
 
 const MinusIcon = () => (
   <svg
-    className="w-5 h-5 text-blue-600"
+    className="w-5 h-5 text-[#0e254d]"
     aria-hidden="true"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -90,7 +92,7 @@ const MinusIcon = () => (
 
 const PlusIcon = () => (
   <svg
-    className="w-5 h-5 text-blue-600"
+    className="w-5 h-5 text-[#0e254d]"
     aria-hidden="true"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -107,7 +109,6 @@ const PlusIcon = () => (
 );
 
 export default function BuscadorVuelosModerno() {
-  // 🟦 --- lógicas iguales ---
   const [modo, setModo] = useState("ida_vuelta");
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
@@ -201,7 +202,7 @@ export default function BuscadorVuelosModerno() {
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
       {/* Panel con efecto vidrio */}
       <div className="relative rounded-3xl shadow-2xl border border-white/50">
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-xl rounded-3xl"></div>
+        <div className="absolute inset-0 bg-white backdrop-blur-xl rounded-3xl"></div>
 
         {/* Contenido */}
         <div className="relative z-10 p-8">
@@ -211,8 +212,8 @@ export default function BuscadorVuelosModerno() {
               onClick={() => setModo("ida_vuelta")}
               className={`px-5 py-2.5 text-base font-sans rounded-full transition-colors ${
                 modo === "ida_vuelta"
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "text-gray-600 hover:bg-blue-50"
+                  ? "bg-[#0e254d] text-white shadow-lg"
+                  : "text-gray-600 hover:bg-[#0e254d]"
               }`}
             >
               Ida y vuelta
@@ -221,8 +222,8 @@ export default function BuscadorVuelosModerno() {
               onClick={() => setModo("solo_ida")}
               className={`px-5 py-2.5 text-base font-sans rounded-full transition-colors ${
                 modo === "solo_ida"
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "text-gray-600 hover:bg-blue-50"
+                  ? "bg-[#0e254d] text-white shadow-lg"
+                  : "text-gray-600 hover:bg-[#0e254d]"
               }`}
             >
               Solo ida
@@ -231,75 +232,35 @@ export default function BuscadorVuelosModerno() {
 
           {/* Formulario */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end text-lg">
-            {/* Origen/Destino */}
-            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Origen */}
-              <div className="flex flex-col relative" ref={origenRef}>
-                <label className="text-sm text-gray-600 mb-2">Origen</label>
-                <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
-                  <PlaneDepartureIcon />
-                  <input
-                    type="text"
-                    placeholder="Bogotá"
-                    value={origen}
-                    onChange={(e) => filtrarOrigen(e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
-                  />
-                  <ChevronDownIcon />
-                </div>
-                {sugerenciasOrigen.length > 0 && (
-                  <ul className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-48 overflow-auto">
-                    {sugerenciasOrigen.map((ciudad, idx) => (
-                      <li
-                        key={idx}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setOrigen(ciudad);
-                          setSugerenciasOrigen([]);
-                        }}
-                        className="p-3 text-base text-gray-800 hover:bg-blue-50 cursor-pointer"
-                      >
-                        {ciudad}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Destino */}
-              <div className="flex flex-col relative" ref={destinoRef}>
-                <label className="text-sm text-gray-600 mb-2">Destino</label>
-                <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
-                  <PlaneDepartureIcon />
-                  <input
-                    type="text"
-                    placeholder="Madrid"
-                    value={destino}
-                    onChange={(e) => filtrarDestino(e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
-                  />
-                  <ChevronDownIcon />
-                </div>
-                {sugerenciasDestino.length > 0 && (
-                  <ul className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-48 overflow-auto">
-                    {sugerenciasDestino.map((ciudad, idx) => (
-                      <li
-                        key={idx}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setDestino(ciudad);
-                          setSugerenciasDestino([]);
-                        }}
-                        className="p-3 text-base text-gray-800 hover:bg-blue-50 cursor-pointer"
-                      >
-                        {ciudad}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+            {/* Origen */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2">Origen</label>
+              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
+                <PlaneTakeoff className="w-6 h-6 text-[#0e254d]" />
+                <input
+                  type="text"
+                  placeholder="Bogotá"
+                  value={origen}
+                  onChange={(e) => filtrarOrigen(e.target.value)}
+                  className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                />
               </div>
             </div>
 
+            {/* Destino */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2">Destino</label>
+              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
+                <PlaneLanding className="w-6 h-6 text-[#0e254d]" />
+                <input
+                  type="text"
+                  placeholder="Madrid"
+                  value={destino}
+                  onChange={(e) => filtrarDestino(e.target.value)}
+                  className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                />
+              </div>
+            </div>
             {/* Fechas */}
             <div
               className={`lg:col-span-2 grid ${
@@ -369,7 +330,7 @@ export default function BuscadorVuelosModerno() {
                             Adultos
                           </div>
                           <div className="text-sm text-gray-500">
-                            Mayores de 15
+                            Mayores de 18 años
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -379,11 +340,11 @@ export default function BuscadorVuelosModerno() {
                               cambiarPasajeros("adultos", "restar");
                             }}
                             disabled={pasajeros.adultos <= 1}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-blue-500"
+                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
                           >
                             <MinusIcon />
                           </button>
-                          <span className="w-6 text-center font-sans">
+                          <span className="w-6 text-center font-sans text-[#0e254d]">
                             {pasajeros.adultos}
                           </span>
                           <button
@@ -392,7 +353,7 @@ export default function BuscadorVuelosModerno() {
                               cambiarPasajeros("adultos", "sumar");
                             }}
                             disabled={totalPasajeros >= 5}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-blue-500"
+                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
                           >
                             <PlusIcon />
                           </button>
@@ -406,7 +367,7 @@ export default function BuscadorVuelosModerno() {
                             Menores
                           </div>
                           <div className="text-sm text-gray-500">
-                            De 2 a 14 años
+                            De o a 17 años
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -416,11 +377,11 @@ export default function BuscadorVuelosModerno() {
                               cambiarPasajeros("menores", "restar");
                             }}
                             disabled={pasajeros.menores <= 0}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-blue-500"
+                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
                           >
                             <MinusIcon />
                           </button>
-                          <span className="w-6 text-center font-sans">
+                          <span className="w-6 text-center font-sans text-[#0e254d]">
                             {pasajeros.menores}
                           </span>
                           <button
@@ -429,7 +390,7 @@ export default function BuscadorVuelosModerno() {
                               cambiarPasajeros("menores", "sumar");
                             }}
                             disabled={totalPasajeros >= 5}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-blue-500"
+                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
                           >
                             <PlusIcon />
                           </button>
@@ -437,14 +398,14 @@ export default function BuscadorVuelosModerno() {
                       </div>
 
                       {totalPasajeros >= 5 && (
-                        <div className="text-sm text-blue-700 bg-blue-50 p-2 rounded-lg text-center">
+                        <div className="text-sm text-[#0e254d] bg-[#0e254d] p-2 rounded-lg text-center">
                           Máximo 5 personas
                         </div>
                       )}
 
                       <button
                         onClick={() => setMostrarPasajeros(false)}
-                        className="w-full mt-3 py-2.5 bg-blue-600 text-white rounded-xl text-base font-sans hover:bg-blue-700 transition-colors shadow-md"
+                        className="w-full mt-3 py-2.5 bg-[#0e254d] text-white rounded-xl text-base font-sans hover:bg-[#0e254d] transition-colors shadow-md"
                       >
                         Confirmar
                       </button>
@@ -456,16 +417,15 @@ export default function BuscadorVuelosModerno() {
               {/* Botón */}
               <button
                 onClick={validarVuelo}
-                className="px-6 py-4 flex items-center justify-center bg-blue-600 text-white font-sans rounded-xl shadow-lg hover:bg-blue-700 transition-colors text-lg"
+                className="px-3 py-6  flex items-center justify-center bg-[#0e254d] text-brand-white font-sans rounded-xl shadow-lg hover:bg-brand-darkcyan transition-colors text-lg"
               >
                 Buscar
               </button>
             </div>
           </div>
-
           {/* Mensaje */}
           {mensaje && (
-            <div className="mt-8 p-5 text-center font-sans text-base text-gray-800 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="mt-8 p-5 text-center font-sans text-base text-gray-800 bg-[#0e254d] rounded-xl border border-[#0e254d]">
               {mensaje}
             </div>
           )}

@@ -33,7 +33,7 @@ const FeaturedDestinations = () => {
       <div className="container mx-auto">
         {/* Título */}
         <div className="text-center mb-10">
-          <h2 className="text-3xl tracking-wide font-bold text-gray-800">
+          <h2 className="text-3xl tracking-wide font-sans text-gray-800">
             Destinos Destacados
           </h2>
         </div>
@@ -53,7 +53,7 @@ const FeaturedDestinations = () => {
 
               {/* Caja blanca sobre la imagen */}
               <div className="absolute bottom-4 left-4 right-4 bg-white p-5 rounded-lg shadow-md transition-all duration-300 group-hover:bottom-6">
-                <h3 className="text-xl font-semibold text-gray-800">
+                <h3 className="text-xl font-sans text-gray-800">
                   {destination.name}
                 </h3>
                 <p className="text-sm text-gray-600">{destination.class}</p>
@@ -67,7 +67,7 @@ const FeaturedDestinations = () => {
 
         {/* CTA */}
         <div className="text-center mt-10">
-          <button className="bg-transparent text-blue-600 border-2 border-blue-600 hover:bg-blue-600 hover:text-white transition duration-300 px-8 py-3 rounded-full font-semibold tracking-wide">
+          <button className="bg-transparent text- border-2 border-blue-600 hover:bg-[#0e254d] hover:text-white transition duration-300 px-8 py-3 rounded-full font-sans tracking-wide">
             Descubre tu nueva aventura
           </button>
         </div>

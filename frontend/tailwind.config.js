@@ -14,6 +14,7 @@ export default {
           darkblue: "#123361",
           cyan: "#39A5D8",
           darkcyan: "#1180B8",
+        
         },
       },
       fontFamily: {
