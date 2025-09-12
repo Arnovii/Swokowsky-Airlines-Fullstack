@@ -126,6 +126,7 @@ export default function BuscadorVuelosModerno() {
   const [sugerenciasDestino, setSugerenciasDestino] = useState([]);
   const origenRef = useRef(null);
   const destinoRef = useRef(null);
+  const [mostrarCalendario, setMostrarCalendario] = useState(false);
 
  
   const ciudades = [
@@ -298,13 +299,24 @@ export default function BuscadorVuelosModerno() {
   };
 
 
+  const formatDateToYYYYMMDD = (date) => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const monthPadded = String(month).padStart(2, '0');
+    const dayPadded = String(day).padStart(2, '0');
+    return `${year}-${monthPadded}-${dayPadded}`;
+  };
+
+
 
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
       <div className="relative rounded-3xl shadow-2xl border border-white/50">
         <div className="absolute inset-0 bg-white backdrop-blur-xl rounded-3xl"></div>
 
-        <div className="relative z-10 p-8">
+        <div className="relative z-10 p-2">
           {/* Tabs */}
           <div className="flex items-center gap-3 mb-6">
             <button
@@ -330,233 +342,279 @@ export default function BuscadorVuelosModerno() {
           </div>
 
           {/* Formulario */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end text-lg">
-            {/* Origen */}
-            <div className="flex flex-col relative" ref={origenRef}>
-              <label className="text-sm text-gray-600 mb-2">Origen</label>
-              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
-                <PlaneTakeoff className="w-6 h-6 text-[#0e254d]" />
-                <input
-                  type="text"
-                  placeholder="Bogotá"
-                  value={origen}
-                  onChange={(e) => filtrarOrigen(e.target.value)}
-                  className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
-                />
-              </div>
-              {sugerenciasOrigen.length > 0 && (
-                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                  {sugerenciasOrigen.map((c, i) => (
-                    <li
-                      key={i}
-                      onClick={() => {
-                        setOrigen(`${c.ciudad} (${c.codigo})`);
-                        setSugerenciasOrigen([]);
-                      }}
-                      className="flex justify-between p-5 cursor-pointer hover:bg-gray-100"
-                    >
-                      <div>
-                        <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
-                        <span className="text-gray-500">({c.pais})</span>
-                      </div>
-                      <span className="font-sans text-gray-700">{c.codigo}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          // En tu componente BuscadorVuelosModerno, modifica la sección del formulario:
+
+        {/* Formulario */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
+          {/* Origen */}
+          <div className="flex flex-col relative" ref={origenRef}>
+            <label className="text-sm text-gray-600 mb-2">Origen</label>
+            <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-3 shadow-sm h-14">
+              <PlaneTakeoff className="w-5 h-5 text-[#0e254d]" />
+              <input
+                type="text"
+                placeholder="Bogotá"
+                value={origen}
+                onChange={(e) => filtrarOrigen(e.target.value)}
+                className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+              />
             </div>
-
-            {/* Destino */}
-            <div className="flex flex-col relative" ref={destinoRef}>
-              <label className="text-sm text-gray-600 mb-2">Destino</label>
-              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
-                <PlaneLanding className="w-6 h-6 text-[#0e254d]" />
-                <input
-                  type="text"
-                  placeholder="Madrid"
-                  value={destino}
-                  onChange={(e) => filtrarDestino(e.target.value)}
-                  className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
-                />
-              </div>
-              {sugerenciasDestino.length > 0 && (
-                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                  {sugerenciasDestino.map((c, i) => (
-                    <li
-                      key={i}
-                      onClick={() => {
-                        setDestino(`${c.ciudad} (${c.codigo})`);
-                        setSugerenciasDestino([]);
-                      }}
-                      className="flex justify-between p-5 cursor-pointer hover:bg-gray-100"
-                    >
-                      <div>
-                        <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
-                        <span className="text-gray-500">({c.pais})</span>
-                      </div>
-                      <span className="font-sans text-gray-700">{c.codigo}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-
-            {/* Fechas */}
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-600 mb-2">Fechas</label>
-              {/* El contenedor padre ya tiene los estilos correctos */}
-              <div className="flex items-center gap-3 bg-white">
-                {/* No necesitas el ícono aquí, ya que está dentro del nuevo componente */}
-                <div className="w-full">
-                  <CalendarioRango
-                    modo={modo}
-                    onChange={({ startDate, endDate }) => {
-                      if (startDate) {
-                        setIda(startDate.toISOString().split("T")[0]);
-                      }
-                      if (endDate && modo === "ida_vuelta") {
-                        setVuelta(endDate.toISOString().split("T")[0]);
-                      } else {
-                        setVuelta("");
-                      }
+            {sugerenciasOrigen.length > 0 && (
+              <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                {sugerenciasOrigen.map((c, i) => (
+                  <li
+                    key={i}
+                    onClick={() => {
+                      setOrigen(`${c.ciudad} (${c.codigo})`);
+                      setSugerenciasOrigen([]);
                     }}
-                  />
+                    className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
+                  >
+                    <div>
+                      <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
+                      <span className="text-gray-500">({c.pais})</span>
+                    </div>
+                    <span className="font-sans text-gray-700">{c.codigo}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Destino */}
+          <div className="flex flex-col relative" ref={destinoRef}>
+            <label className="text-sm text-gray-600 mb-2">Destino</label>
+            <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-3 shadow-sm h-14">
+              <PlaneLanding className="w-5 h-5 text-[#0e254d]" />
+              <input
+                type="text"
+                placeholder="Madrid"
+                value={destino}
+                onChange={(e) => filtrarDestino(e.target.value)}
+                className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+              />
+            </div>
+            {sugerenciasDestino.length > 0 && (
+              <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                {sugerenciasDestino.map((c, i) => (
+                  <li
+                    key={i}
+                    onClick={() => {
+                      setDestino(`${c.ciudad} (${c.codigo})`);
+                      setSugerenciasDestino([]);
+                    }}
+                    className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
+                  >
+                    <div>
+                      <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
+                      <span className="text-gray-500">({c.pais})</span>
+                    </div>
+                    <span className="font-sans text-gray-700">{c.codigo}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Fechas */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 mb-2">Fechas</label>
+            <div className="flex gap-2">
+              {/* Fecha Ida */}
+              <div 
+                className="flex-1 border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2"
+                onClick={() => setMostrarCalendario(true)}
+              >
+                <CalendarIcon />
+                <div>
+                  <div className="text-xs text-gray-500">Ida</div>
+                  <div className="text-sm font-sans text-gray-900">
+                    {/* CORRECCIÓN AL MOSTRAR LA FECHA */}
+                    {ida ? new Date(`${ida}T00:00:00`).toLocaleDateString("es-ES", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric"
+                    }) : "Seleccionar"}
+                  </div>
                 </div>
               </div>
-            </div>
 
-
-            {/* Pasajeros + Botón */}
-            <div className="lg:col-span-1 grid grid-cols-2 gap-6">
-              <div className="relative">
-                <label className="text-sm text-gray-600 mb-2">Pasajeros</label>
-                <div
-                  onClick={() => setMostrarPasajeros(!mostrarPasajeros)}
-                  className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-4 cursor-pointer shadow-sm"
+              {/* Fecha Vuelta */}
+              {modo === "ida_vuelta" && (
+                <div 
+                  className="flex-1 border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2"
+                  onClick={() => setMostrarCalendario(true)}
                 >
-                  <UserIcon />
-                  <span className="text-base font-sans text-gray-900">
-                    {totalPasajeros}
-                  </span>
-                  <ChevronDownIcon
-                    className={`transition-transform ${
-                      mostrarPasajeros ? "rotate-180" : ""
-                    }`}
-                  />
+                  <CalendarIcon />
+                  <div>
+                    <div className="text-xs text-gray-500">Vuelta</div>
+                    <div className="text-sm font-sans text-gray-900">
+                      {/* CORRECCIÓN AL MOSTRAR LA FECHA */}
+                      {vuelta ? new Date(`${vuelta}T00:00:00`).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                      }) : "Seleccionar"}
+                    </div>
+                  </div>
                 </div>
-                {mostrarPasajeros && (
-                  <div className="absolute top-full right-0 mt-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-6 min-w-[320px]">
-                    <div className="space-y-5">
-                      <div className="text-lg font-sans text-gray-900">
-                        ¿Quiénes viajan?
-                      </div>
-                      {/* Adultos */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-base font-sans text-gray-900">
-                            Adultos
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Mayores de 18 años
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cambiarPasajeros("adultos", "restar");
-                            }}
-                            disabled={pasajeros.adultos <= 1}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                          >
-                            <MinusIcon />
-                          </button>
-                          <span className="w-6 text-center font-sans text-[#0e254d]">
-                            {pasajeros.adultos}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cambiarPasajeros("adultos", "sumar");
-                            }}
-                            disabled={totalPasajeros >= 5}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                          >
-                            <PlusIcon />
-                          </button>
-                        </div>
-                      </div>
+              )}
+            </div>
+            
+            {/* Componente CalendarioRango */}
+            <CalendarioRango
+              modo={modo}
+              isOpen={mostrarCalendario}
+              onOpenChange={setMostrarCalendario}
+              fechaInicial={ida}
+              fechaFinal={vuelta}
+              onChange={({ startDate, endDate }) => {
+                // 2. SEGUNDO: Usa la función auxiliar para guardar las fechas correctamente
+                if (startDate) {
+                  setIda(formatDateToYYYYMMDD(startDate));
+                }
+                if (endDate && modo === "ida_vuelta") {
+                  setVuelta(formatDateToYYYYMMDD(endDate));
+                } else {
+                  setVuelta("");
+                }
+              }}
+            />
+          </div>
 
-                      {/* Menores */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-base font-sans text-gray-900">
-                            Menores
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            De o a 17 años
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cambiarPasajeros("menores", "restar");
-                            }}
-                            disabled={pasajeros.menores <= 0}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                          >
-                            <MinusIcon />
-                          </button>
-                          <span className="w-6 text-center font-sans text-[#0e254d]">
-                            {pasajeros.menores}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cambiarPasajeros("menores", "sumar");
-                            }}
-                            disabled={totalPasajeros >= 5}
-                            className="w-9 h-9 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                          >
-                            <PlusIcon />
-                          </button>
-                        </div>
-                      </div>
-
-                      {totalPasajeros >= 5 && (
-                        <div className="text-sm text-[#0e254d] bg-[#0e254d] p-2 rounded-lg text-center">
-                          Máximo 5 personas
-                        </div>
-                      )}
-
+          {/* Pasajeros  */}
+          <div className="relative">
+            <label className="text-sm text-gray-600 mb-2">Pasajeros</label>
+            <div
+              onClick={() => setMostrarPasajeros(!mostrarPasajeros)}
+              className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14"
+            >
+              <UserIcon />
+              <span className="text-base font-sans text-gray-900">
+                {totalPasajeros}
+              </span>
+              <ChevronDownIcon
+                className={`transition-transform ${mostrarPasajeros ? "rotate-180" : ""}`}
+              />
+            </div>
+            {mostrarPasajeros && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 min-w-[200px]">
+                <div className="space-y-4">
+                  <div className="text-base font-sans text-gray-900">
+                    ¿Quiénes viajan?
+                  </div>
+                  {/* Adultos */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-sans text-gray-900">Adultos</div>
+                      <div className="text-xs text-gray-500">Mayores de 18 años</div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setMostrarPasajeros(false)}
-                        className="w-full mt-3 py-2.5 bg-[#0e254d] text-white rounded-xl text-base font-sans hover:bg-[#0e254d] transition-colors shadow-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cambiarPasajeros("adultos", "restar");
+                        }}
+                        disabled={pasajeros.adultos <= 1}
+                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
                       >
-                        Confirmar
+                        <MinusIcon />
+                      </button>
+                      <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
+                        {pasajeros.adultos}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cambiarPasajeros("adultos", "sumar");
+                        }}
+                        disabled={totalPasajeros >= 5}
+                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                      >
+                        <PlusIcon />
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Botón */}
-              <button
-                onClick={validarVuelo}
-                className="px-3 py-6  flex items-center justify-center bg-[#0e254d] text-brand-white font-sans rounded-xl shadow-lg hover:bg-brand-darkcyan transition-colors text-lg"
-              >
-                Buscar
-              </button>
-            </div>
+                  {/* Menores */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-sans text-gray-900">Menores</div>
+                      <div className="text-xs text-gray-500">De 0 a 17 años</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cambiarPasajeros("menores", "restar");
+                        }}
+                        disabled={pasajeros.menores <= 0}
+                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                      >
+                        <MinusIcon />
+                      </button>
+                      <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
+                        {pasajeros.menores}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cambiarPasajeros("menores", "sumar");
+                        }}
+                        disabled={totalPasajeros >= 5}
+                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                      >
+                        <PlusIcon />
+                      </button>
+                    </div>
+                  </div>
+
+                  {totalPasajeros >= 5 && (
+                    <div className="text-xs text-[#0e254d] bg-blue-50 p-2 rounded-lg text-center">
+                      Máximo 5 personas
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setMostrarPasajeros(false)}
+                    className="w-full mt-2 py-2 bg-[#0e254d] text-white rounded-lg text-sm font-sans hover:bg-[#0a1a3a] transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          {/* Mensaje */}
+
+          {/* Botón Buscar - Ahora más a la izquierda y mejor integrado */}
+          <div className="flex items-end h-full">
+            <button
+              onClick={validarVuelo}
+              className="w-full h-14 flex items-center justify-center bg-[#0e254d] text-white font-sans rounded-xl shadow-lg hover:bg-[#0a1a3a] transition-colors text-base font-medium"
+            >
+              Buscar
+            </button>
+          </div>
+        </div>
+                  {/* Mensaje */}
           {mensaje && (
             <div className="mt-8 p-5 text-center font-sans text-base text-gray-800 bg-[#0e254d] rounded-xl border border-[#0e254d]">
               {mensaje}
             </div>
           )}
+
+
+
+
+
+
+
+
+
+
+
+
+          
         </div>
       </div>
     </div>
