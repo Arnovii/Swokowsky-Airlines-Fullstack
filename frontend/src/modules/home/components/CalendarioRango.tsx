@@ -54,37 +54,37 @@ const CalendarioRango = ({
   
   const handleChange = (item) => {
     if (modo === "solo_ida") {
-      
       const startDate = item;
       onChange({ startDate, endDate: null });
       if (startDate) {
         setTimeout(() => onOpenChange(false), 300);
       }
     } else {
-
       const { startDate, endDate } = item.selection;
       onChange({ startDate, endDate });
       if (startDate && endDate) {
         if (endDate.getTime() > startDate.getTime()) {
-           setTimeout(() => onOpenChange(false), 300);
+          setTimeout(() => onOpenChange(false), 300);
         }
       }
     }
   };
 
+
+  const maxFechaRegreso = new Date(range[0].startDate);
+  maxFechaRegreso.setFullYear(maxFechaRegreso.getFullYear() + 1);
+
   return (
     <div className="relative w-full" ref={ref}>
       {isOpen && (
         <div className="absolute z-50 top-full mt-2 left-0 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-auto">
-          <style>{/* */}</style>
-          
-          
           {modo === "solo_ida" ? (
             <Calendar
               locale={es}
               date={range[0].startDate}
               onChange={handleChange}
               minDate={hoy}
+              maxDate={maxFechaRegreso}  
               color="#0e254d"
               className="custom-date-range"
             />
@@ -99,6 +99,7 @@ const CalendarioRango = ({
               direction="horizontal"
               rangeColors={["#0e254d"]}
               minDate={hoy}
+              maxDate={maxFechaRegreso}  
               showDateDisplay={false}
               showMonthAndYearPickers={true}
               fixedHeight={true}

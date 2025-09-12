@@ -127,6 +127,9 @@ export default function BuscadorVuelosModerno() {
   const origenRef = useRef(null);
   const destinoRef = useRef(null);
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
+  const [origenBloqueado, setOrigenBloqueado] = useState(false);
+  const [destinoBloqueado, setDestinoBloqueado] = useState(false);
+
 
  
   const ciudades = [
@@ -203,70 +206,69 @@ export default function BuscadorVuelosModerno() {
   };
 
   // ================== FILTROS ==================
-  const filtrarOrigen = (valor: string) => {
-    setOrigen(valor);
-    const q = normalize(valor);
-    setSugerenciasOrigen(
-      q ? ciudades.filter(c => normalize(c.ciudad).includes(q)) : []
+const filtrarOrigen = (valor: string) => {
+  setOrigen(valor);
+  const q = normalize(valor);
+
+  setSugerenciasOrigen(
+    q ? ciudades.filter((c) => normalize(c.ciudad).includes(q)) : []
+  );
+};
+
+const filtrarDestino = (valor: string) => {
+  setDestino(valor);
+  const q = normalize(valor);
+  let listaPermitida: typeof ciudades = [];
+
+  if (origen) {
+    const origenCiudad = limpiarCiudad(origen);
+
+    // Verificamos si el origen es una ciudad colombiana válida
+    const origenEsValido = ciudades.some(
+      (c) => c.ciudad === origenCiudad && c.pais === "Colombia"
     );
-  };
 
-  const filtrarDestino = (valor) => {
-    setDestino(valor);
-    const q = normalize(valor);
-    let listaPermitida = [];
-
-    if (origen) {
-      const origenCiudad = limpiarCiudad(origen);
-      
-      // Verificamos si el origen es una ciudad colombiana válida
-      const origenEsValido = ciudades.some(
-        (c) => c.ciudad === origenCiudad && c.pais === "Colombia"
+    if (origenEsValido) {
+      // Permitimos todos los destinos nacionales EXCEPTO el mismo origen
+      listaPermitida = ciudades.filter(
+        (c) => c.pais === "Colombia" && c.ciudad !== origenCiudad
       );
 
-      // Si el origen es una ciudad colombiana válida...
-      if (origenEsValido) {
-        
-        // Por defecto, permitimos TODOS los destinos nacionales.
-        listaPermitida = ciudades.filter((c) => c.pais === "Colombia");
-
-        //  ADEMÁS, si ese origen es un hub internacional...
-        if (origenesInternacionales.includes(origenCiudad)) {
-          
-          // agregamos los destinos internacionales a la lista.
-          const destinosInternacionalesPermitidos = ciudades.filter((c) =>
-            destinosInternacionales.includes(c.ciudad)
-          );
-          // Usamos push(...array) para añadir los elementos del otro array
-          listaPermitida.push(...destinosInternacionalesPermitidos);
-        }
+      // Si ese origen es un hub internacional...
+      if (origenesInternacionales.includes(origenCiudad)) {
+        const destinosInternacionalesPermitidos = ciudades.filter((c) =>
+          destinosInternacionales.includes(c.ciudad)
+        );
+        listaPermitida.push(...destinosInternacionalesPermitidos);
       }
-      // Si el origen no es colombiano, `listaPermitida` se queda vacía []. Correcto.
-
-    } else {
-      // Si no se ha escrito un origen, mostrar todo.
-      listaPermitida = ciudades;
     }
+  } else {
+    // Si no hay origen, mostramos todas las ciudades (sin restricción)
+    listaPermitida = ciudades;
+  }
 
-    setSugerenciasDestino(
-      q.length > 0
-        ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q))
-        : []
-    );
-  };
+  // Aplicar filtro por lo que escribe el usuario
+  setSugerenciasDestino(
+    q.length > 0 
+      ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q))
+      : []
+  );
+};
+
   // ================== EFFECTS ==================
-  useEffect(() => {
-    if (modo === "solo_ida") setVuelta("");
-  }, [modo]);
+  const handleChange = (item) => {
+  if (modo === "solo_ida") {
+    const startDate = item;
+    onChange({ startDate, endDate: null });
+    setRange([{ startDate, endDate: null, key: "selection" }]);
+  } else {
+    const { startDate, endDate } = item.selection;
+    onChange({ startDate, endDate });
+    setRange([{ startDate, endDate, key: "selection" }]);
+  }
+};
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (origenRef.current && !origenRef.current.contains(e.target)) setSugerenciasOrigen([]);
-      if (destinoRef.current && !destinoRef.current.contains(e.target)) setSugerenciasDestino([]);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // ================== VALIDACIÓN ==================
   const validarVuelo = () => {
@@ -286,6 +288,8 @@ export default function BuscadorVuelosModerno() {
         return setMensaje("❌ Solo puedes salir internacional desde: Bogotá, Medellín, Cali, Cartagena o Pereira.");
     } else if (!ciudadesColombia.includes(origenCiudad) || !ciudadesColombia.includes(destinoCiudad)) {
         return setMensaje("❌ Los vuelos nacionales solo son entre ciudades de Colombia.");
+
+    
     }
 
     // Validación de fechas
@@ -341,9 +345,6 @@ export default function BuscadorVuelosModerno() {
             </button>
           </div>
 
-          {/* Formulario */}
-          // En tu componente BuscadorVuelosModerno, modifica la sección del formulario:
-
         {/* Formulario */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
           {/* Origen */}
@@ -355,8 +356,19 @@ export default function BuscadorVuelosModerno() {
                 type="text"
                 placeholder="Bogotá"
                 value={origen}
-                onChange={(e) => filtrarOrigen(e.target.value)}
-                className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                onChange={(e) => {
+                  if (!origenBloqueado) filtrarOrigen(e.target.value); // solo filtra si no está bloqueado
+                }}
+                readOnly={origenBloqueado}
+                onClick={() => {
+                  if (origenBloqueado) {
+                    // Si está bloqueado y haces click → limpiar
+                    setOrigen("");
+                    setOrigenBloqueado(false);
+                    setSugerenciasOrigen(ciudades);
+                  }
+                }}
+                className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${origenBloqueado ? "cursor-pointer" : ""}`}
               />
             </div>
             {sugerenciasOrigen.length > 0 && (
@@ -366,6 +378,7 @@ export default function BuscadorVuelosModerno() {
                     key={i}
                     onClick={() => {
                       setOrigen(`${c.ciudad} (${c.codigo})`);
+                      setOrigenBloqueado(true); 
                       setSugerenciasOrigen([]);
                     }}
                     className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
@@ -390,8 +403,20 @@ export default function BuscadorVuelosModerno() {
                 type="text"
                 placeholder="Madrid"
                 value={destino}
-                onChange={(e) => filtrarDestino(e.target.value)}
-                className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                onChange={(e) => {
+                  if (!destinoBloqueado) filtrarDestino(e.target.value);
+                }}
+                readOnly={destinoBloqueado}
+                onClick={() => {
+                  if (destinoBloqueado) {
+                    setDestino("");
+                    setDestinoBloqueado(false);
+                    setSugerenciasDestino(ciudades);
+                  }
+                }}
+                className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${
+                  destinoBloqueado ? "cursor-pointer" : ""
+                }`}
               />
             </div>
             {sugerenciasDestino.length > 0 && (
@@ -401,6 +426,7 @@ export default function BuscadorVuelosModerno() {
                     key={i}
                     onClick={() => {
                       setDestino(`${c.ciudad} (${c.codigo})`);
+                      setDestinoBloqueado(true);
                       setSugerenciasDestino([]);
                     }}
                     className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
@@ -429,7 +455,6 @@ export default function BuscadorVuelosModerno() {
                 <div>
                   <div className="text-xs text-gray-500">Ida</div>
                   <div className="text-sm font-sans text-gray-900">
-                    {/* CORRECCIÓN AL MOSTRAR LA FECHA */}
                     {ida ? new Date(`${ida}T00:00:00`).toLocaleDateString("es-ES", {
                       day: "2-digit",
                       month: "2-digit",
@@ -449,7 +474,6 @@ export default function BuscadorVuelosModerno() {
                   <div>
                     <div className="text-xs text-gray-500">Vuelta</div>
                     <div className="text-sm font-sans text-gray-900">
-                      {/* CORRECCIÓN AL MOSTRAR LA FECHA */}
                       {vuelta ? new Date(`${vuelta}T00:00:00`).toLocaleDateString("es-ES", {
                         day: "2-digit",
                         month: "2-digit",
@@ -469,7 +493,7 @@ export default function BuscadorVuelosModerno() {
               fechaInicial={ida}
               fechaFinal={vuelta}
               onChange={({ startDate, endDate }) => {
-                // 2. SEGUNDO: Usa la función auxiliar para guardar las fechas correctamente
+        
                 if (startDate) {
                   setIda(formatDateToYYYYMMDD(startDate));
                 }
@@ -586,7 +610,6 @@ export default function BuscadorVuelosModerno() {
             )}
           </div>
 
-          {/* Botón Buscar - Ahora más a la izquierda y mejor integrado */}
           <div className="flex items-end h-full">
             <button
               onClick={validarVuelo}
