@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
+import CalendarioRango from "@/modules/home/components/CalendarioRango";
 
 
 const PlaneDepartureIcon = () => (
@@ -108,6 +109,9 @@ const PlusIcon = () => (
   </svg>
 );
 
+
+
+
 export default function BuscadorVuelosModerno() {
   const [modo, setModo] = useState("ida_vuelta");
   const [origen, setOrigen] = useState("");
@@ -123,88 +127,183 @@ export default function BuscadorVuelosModerno() {
   const origenRef = useRef(null);
   const destinoRef = useRef(null);
 
+ 
   const ciudades = [
-    "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena",
-    "Bucaramanga", "Pereira", "Manizales", "Santa Marta", "Cúcuta",
-    "Madrid", "Londres", "New York", "Buenos Aires", "Miami"
-  ];
 
-  const normalize = (s) =>
-    s?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() || "";
+  { ciudad: "Bogotá", pais: "Colombia", codigo: "BOG" },
+  { ciudad: "Medellín", pais: "Colombia", codigo: "MDE" },
+  { ciudad: "Cali", pais: "Colombia", codigo: "CLO" },
+  { ciudad: "Barranquilla", pais: "Colombia", codigo: "BAQ" },
+  { ciudad: "Cartagena", pais: "Colombia", codigo: "CTG" },
+  { ciudad: "Bucaramanga", pais: "Colombia", codigo: "BGA" },
+  { ciudad: "Pereira", pais: "Colombia", codigo: "PEI" },
+  { ciudad: "Manizales", pais: "Colombia", codigo: "MZL" },
+  { ciudad: "Santa Marta", pais: "Colombia", codigo: "SMR" },
+  { ciudad: "Cúcuta", pais: "Colombia", codigo: "CUC" },
+  { ciudad: "Ibagué", pais: "Colombia", codigo: "IBE" },
+  { ciudad: "Villavicencio", pais: "Colombia", codigo: "VVC" },
+  { ciudad: "Armenia", pais: "Colombia", codigo: "AXM" },
+  { ciudad: "Montería", pais: "Colombia", codigo: "MTR" },
+  { ciudad: "Neiva", pais: "Colombia", codigo: "NVA" },
+  { ciudad: "Pasto", pais: "Colombia", codigo: "PSO" },
+  { ciudad: "Sincelejo", pais: "Colombia", codigo: "CZU" },
+  { ciudad: "Riohacha", pais: "Colombia", codigo: "RCH" },
+  { ciudad: "Valledupar", pais: "Colombia", codigo: "VUP" },
+  { ciudad: "Popayán", pais: "Colombia", codigo: "PPN" },
+  { ciudad: "Tunja", pais: "Colombia", codigo: "TUN" },
+  { ciudad: "Florencia", pais: "Colombia", codigo: "FLA" },
+  { ciudad: "Yopal", pais: "Colombia", codigo: "EYP" },
+  { ciudad: "Mocoa", pais: "Colombia", codigo: "VGZ" },
+  { ciudad: "San Andrés", pais: "Colombia", codigo: "ADZ" },
+  { ciudad: "Mitú", pais: "Colombia", codigo: "MVP" },
+  { ciudad: "Puerto Carreño", pais: "Colombia", codigo: "PCR" },
+  { ciudad: "Inírida", pais: "Colombia", codigo: "LCR" },
+  { ciudad: "Quibdó", pais: "Colombia", codigo: "UIB" },
+  { ciudad: "Leticia", pais: "Colombia", codigo: "LET" },
+
+  { ciudad: "Madrid", pais: "Spain", codigo: "MAD" },
+  { ciudad: "Londres", pais: "United Kingdom", codigo: "LHR" },
+  { ciudad: "New York", pais: "United States", codigo: "JFK" },
+  { ciudad: "Buenos Aires", pais: "Argentina", codigo: "EZE" },
+  { ciudad: "Miami", pais: "United States", codigo: "MIA" }
+];
+
+
+  const ciudadesColombia = ciudades.filter(c => c.pais === "Colombia").map(c => c.ciudad);
+  const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
+  const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
 
   const hoy = new Date().toISOString().split("T")[0];
-  const unAñoDespues = new Date(
-    new Date().getTime() + 365 * 24 * 60 * 60 * 1000
-  )
+  const unAñoDespues = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
+
   const totalPasajeros = pasajeros.adultos + pasajeros.menores;
 
-  useEffect(() => {
-    if (modo === "solo_ida") setVuelta("");
-  }, [modo]);
+  // ================== HELPERS ==================
+  const normalize = (s: string) =>
+    s?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() || "";
 
-  const cambiarPasajeros = (tipo, operacion) => {
-    setPasajeros((prev) => {
-      const nuevoValor =
-        operacion === "sumar" ? prev[tipo] + 1 : prev[tipo] - 1;
-      const nuevosPasajeros = {
-        ...prev,
-        [tipo]: Math.max(0, nuevoValor),
-      };
-      const nuevoTotal = nuevosPasajeros.adultos + nuevosPasajeros.menores;
-      if (nuevoTotal > 5) return prev;
+  const limpiarCiudad = (valor: string) => valor.split("(")[0].trim();
+
+  const cambiarPasajeros = (tipo: "adultos" | "menores", operacion: "sumar" | "restar") => {
+    setPasajeros(prev => {
+      let nuevoValor = operacion === "sumar" ? prev[tipo] + 1 : prev[tipo] - 1;
+      nuevoValor = Math.max(0, nuevoValor);
+
+      const nuevosPasajeros = { ...prev, [tipo]: nuevoValor };
+      const total = nuevosPasajeros.adultos + nuevosPasajeros.menores;
+
+      if (total > 5) return prev;
       if (nuevosPasajeros.adultos === 0) return { ...prev, adultos: 1 };
+
       return nuevosPasajeros;
     });
   };
 
-  const filtrarOrigen = (valor) => {
+  // ================== FILTROS ==================
+  const filtrarOrigen = (valor: string) => {
     setOrigen(valor);
     const q = normalize(valor);
     setSugerenciasOrigen(
-      q.length > 0 ? ciudades.filter((c) => normalize(c).includes(q)) : []
+      q ? ciudades.filter(c => normalize(c.ciudad).includes(q)) : []
     );
   };
 
   const filtrarDestino = (valor) => {
     setDestino(valor);
     const q = normalize(valor);
+    let listaPermitida = [];
+
+    if (origen) {
+      const origenCiudad = limpiarCiudad(origen);
+      
+      // Verificamos si el origen es una ciudad colombiana válida
+      const origenEsValido = ciudades.some(
+        (c) => c.ciudad === origenCiudad && c.pais === "Colombia"
+      );
+
+      // Si el origen es una ciudad colombiana válida...
+      if (origenEsValido) {
+        
+        // Por defecto, permitimos TODOS los destinos nacionales.
+        listaPermitida = ciudades.filter((c) => c.pais === "Colombia");
+
+        //  ADEMÁS, si ese origen es un hub internacional...
+        if (origenesInternacionales.includes(origenCiudad)) {
+          
+          // agregamos los destinos internacionales a la lista.
+          const destinosInternacionalesPermitidos = ciudades.filter((c) =>
+            destinosInternacionales.includes(c.ciudad)
+          );
+          // Usamos push(...array) para añadir los elementos del otro array
+          listaPermitida.push(...destinosInternacionalesPermitidos);
+        }
+      }
+      // Si el origen no es colombiano, `listaPermitida` se queda vacía []. Correcto.
+
+    } else {
+      // Si no se ha escrito un origen, mostrar todo.
+      listaPermitida = ciudades;
+    }
+
     setSugerenciasDestino(
-      q.length > 0 ? ciudades.filter((c) => normalize(c).includes(q)) : []
+      q.length > 0
+        ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q))
+        : []
     );
   };
+  // ================== EFFECTS ==================
+  useEffect(() => {
+    if (modo === "solo_ida") setVuelta("");
+  }, [modo]);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (origenRef.current && !origenRef.current.contains(e.target))
-        setSugerenciasOrigen([]);
-      if (destinoRef.current && !destinoRef.current.contains(e.target))
-        setSugerenciasDestino([]);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (origenRef.current && !origenRef.current.contains(e.target)) setSugerenciasOrigen([]);
+      if (destinoRef.current && !destinoRef.current.contains(e.target)) setSugerenciasDestino([]);
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ================== VALIDACIÓN ==================
   const validarVuelo = () => {
     setMensaje("");
+
     if (!origen || !destino) return setMensaje("❌ Ingresa origen y destino.");
+
+    const origenCiudad = limpiarCiudad(origen);
+    const destinoCiudad = limpiarCiudad(destino);
+
+    const origenEsInt = origenesInternacionales.includes(origenCiudad);
+    const destinoEsInt = destinosInternacionales.includes(destinoCiudad);
+
+    if (origenEsInt && destinoEsInt) {
+      // validacion vuelos
+    } else if (destinoEsInt && !origenEsInt) {
+        return setMensaje("❌ Solo puedes salir internacional desde: Bogotá, Medellín, Cali, Cartagena o Pereira.");
+    } else if (!ciudadesColombia.includes(origenCiudad) || !ciudadesColombia.includes(destinoCiudad)) {
+        return setMensaje("❌ Los vuelos nacionales solo son entre ciudades de Colombia.");
+    }
+
+    // Validación de fechas
     if (!ida) return setMensaje("❌ Selecciona fecha de ida.");
-    if (modo === "ida_vuelta" && !vuelta)
-      return setMensaje("❌ Selecciona fecha de vuelta.");
-    if (modo === "ida_vuelta" && ida && vuelta && new Date(vuelta) < new Date(ida))
+    if (modo === "ida_vuelta" && !vuelta) return setMensaje("❌ Selecciona fecha de vuelta.");
+    if (modo === "ida_vuelta" && ida && vuelta && vuelta < ida) {
       return setMensaje("❌ La vuelta no puede ser antes de la ida.");
+    }
+
     return setMensaje("✅ Búsqueda válida.");
   };
 
+
+
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
-      {/* Panel con efecto vidrio */}
       <div className="relative rounded-3xl shadow-2xl border border-white/50">
         <div className="absolute inset-0 bg-white backdrop-blur-xl rounded-3xl"></div>
 
-        {/* Contenido */}
         <div className="relative z-10 p-8">
           {/* Tabs */}
           <div className="flex items-center gap-3 mb-6">
@@ -233,9 +332,9 @@ export default function BuscadorVuelosModerno() {
           {/* Formulario */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end text-lg">
             {/* Origen */}
-            <div className="flex flex-col">
+            <div className="flex flex-col relative" ref={origenRef}>
               <label className="text-sm text-gray-600 mb-2">Origen</label>
-              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
+              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
                 <PlaneTakeoff className="w-6 h-6 text-[#0e254d]" />
                 <input
                   type="text"
@@ -245,12 +344,32 @@ export default function BuscadorVuelosModerno() {
                   className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                 />
               </div>
+              {sugerenciasOrigen.length > 0 && (
+                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {sugerenciasOrigen.map((c, i) => (
+                    <li
+                      key={i}
+                      onClick={() => {
+                        setOrigen(`${c.ciudad} (${c.codigo})`);
+                        setSugerenciasOrigen([]);
+                      }}
+                      className="flex justify-between p-5 cursor-pointer hover:bg-gray-100"
+                    >
+                      <div>
+                        <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
+                        <span className="text-gray-500">({c.pais})</span>
+                      </div>
+                      <span className="font-sans text-gray-700">{c.codigo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Destino */}
-            <div className="flex flex-col">
+            <div className="flex flex-col relative" ref={destinoRef}>
               <label className="text-sm text-gray-600 mb-2">Destino</label>
-              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 relative shadow-sm">
+              <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
                 <PlaneLanding className="w-6 h-6 text-[#0e254d]" />
                 <input
                   type="text"
@@ -260,44 +379,53 @@ export default function BuscadorVuelosModerno() {
                   className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
                 />
               </div>
+              {sugerenciasDestino.length > 0 && (
+                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {sugerenciasDestino.map((c, i) => (
+                    <li
+                      key={i}
+                      onClick={() => {
+                        setDestino(`${c.ciudad} (${c.codigo})`);
+                        setSugerenciasDestino([]);
+                      }}
+                      className="flex justify-between p-5 cursor-pointer hover:bg-gray-100"
+                    >
+                      <div>
+                        <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
+                        <span className="text-gray-500">({c.pais})</span>
+                      </div>
+                      <span className="font-sans text-gray-700">{c.codigo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
+
+
             {/* Fechas */}
-            <div
-              className={`lg:col-span-2 grid ${
-                modo === "ida_vuelta" ? "grid-cols-2" : "grid-cols-1"
-              } gap-6`}
-            >
-              <div className="flex flex-col">
-                <label className="text-sm text-gray-600 mb-2">Ida</label>
-                <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
-                  <CalendarIcon />
-                  <input
-                    type="date"
-                    value={ida}
-                    onChange={(e) => setIda(e.target.value)}
-                    min={hoy}
-                    max={unAñoDespues}
-                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2">Fechas</label>
+              {/* El contenedor padre ya tiene los estilos correctos */}
+              <div className="flex items-center gap-3 bg-white">
+                {/* No necesitas el ícono aquí, ya que está dentro del nuevo componente */}
+                <div className="w-full">
+                  <CalendarioRango
+                    modo={modo}
+                    onChange={({ startDate, endDate }) => {
+                      if (startDate) {
+                        setIda(startDate.toISOString().split("T")[0]);
+                      }
+                      if (endDate && modo === "ida_vuelta") {
+                        setVuelta(endDate.toISOString().split("T")[0]);
+                      } else {
+                        setVuelta("");
+                      }
+                    }}
                   />
                 </div>
               </div>
-              {modo === "ida_vuelta" && (
-                <div className="flex flex-col">
-                  <label className="text-sm text-gray-600 mb-2">Vuelta</label>
-                  <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-4 shadow-sm">
-                    <CalendarIcon />
-                    <input
-                      type="date"
-                      value={vuelta}
-                      onChange={(e) => setVuelta(e.target.value)}
-                      min={ida || hoy}
-                      max={unAñoDespues}
-                      className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
+
 
             {/* Pasajeros + Botón */}
             <div className="lg:col-span-1 grid grid-cols-2 gap-6">

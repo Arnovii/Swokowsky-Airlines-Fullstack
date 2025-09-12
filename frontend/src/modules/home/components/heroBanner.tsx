@@ -29,7 +29,7 @@ const HeroBanner: React.FC = () => {
         </div>
 
         {/* Buscador de vuelos */}
-        <div className="w-full max-w-full px-4">
+        <div className="w-full max-w-7xl mx-auto px-6">
           <FilterSearchBar />
         </div>
 
