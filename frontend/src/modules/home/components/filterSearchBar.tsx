@@ -602,18 +602,7 @@ export default function BuscadorVuelosModerno() {
               {mensaje}
             </div>
           )}
-
-
-
-
-
-
-
-
-
-
-
-
+          
           
         </div>
       </div>

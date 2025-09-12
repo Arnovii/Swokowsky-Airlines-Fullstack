@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-// CAMBIO 1: Importamos también el componente 'Calendar'
 import { DateRange, Calendar } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -52,17 +51,17 @@ const CalendarioRango = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onOpenChange]);
 
-  // CAMBIO 2: La función ahora maneja los dos formatos de fecha
+  
   const handleChange = (item) => {
     if (modo === "solo_ida") {
-      // Para <Calendar>, 'item' es la fecha directamente
+      
       const startDate = item;
       onChange({ startDate, endDate: null });
       if (startDate) {
         setTimeout(() => onOpenChange(false), 300);
       }
     } else {
-      // Para <DateRange>, 'item' es un objeto { selection: { ... } }
+
       const { startDate, endDate } = item.selection;
       onChange({ startDate, endDate });
       if (startDate && endDate) {
@@ -77,9 +76,9 @@ const CalendarioRango = ({
     <div className="relative w-full" ref={ref}>
       {isOpen && (
         <div className="absolute z-50 top-full mt-2 left-0 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 w-auto">
-          <style>{/* Tus estilos personalizados */}</style>
+          <style>{/* */}</style>
           
-          {/* CAMBIO 3: La lógica condicional ahora funcionará correctamente */}
+          
           {modo === "solo_ida" ? (
             <Calendar
               locale={es}
@@ -96,7 +95,7 @@ const CalendarioRango = ({
               moveRangeOnFirstSelection={false}
               ranges={range}
               onChange={handleChange}
-              months={2} // Mejora: Mostrar 2 meses para rangos es más cómodo
+              months={2} 
               direction="horizontal"
               rangeColors={["#0e254d"]}
               minDate={hoy}
