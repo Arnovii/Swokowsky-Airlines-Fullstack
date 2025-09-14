@@ -1,4 +1,5 @@
 version: "3.9"
+
 services:
   frontend:
     build:
@@ -7,40 +8,57 @@ services:
     ports:
       - "5173:5173"
     volumes:
-    - ./frontend:/app           # monta el código local
-    - /app/node_modules         # evita conflictos con node_modules
+      - ./frontend:/app
+      - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend
+    networks:
+      - appnet
 
   backend:
     build: ./backend
     ports:
       - "3000:3000"
+    networks:
+      - appnet
+    env_file:
+      - ./backend/.ENV        # ⬅️ usa el nombre real del archivo
     environment:
-      - DATABASE_HOST=db
-      - DATABASE_PORT=3306
-      - DATABASE_USER=root
-      - DATABASE_PASSWORD=root
-      - DATABASE_NAME=swokosky
+      # variables propias del backend además de las del env_file
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_USER: ${MYSQL_USER}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+      DATABASE_NAME: ${MYSQL_DATABASE}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
-      - ./backend:/app       # tu código local
-      - /app/node_modules    # evita conflictos con node_modules. Evita sobrescribir los node_modules del contenedor (No necesital los locales, si no necesita para su sistema operativo)
+      - ./backend:/app
+      - /app/node_modules
     command: npm run start:dev
-
 
   db:
     image: mysql:8.0
     restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: swokosky
+    env_file:
+      - ./backend/.ENV        # ⬅️ variables para MySQL
     ports:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data:
+
+networks:
+  appnet:
+    driver: bridge
