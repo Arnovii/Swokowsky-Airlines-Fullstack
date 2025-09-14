@@ -1,15 +1,237 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model aeronave {
+  id_aeronave Int       @id @default(autoincrement())
+  modelo      String    @db.VarChar(100)
+  capacidad   Int
+  asiento     asiento[]
+  vuelo       vuelo[]
+}
+
+model aeropuerto {
+  id_aeropuerto                                   Int     @id @default(autoincrement())
+  id_ciudadFK                                     Int
+  nombre                                          String  @db.VarChar(100)
+  codigo_iata                                     String  @db.VarChar(100)
+  ciudad                                          ciudad  @relation(fields: [id_ciudadFK], references: [id_ciudad], onDelete: NoAction, onUpdate: NoAction, map: "aeropuerto_ibfk_1")
+  vuelo_vuelo_id_aeropuerto_origenFKToaeropuerto  vuelo[] @relation("vuelo_id_aeropuerto_origenFKToaeropuerto")
+  vuelo_vuelo_id_aeropuerto_destinoFKToaeropuerto vuelo[] @relation("vuelo_id_aeropuerto_destinoFKToaeropuerto")
+
+  @@index([id_ciudadFK], map: "id_ciudadFK")
+}
+
+model asiento {
+  id_asiento    Int            @id @default(autoincrement())
+  id_aeronaveFK Int
+  numero        String         @db.VarChar(100)
+  clases        asiento_clases
+  aeronave      aeronave       @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "asiento_ibfk_1")
+  ticket        ticket[]
+
+  @@index([id_aeronaveFK], map: "id_aeronaveFK")
+}
+
+model ciudad {
+  id_ciudad  Int          @id @default(autoincrement())
+  id_paisFK  Int
+  nombre     String       @db.VarChar(100)
+  codigo     String       @db.VarChar(100)
+  aeropuerto aeropuerto[]
+  pais       pais         @relation(fields: [id_paisFK], references: [id_pais], onDelete: NoAction, onUpdate: NoAction, map: "ciudad_ibfk_1")
+
+  @@index([id_paisFK], map: "id_paisFK")
+}
+
+model pago {
+  id_pago      Int         @id @default(autoincrement())
+  id_ticketFK  Int
+  id_tarjetaFK Int
+  monto        Float       @db.Float
+  fecha        DateTime    @db.DateTime(0)
+  estado       pago_estado
+  ticket       ticket      @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_1")
+  tarjeta      tarjeta     @relation(fields: [id_tarjetaFK], references: [id_tarjeta], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_2")
+
+  @@index([id_tarjetaFK], map: "id_tarjetaFK")
+  @@index([id_ticketFK], map: "id_ticketFK")
+}
+
+model pais {
+  id_pais Int      @id @default(autoincrement())
+  nombre  String   @db.VarChar(100)
+  iso2    String   @db.VarChar(100)
+  ciudad  ciudad[]
+}
+
+model pasajero {
+  id_pasajero      Int             @id @default(autoincrement())
+  id_ticketFK      Int
+  nombre           String          @db.VarChar(255)
+  apellido         String          @db.VarChar(255)
+  dni              String          @db.VarChar(255)
+  genero           pasajero_genero
+  fecha_nacimiento DateTime        @db.Date
+  ticket           ticket          @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
+
+  @@index([id_ticketFK], map: "id_ticketFK")
+}
+
+model promocion {
+  id_promocion   Int              @id @default(autoincrement())
+  nombre         String           @db.VarChar(255)
+  descripcion    String           @db.VarChar(255)
+  descuento_pet  Float            @db.Float
+  fecha_inicio   DateTime         @db.DateTime(0)
+  fecha_fin      DateTime         @db.DateTime(0)
+  activo         Boolean          @default(true)
+  vuelopromocion vuelopromocion[]
+}
+
+model tarjeta {
+  id_tarjeta   Int          @id @default(autoincrement())
+  id_usuarioFK Int
+  numero_cnc   String       @db.VarChar(255)
+  titular      String       @db.VarChar(255)
+  vence_mes    Int
+  vence_anio   Int
+  cvv_ene      String       @db.VarChar(255)
+  tipo         tarjeta_tipo
+  banco        String       @db.VarChar(255)
+  activo       Boolean
+  creado_en    DateTime     @db.DateTime(0)
+  pago         pago[]
+  usuario      usuario      @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "tarjeta_ibfk_1")
+
+  @@index([id_usuarioFK], map: "id_usuarioFK")
+}
+
+model ticket {
+  id_ticket    Int           @id @default(autoincrement())
+  id_usuarioFK Int
+  id_vueloFK   Int
+  id_asientoFK Int
+  precio       Float         @db.Float
+  estado       ticket_estado
+  creado_en    DateTime      @db.DateTime(0)
+  pago         pago[]
+  pasajero     pasajero[]
+  usuario      usuario       @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+  vuelo        vuelo         @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
+  asiento      asiento       @relation(fields: [id_asientoFK], references: [id_asiento], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_3")
+
+  @@index([id_asientoFK], map: "id_asientoFK")
+  @@index([id_usuarioFK], map: "id_usuarioFK")
+  @@index([id_vueloFK], map: "id_vueloFK")
+}
+
+model usuario {
+  id_usuario            Int                  @id @default(autoincrement())
+  tipo_usuario          usuario_tipo_usuario
+  dni                   String               @db.VarChar(255)
+  nombre                String               @db.VarChar(255)
+  apellido              String               @db.VarChar(255)
+  fecha_nacimiento      DateTime             @db.Date
+  lugar_nacimiento      String               @db.VarChar(255)
+  direccion_facturacion String               @db.VarChar(255)
+  genero                usuario_genero
+  correo                String               @db.VarChar(255)
+  username              String               @db.VarChar(255)
+  password_bash         String               @db.VarChar(255)
+  img_url               String               @db.VarChar(255)
+  suscrito_noticias     Boolean              @default(false)
+  creado_en             DateTime             @db.DateTime(0)
+  tarjeta               tarjeta[]
+  ticket                ticket[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vuelo {
+  id_vuelo                                             Int              @id @default(autoincrement())
+  id_aeronaveFK                                        Int
+  id_aeropuerto_origenFK                               Int
+  id_aeropuerto_destinoFK                              Int
+  salida_programada                                    DateTime         @db.DateTime(0)
+  llegada_programada                                   DateTime         @db.DateTime(0)
+  salida_programada_utc                                DateTime         @db.Timestamp(0)
+  llegada_programada_utc                               DateTime         @db.Timestamp(0)
+  estado                                               vuelo_estado     @default(Programado)
+  ticket                                               ticket[]
+  aeronave                                             aeronave         @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_1")
+  aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto  aeropuerto       @relation("vuelo_id_aeropuerto_origenFKToaeropuerto", fields: [id_aeropuerto_origenFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_2")
+  aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto aeropuerto       @relation("vuelo_id_aeropuerto_destinoFKToaeropuerto", fields: [id_aeropuerto_destinoFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_3")
+  vuelopromocion                                       vuelopromocion[]
+
+  @@index([id_aeronaveFK], map: "id_aeronaveFK")
+  @@index([id_aeropuerto_destinoFK], map: "id_aeropuerto_destinoFK")
+  @@index([id_aeropuerto_origenFK], map: "id_aeropuerto_origenFK")
+}
+
+model vuelopromocion {
+  id_vuelo_promocion Int       @id @default(autoincrement())
+  id_vueloFK         Int
+  id_promocionFK     Int
+  vuelo              vuelo     @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "vuelopromocion_ibfk_1")
+  promocion          promocion @relation(fields: [id_promocionFK], references: [id_promocion], onDelete: NoAction, onUpdate: NoAction, map: "vuelopromocion_ibfk_2")
+
+  @@index([id_promocionFK], map: "id_promocionFK")
+  @@index([id_vueloFK], map: "id_vueloFK")
+}
+
+enum usuario_tipo_usuario {
+  root
+  admin
+  cliente
+  visitante
+}
+
+enum asiento_clases {
+  economica
+  primera_clase @map("primera clase")
+}
+
+enum pago_estado {
+  pendiente
+  aprobado
+  rechazado
+}
+
+enum ticket_estado {
+  reservado
+  pagado
+  checkin
+  usado
+  cancelado
+}
+
+enum pasajero_genero {
+  M
+  F
+  X
+}
+
+enum tarjeta_tipo {
+  credito
+  debito
+}
+
+enum vuelo_estado {
+  Programado
+  En_vuelo   @map("En vuelo")
+  Aterrizado
+  Cancelado
+  Retrasado
+}
+
+enum usuario_genero {
+  M
+  F
+  X
 }
