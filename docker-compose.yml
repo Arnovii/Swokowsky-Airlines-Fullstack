@@ -20,10 +20,11 @@ services:
     build: ./backend
     ports:
       - "3000:3000"
+      - "5555:5555"
     networks:
       - appnet
     env_file:
-      - ./backend/.ENV        # ⬅️ usa el nombre real del archivo
+      - ./backend/.env        # ⬅️ usa el nombre real del archivo
     environment:
       # variables propias del backend además de las del env_file
       DATABASE_HOST: db
@@ -43,7 +44,7 @@ services:
     image: mysql:8.0
     restart: always
     env_file:
-      - ./backend/.ENV        # ⬅️ variables para MySQL
+      - ./backend/.env        # ⬅️ variables para MySQL
     ports:
       - "3307:3306"
     volumes:
