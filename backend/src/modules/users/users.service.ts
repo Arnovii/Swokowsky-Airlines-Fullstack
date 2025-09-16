@@ -62,7 +62,7 @@ export class UsersService {
     try {
       if (isNaN(id)) throw new BadRequestException('El ID debe ser un número');
 
-      // ✅ Verificamos que exista antes de actualizar
+      //Verificamos que exista antes de actualizar
       const existingUser = await this.prisma.usuario.findUnique({
         where: { id_usuario: id },
       });
@@ -70,9 +70,6 @@ export class UsersService {
       if (!existingUser) {
         throw new BadRequestException(`El usuario #${id} no existe.`);
       }
-
-      // 🛑 Remover campos que no queremos que el cliente modifique
-      console.log(data);
 
       const updatedUser = await this.prisma.usuario.update({
         where: { id_usuario: id },
