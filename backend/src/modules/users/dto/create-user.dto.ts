@@ -3,15 +3,32 @@ import {
   IsEmail,
   IsEnum,
   IsDateString,
-  IsBoolean,
   Length,
 } from 'class-validator';
-import { TipoUsuario, GeneroUsuario } from '../enums/usuario.enums';
+import {nationalities, usuario_genero} from '@prisma/client';
 
+/*
+| Campo en `usuario`       | ¿Viene en DTO?  | Notas                                                                      |
+| ------------------------ | --------------  | -------------------------------------------------------------------------- |
+| `id_usuario`             | ❌ No           | Autogenerado por la BD                                                     |
+| `tipo_usuario`           | ❌ No           | Lo defines tú en el backend (`CLIENTE` en /users, `ADMIN` en /root)        |
+| `dni`                    | ✅ Sí           |                                                                            |
+| `nombre`                 | ✅ Sí           |                                                                            |
+| `apellido`               | ✅ Sí           |                                                                            |
+| `fecha_nacimiento`       | ✅ Sí           |                                                                            |
+| `nacionalidad`           | ✅ Sí           |                                                                            |
+| `direccion_facturacion`  | ❌ No           | Lo podrías dejar `NULL` o vacío hasta que el usuario lo modifique          |
+| `genero`                 | ✅ Sí           |                                                                            |
+| `correo`                 | ✅ Sí           |                                                                            |
+| `username`               | ✅ Sí           |                                                                            |
+| `password_bash`          | ✅ Sí           | Recuerda **hashearla** en el backend                                       |
+| `img_url`                | ✅ Sí           |                                                                            |
+| `suscrito_noticias`      | ❌ No           | Se puede inicializar en `false`                                            |
+| `creado_en`              | ❌ No           | Se debe setear en backend con `new Date()`                                 |
+| `tarjeta[]` / `ticket[]` | ❌ No           | Relaciones, no se envían en el POST inicial                                |
+
+*/
 export class CreateUserDto {
-  @IsEnum(TipoUsuario)
-  tipo_usuario: TipoUsuario;
-
   @IsString()
   dni: string;
 
@@ -24,14 +41,11 @@ export class CreateUserDto {
   @IsDateString()
   fecha_nacimiento: string;
 
-  @IsString()
-  lugar_nacimiento: string;
+  @IsEnum(nationalities)
+  nacionalidad: nationalities;
 
-  @IsString()
-  direccion_facturacion: string;
-
-  @IsEnum(GeneroUsuario)
-  genero: GeneroUsuario;
+  @IsEnum(usuario_genero)
+  genero: usuario_genero;
 
   @IsEmail()
   correo: string;
@@ -45,7 +59,4 @@ export class CreateUserDto {
 
   @IsString()
   img_url: string;
-
-  @IsBoolean()
-  suscrito_noticias: boolean;
 }
