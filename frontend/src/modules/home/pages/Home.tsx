@@ -1,4 +1,3 @@
-// src/modules/home/pages/Home.tsx
 
 import React from 'react';
 import HeroBanner from '@/modules/home/components/heroBanner';
