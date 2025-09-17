@@ -5,12 +5,20 @@ import { AuthModule } from './modules/auth/auth.module';
 import { FlightsModule } from './modules/flights/flights.module';
 import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
+import { ConfigModule } from '@nestjs/config';
 
 
 
 @Module({
-  imports: [DatabaseModule, AuthModule, FlightsModule, UsersModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // Hace que esté disponible en toda la app
+    }),
+    DatabaseModule,
+    AuthModule,
+    FlightsModule,
+    UsersModule],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

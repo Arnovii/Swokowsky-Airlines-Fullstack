@@ -37,12 +37,77 @@ export class UsersService {
     }
   }
 
+  //útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
+  async getUserByEmail(email: string): Promise<usuario | null> {
+    try {
+      if (!email || email.trim() === '') {
+        throw new BadRequestException('El email no puede estar vacío');
+      }
+
+      const user: usuario | null = await this.prisma.usuario.findUnique({
+        where: { correo: email },
+      });
+
+      if (!user) {
+        throw new Error(`No existe ningún usuario con el email ${email}`);
+      }
+
+      return user;
+    } catch (error) {
+      throw new BadRequestException(
+        `Hubo un problema al obtener la información del usuario por email. Detalle: ${error}`,
+      );
+    }
+  }
+
+  //útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
+  async getUserByUsername(username: string): Promise<usuario | null> {
+    try {
+      if (!username || username.trim() === '') {
+        throw new BadRequestException('El username no puede estar vacío');
+      }
+
+      const user: usuario | null = await this.prisma.usuario.findUnique({
+        where: { username: username },
+      });
+
+      if (!user) {
+        throw new Error(`No existe ningún usuario con el username ${username}`);
+      }
+
+      return user;
+    } catch (error) {
+      throw new BadRequestException(
+        `Hubo un problema al obtener la información del usuario por username. Detalle: ${error}`,
+      );
+    }
+  }
+  //Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
+  async findUserByEmail(email: string): Promise<usuario | null> {
+    if (!email || email.trim() === '') return null;
+
+    return this.prisma.usuario.findUnique({
+      where: { correo: email },
+    });
+  }
+
+  //Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
+  async findUserByUsername(username: string): Promise<usuario | null> {
+    if (!username || username.trim() === '') return null;
+
+    return this.prisma.usuario.findUnique({
+      where: { username:username },
+    });
+  }
+
+
   async createUser(data: CreateUserDto): Promise<usuario> {
     try {
-      //El backend define estos valores, el cliente no puede enviarlos
+
       const userCreated = await this.prisma.usuario.create({
         data: {
           ...data,
+          //El backend define estos valores, el cliente no debería de enviarlos al momento de crearse  
           direccion_facturacion: "",
           suscrito_noticias: false,
           tipo_usuario: usuario_tipo_usuario.cliente,
@@ -83,8 +148,6 @@ export class UsersService {
       );
     }
   }
-
-
 
 
 }

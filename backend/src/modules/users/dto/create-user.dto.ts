@@ -6,6 +6,7 @@ import {
   Length,
 } from 'class-validator';
 import {nationalities, usuario_genero} from '@prisma/client';
+import { Transform } from 'class-transformer';
 
 /*
 | Campo en `usuario`       | ¿Viene en DTO?  | Notas                                                                      |
@@ -50,9 +51,11 @@ export class CreateUserDto {
   @IsEmail()
   correo: string;
 
+  @Transform(({value}) => value.trim())
   @IsString()
   username: string;
 
+  @Transform(({value}) => value.trim())
   @IsString()
   @Length(8, 255)
   password_bash: string;
