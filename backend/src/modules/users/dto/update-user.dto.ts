@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { usuario_tipo_usuario } from '@prisma/client';
 
 // Esto hace que todos los campos de CreateUserDto sean opcionales
 export class UpdateUserDto extends PartialType(CreateUserDto) {
@@ -12,6 +13,9 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @IsBoolean()
   suscrito_noticias?: boolean;
+
+  @IsEnum(usuario_tipo_usuario)
+  tipo_usuario?: usuario_tipo_usuario;
 
   // 🚫 No incluyas tarjeta[] ni ticket[] aquí
   // Si necesitas gestionar tarjetas/tickets, crea DTOs y endpoints aparte.
