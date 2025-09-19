@@ -1,10 +1,12 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from './common/guards/auth.guard';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
 
   app.setGlobalPrefix("api/v1");
 
@@ -19,8 +21,37 @@ async function bootstrap() {
     })
   );
 
+  //Hacemos el AuthGuard global
+  const reflector = app.get(Reflector);
+  const jwtService = app.get(JwtService);
+  app.useGlobalGuards(new AuthGuard(jwtService, reflector));
+
+  //Swagger
+      const config = new DocumentBuilder()
+      .setTitle('Swokosky Airlines API')
+      .setDescription('Documentación de la API de Swokosky Airlines')
+      .setVersion('1.0')
+      // => aquí definimos el esquema Bearer (JWT)
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'Authorization',
+          in: 'header'
+        },
+        'bearerAuth' // <-- nombre del esquema, usar este ID en @ApiBearerAuth(...)
+      )
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true } // mantiene token entre reloads
+    });
+
+    console.log('Swagger disponible en: /api/docs');
 
 
   await app.listen(process.env.PORT ?? 3000);
-}
+} 
 bootstrap();

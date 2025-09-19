@@ -16,7 +16,7 @@ export class UsersService {
 
 
 
-  async findAllUsers(): Promise<usuario[]> {
+  async getAllUsers(): Promise<usuario[]> {
     try {
       const usersList: usuario[] = await this.prisma.usuario.findMany();
       return usersList;
@@ -37,7 +37,7 @@ export class UsersService {
     }
   }
 
-  //útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
+  // GET --> útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
   async getUserByEmail(email: string): Promise<usuario | null> {
     try {
       if (!email || email.trim() === '') {
@@ -60,7 +60,7 @@ export class UsersService {
     }
   }
 
-  //útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
+  // GET --> útil en endpoints como GET, ya que lanza un error al no encontrar (Para endpoints que requieren que el usuario exista (lanzan error si no existe)
   async getUserByUsername(username: string): Promise<usuario | null> {
     try {
       if (!username || username.trim() === '') {
@@ -82,7 +82,7 @@ export class UsersService {
       );
     }
   }
-  //Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
+  // FIND --> Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
   async findUserByEmail(email: string): Promise<usuario | null> {
     if (!email || email.trim() === '') return null;
 
@@ -91,7 +91,7 @@ export class UsersService {
     });
   }
 
-  //Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
+  // FIND --> Para validaciones lógicas donde null es un resultado esperado (funcion de register en Auth por ejemplo.)
   async findUserByUsername(username: string): Promise<usuario | null> {
     if (!username || username.trim() === '') return null;
 
@@ -101,7 +101,7 @@ export class UsersService {
   }
 
 
-  async createUser(data: CreateUserDto): Promise<usuario> {
+  async createUser(data: CreateUserDto): Promise<string> {
     try {
 
       const userCreated = await this.prisma.usuario.create({
@@ -115,7 +115,7 @@ export class UsersService {
         },
       });
 
-      return userCreated;
+      return `Se ha creado el usuario ${userCreated.username} con correo ${userCreated.correo}`;
     } catch (error) {
       throw new BadRequestException(
         `Hubo un problema al crear el usuario. Por favor, intente nuevamente. ${error}`,
