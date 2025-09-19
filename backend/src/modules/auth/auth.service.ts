@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcryptjs from 'bcryptjs'
 import { JwtService } from '@nestjs/jwt';
+import type { PayloadInterface } from './dto/payload.dto';
 
 
 @Injectable()
@@ -40,11 +41,16 @@ export class AuthService {
         if (!isPasswordValid) throw new UnauthorizedException(`Contraseña incorrecta`)
 
         //retornar JWT
-        //Paylaod: ¿Que datos van a a viajar en el token? 
-        const payload = { email: userByEmail.correo, tipo_usuario: userByEmail.tipo_usuario };
+        //Paylaod: ¿Que datos NO SENSIBLES van a a viajar en el token? 
+        const payload: PayloadInterface = { 
+            email: userByEmail.correo, 
+            username: userByEmail.username, 
+            tipo_usuario: userByEmail.tipo_usuario 
+        };
         const token = await this.jwtService.signAsync(payload)
         return {
             token: token,
+            username: userByEmail.username,
             email: userByEmail.correo,
             tipo_usuario: userByEmail.tipo_usuario
         }
