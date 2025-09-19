@@ -3,7 +3,10 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InternalKeyGuard } from '../../common/guards/internal-key.guard';
+import { ApiExcludeController } from '@nestjs/swagger';
 
+
+@ApiExcludeController()
 @Controller('users')
 @UseGuards(InternalKeyGuard) // 🔒 Aplica el guard a TODO el controlador
 export class UsersController {

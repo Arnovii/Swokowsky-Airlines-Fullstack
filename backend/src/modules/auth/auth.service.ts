@@ -43,6 +43,7 @@ export class AuthService {
         //3. retornar JWT
         //Paylaod: ¿Que datos NO SENSIBLES van a a viajar en el token? 
         const payload: PayloadInterface = { 
+            id_usuario:userByEmail.id_usuario,
             email: userByEmail.correo, 
             username: userByEmail.username, 
             tipo_usuario: userByEmail.tipo_usuario 
@@ -50,6 +51,7 @@ export class AuthService {
         const token = await this.jwtService.signAsync(payload)
         return {
             token: token,
+            id_usuario: userByEmail.id_usuario,
             username: userByEmail.username,
             email: userByEmail.correo,
             tipo_usuario: userByEmail.tipo_usuario

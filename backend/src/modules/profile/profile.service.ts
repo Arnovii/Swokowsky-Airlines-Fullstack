@@ -1,23 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UsersService } from '../users/users.service';
+import { UpdateUserDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class ProfileService {
-  create(createProfileDto: CreateProfileDto) {
-    return 'This action adds a new profile';
+  constructor(private readonly userService: UsersService) { }
+
+
+  async getProfileInfo(email: string) {
+    // Usamos 'await' para esperar a que la promesa se resuelva
+    const userData = await this.userService.findUserByEmail(email);
+
+    if (userData) {
+      const { password_bash, ...userWithoutPassword } = userData;
+      return userWithoutPassword;
+    } else {
+      throw new Error('Usuario no encontrado');
+    }
   }
 
-  findAll() {
-    return `This action returns all profile`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} profile`;
-  }
-
-  update(username: string, updateProfileDto: UpdateProfileDto) {
-    return `This action updates #${username}'s profile`;
+  async updateProfileInfo(id: number, data: UpdateUserDto) {
+    const userUploaded = await this.userService.updateUser(id,data);
+    const { password_bash, ...userWithoutPassword } = userUploaded;
+    return userWithoutPassword;
   }
 
 

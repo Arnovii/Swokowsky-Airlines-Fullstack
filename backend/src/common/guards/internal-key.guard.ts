@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { ConfigService } from '@nestjs/config';
 
 /*
-Objetivo: 
+Objetivo: Endpoints que no deberían ser usados en el lado del cliente, existen solo con el fin de hacer testing en Postman 
 */
 @Injectable()
 export class InternalKeyGuard implements CanActivate {

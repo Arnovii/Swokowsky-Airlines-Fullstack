@@ -1,28 +1,32 @@
 import { Controller, Get, Post, Body, Patch, Request } from '@nestjs/common';
 import { ProfileService } from './profile.service';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import type { AuthenticatedUserRequest } from '../../common/interfaces/request.interface';
+import { ActiveUser } from '../../common/decorators/active-user.decorator';
+import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
+import { ApiBearerAuth, ApiTags, ApiOperation} from '@nestjs/swagger';
+import { UpdateUserDto } from './dto/update-profile.dto';
 
+
+
+
+@ApiTags('Perfil de usuario')
+@ApiBearerAuth('bearerAuth') // muestra candado en swagger y asocia el esquema 'bearerAuth'
 @Controller('profile')
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
-
-  @Post()
-  create(@Body() createProfileDto: CreateProfileDto) {
-    return this.profileService.create(createProfileDto);
-  }
+  constructor(
+    private readonly profileService: ProfileService,
+  ){}
 
   @Get()
-  findAll() {
-    return this.profileService.findAll();
+  @ApiOperation({ summary: 'Consigue toda la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  getProfileInfo(@ActiveUser() authenticatedUser: PayloadInterface) {
+    const data = this.profileService.getProfileInfo(authenticatedUser.email)
+    return data
   }
 
-
-
   @Patch()
-  update(@Request() req: AuthenticatedUserRequest, @Body() updateProfileDto: UpdateProfileDto) {
-    return this.profileService.update(req.user.username, updateProfileDto);
+  @ApiOperation({ summary: 'Actualizar la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  update(@ActiveUser() authenticatedUser: PayloadInterface, @Body() data: UpdateUserDto) {
+    return this.profileService.updateProfileInfo(+authenticatedUser.id_usuario, data);
   }
 
 }

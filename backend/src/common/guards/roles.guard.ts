@@ -24,11 +24,11 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedUserRequest>();
     const user: PayloadInterface = request.user;
 
-    if (!user) throw new ForbiddenException('Usuario no autenticado');
+    if (!user) throw new ForbiddenException('Usuario no autenticado o ruta definida como pública incorrectamente.');
 
     // 3. Verificar si el rol del usuario está en la lista de roles permitidos
     if (!requiredRoles.includes(user.tipo_usuario)) {
-      throw new ForbiddenException(`No tienes permisos para acceder a esta ruta`);
+      throw new ForbiddenException(`El tipo de usuario ${user.tipo_usuario} no tiene permisos para acceder a esta ruta`);
     }
 
     return true;
