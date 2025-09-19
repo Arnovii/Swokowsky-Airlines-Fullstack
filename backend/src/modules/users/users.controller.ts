@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -15,13 +15,13 @@ export class UsersController {
 
   @Get()
   getAll() {
-    return this.usersService.findAllUsers();
+    return this.usersService.getAllUsers();
   }
 
   //A pesar de que el query siempre se reciba como una string, gracias a el transform:true en el archivo main.ts, la conversión se hace automaticamente y podemos tiparlo como 'number'
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.usersService.getUserByID(id);
+  @Get(':username')
+  getOne(@Param('username') username: string) {
+    return this.usersService.getUserByUsername(username);
   }
 
   @Patch(':id')

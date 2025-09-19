@@ -33,14 +33,14 @@ export class AuthService {
     }
 
     async login(data: LoginDto) {
-        //verificar correo
+        //1. verificar correo
         const userByEmail = await this.userService.findUserByEmail(data.correo)
         if (!userByEmail) throw new UnauthorizedException(`No existe cuenta asociada al correo ${data.correo}`)
-        //verificar contraseña
+        //2. verificar contraseña
         const isPasswordValid = await bcryptjs.compare(data.password_bash, userByEmail.password_bash);
         if (!isPasswordValid) throw new UnauthorizedException(`Contraseña incorrecta`)
 
-        //retornar JWT
+        //3. retornar JWT
         //Paylaod: ¿Que datos NO SENSIBLES van a a viajar en el token? 
         const payload: PayloadInterface = { 
             email: userByEmail.correo, 
