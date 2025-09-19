@@ -2,8 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InternalKeyGuard } from '../../common/guards/internal-key.guard';
 
 @Controller('users')
+@UseGuards(InternalKeyGuard) // 🔒 Aplica el guard a TODO el controlador
 export class UsersController {
   
   constructor(private readonly usersService: UsersService) {}
@@ -23,10 +25,13 @@ export class UsersController {
   getOne(@Param('username') username: string) {
     return this.usersService.getUserByUsername(username);
   }
-
+  
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.updateUser(+id, updateUserDto);
   }
 
 }
+
+
+

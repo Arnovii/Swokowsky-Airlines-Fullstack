@@ -4,7 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcryptjs from 'bcryptjs'
 import { JwtService } from '@nestjs/jwt';
-import type { PayloadInterface } from './dto/payload.dto';
+import type { PayloadInterface } from '../../common/interfaces/payload.interface';
 
 
 @Injectable()

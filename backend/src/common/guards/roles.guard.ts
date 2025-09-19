@@ -1,10 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { AuthenticatedRequest } from '../modules/auth/dto/request.dto';
-import { PayloadInterface } from '../modules/auth/dto/payload.dto';
+import { AuthenticatedUserRequest } from '../interfaces/request.interface';
+import { PayloadInterface } from '../interfaces/payload.interface';
 
-
+// Objetivo: Validar el rol del usuario quien realiza el request y determinar si está habilitado. 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -21,7 +21,7 @@ export class RolesGuard implements CanActivate {
     }
 
     // 2. Obtener usuario del request
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const request = context.switchToHttp().getRequest<AuthenticatedUserRequest>();
     const user: PayloadInterface = request.user;
 
     if (!user) throw new ForbiddenException('Usuario no autenticado');

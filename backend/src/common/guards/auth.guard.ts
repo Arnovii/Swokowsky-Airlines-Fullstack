@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
-import { PayloadInterface } from 'src/modules/auth/dto/payload.dto';
+import { PayloadInterface } from 'src/common/interfaces/payload.interface';
 
 /*
  CanActive --> midleware --> es un middleware especial de NestJS que se ejecuta antes de que el controlador procese la petición.
