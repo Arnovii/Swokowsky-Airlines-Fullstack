@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -135,15 +134,15 @@ model ticket {
 model usuario {
   id_usuario            Int                  @id @default(autoincrement())
   tipo_usuario          usuario_tipo_usuario
-  dni                   String               @db.VarChar(255)
+  dni                   String               @unique @db.VarChar(255)
   nombre                String               @db.VarChar(255)
   apellido              String               @db.VarChar(255)
   fecha_nacimiento      DateTime             @db.Date
-  lugar_nacimiento      String               @db.VarChar(255)
+  nacionalidad          nationalities
   direccion_facturacion String               @db.VarChar(255)
   genero                usuario_genero
-  correo                String               @db.VarChar(255)
-  username              String               @db.VarChar(255)
+  correo                String               @unique @db.VarChar(255)
+  username              String               @unique @db.VarChar(255)
   password_bash         String               @db.VarChar(255)
   img_url               String               @db.VarChar(255)
   suscrito_noticias     Boolean              @default(false)
@@ -189,7 +188,6 @@ enum usuario_tipo_usuario {
   root
   admin
   cliente
-  visitante
 }
 
 enum asiento_clases {
@@ -234,4 +232,201 @@ enum usuario_genero {
   M
   F
   X
+}
+
+enum nationalities {
+  Afghanistan
+  Albania
+  Algeria
+  Andorra
+  Angola
+  AntiguaAndBarbuda
+  Argentina
+  Armenia
+  Australia
+  Austria
+  Azerbaijan
+  Bahamas
+  Bahrain
+  Bangladesh
+  Barbados
+  Belarus
+  Belgium
+  Belize
+  Benin
+  Bhutan
+  Bolivia
+  BosniaAndHerzegovina
+  Botswana
+  Brazil
+  Brunei
+  Bulgaria
+  BurkinaFaso
+  Burundi
+  Cambodia
+  Cameroon
+  Canada
+  CapeVerde
+  CentralAfricanRepublic
+  Chad
+  Chile
+  China
+  Colombia
+  Comoros
+  Congo
+  CostaRica
+  Croatia
+  Cuba
+  Cyprus
+  CzechRepublic
+  Denmark
+  Djibouti
+  Dominica
+  DominicanRepublic
+  Ecuador
+  Egypt
+  ElSalvador
+  EquatorialGuinea
+  Eritrea
+  Estonia
+  Eswatini
+  Ethiopia
+  Fiji
+  Finland
+  France
+  Gabon
+  Gambia
+  Georgia
+  Germany
+  Ghana
+  Greece
+  Grenada
+  Guatemala
+  Guinea
+  GuineaBissau
+  Guyana
+  Haiti
+  Honduras
+  Hungary
+  Iceland
+  India
+  Indonesia
+  Iran
+  Iraq
+  Ireland
+  Israel
+  Italy
+  IvoryCoast
+  Jamaica
+  Japan
+  Jordan
+  Kazakhstan
+  Kenya
+  Kiribati
+  Kuwait
+  Kyrgyzstan
+  Laos
+  Latvia
+  Lebanon
+  Lesotho
+  Liberia
+  Libya
+  Liechtenstein
+  Lithuania
+  Luxembourg
+  Madagascar
+  Malawi
+  Malaysia
+  Maldives
+  Mali
+  Malta
+  MarshallIslands
+  Mauritania
+  Mauritius
+  Mexico
+  Micronesia
+  Moldova
+  Monaco
+  Mongolia
+  Montenegro
+  Morocco
+  Mozambique
+  Myanmar
+  Namibia
+  Nauru
+  Nepal
+  Netherlands
+  NewZealand
+  Nicaragua
+  Niger
+  Nigeria
+  NorthKorea
+  NorthMacedonia
+  Norway
+  Oman
+  Pakistan
+  Palau
+  Panama
+  PapuaNewGuinea
+  Paraguay
+  Peru
+  Philippines
+  Poland
+  Portugal
+  Qatar
+  Romania
+  Russia
+  Rwanda
+  SaintKittsAndNevis
+  SaintLucia
+  SaintVincentAndGrenadines
+  Samoa
+  SanMarino
+  SaoTomeAndPrincipe
+  SaudiArabia
+  Senegal
+  Serbia
+  Seychelles
+  SierraLeone
+  Singapore
+  Slovakia
+  Slovenia
+  SolomonIslands
+  Somalia
+  SouthAfrica
+  SouthKorea
+  SouthSudan
+  Spain
+  SriLanka
+  Sudan
+  Suriname
+  Sweden
+  Switzerland
+  Syria
+  Taiwan
+  Tajikistan
+  Tanzania
+  Thailand
+  TimorLeste
+  Togo
+  Tonga
+  TrinidadAndTobago
+  Tunisia
+  Turkey
+  Turkmenistan
+  Tuvalu
+  Uganda
+  Ukraine
+  UnitedArabEmirates
+  UnitedKingdom
+  UnitedStates
+  Uruguay
+  Uzbekistan
+  Vanuatu
+  VaticanCity
+  Venezuela
+  Vietnam
+  Yemen
+  Zambia
+  Zimbabwe
 }

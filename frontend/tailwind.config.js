@@ -14,14 +14,13 @@ export default {
           darkblue: "#123361",
           cyan: "#39A5D8",
           darkcyan: "#1180B8",
+        
         },
       },
       fontFamily: {
-        title: ["Montserrat", "sans-serif"],
-        body: ["Poppins", "sans-serif"],
-        oswald: ["Oswald", "sans-serif"],
+        sans: ["Oswald", "sans-serif"]
       },
     },
   },
-  plugins: [ ],
+  plugins: [],
 };
