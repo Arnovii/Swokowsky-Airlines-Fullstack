@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/montserrat": "^5.2.7",
-    "@fontsource/oswald": "^5.2.6",
-    "@fontsource/poppins": "^5.2.6",
+    "@fontsource/montserrat": "^5.2.8",
+    "@fontsource/oswald": "^5.2.8",
+    "@fontsource/poppins": "^5.2.7",
     "@tailwindcss/vite": "^4.1.13",
     "flowbite": "^3.1.2",
     "flowbite-react": "^0.12.9",
