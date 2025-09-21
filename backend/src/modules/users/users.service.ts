@@ -101,7 +101,7 @@ export class UsersService {
   }
 
 
-  async createUser(data: CreateUserDto): Promise<string> {
+  async createUser(data: CreateUserDto): Promise<usuario> {
     try {
 
       const userCreated = await this.prisma.usuario.create({
@@ -115,7 +115,7 @@ export class UsersService {
         },
       });
 
-      return `Se ha creado el usuario ${userCreated.username} con correo ${userCreated.correo}`;
+      return userCreated;
     } catch (error) {
       throw new BadRequestException(
         `Hubo un problema al crear el usuario. Por favor, intente nuevamente. ${error}`,

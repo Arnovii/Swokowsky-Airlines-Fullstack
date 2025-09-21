@@ -9,7 +9,7 @@ export class LoginDto {
     @IsEmail()
     correo: string;
 
-    @ApiProperty({ example: '12345678', description: 'Contraseña del usuario' })
+    @ApiProperty({ example: '12345678', description: 'Contraseña del usuario', minLength: 8})
     @Transform(({ value }) => value.trim())
     @IsNotEmpty()
     @IsString()
