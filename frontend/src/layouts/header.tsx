@@ -32,7 +32,7 @@ export default function Header() {
 
       {/* Menú de navegación (desktop) */}
       <div className="hidden lg:flex items-center space-x-8 text-lg font-semibold">
-        <Link to="/noticias" className="hover:text-cyan-400">
+        <Link to="/news" className="hover:text-cyan-400">
           Noticias
         </Link>
         <Link to="/reserva" className="hover:text-cyan-400">
@@ -59,7 +59,7 @@ export default function Header() {
       {/* Menú desplegable (móvil) */}
       {open && (
         <div className="absolute top-20 left-0 w-full bg-black flex flex-col items-center space-y-4 py-6 lg:hidden font-sans">
-          <Link to="/noticias" className="hover:text-cyan-400">
+          <Link to="/news" className="hover:text-cyan-400">
             Noticias
           </Link>
           <Link to="/reserva" className="hover:text-cyan-400">
