@@ -10,6 +10,8 @@ import {
   IsOptional,
   IsBoolean,
   Length,
+  IsNotEmpty,
+  length,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { nationalities, usuario_genero, usuario_tipo_usuario } from '@prisma/client';
@@ -23,7 +25,9 @@ export class UpdateUserDto {
     maxLength: 20,
   })
   @IsOptional()
+  @Length(8, 20)
   @IsString()
+  @IsNotEmpty()
   dni?: string;
 
   @ApiProperty({
@@ -33,6 +37,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   nombre?: string;
 
   @ApiProperty({
@@ -42,6 +47,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   apellido?: string;
 
   @ApiProperty({
@@ -51,6 +57,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsDateString()
+  @IsNotEmpty()
   fecha_nacimiento?: string;
 
   @ApiProperty({
@@ -61,6 +68,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsEnum(nationalities)
+  @IsNotEmpty()
   nacionalidad?: nationalities;
 
   @ApiProperty({
@@ -71,6 +79,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsEnum(usuario_genero)
+  @IsNotEmpty()
   genero?: usuario_genero;
 
   @ApiProperty({
@@ -83,11 +92,12 @@ export class UpdateUserDto {
   @IsOptional()
   @Transform(({ value }) => value.trim())
   @IsString()
+  @IsNotEmpty()
   username?: string;
 
   @ApiProperty({
     example: 'P@ssword123',
-    description: 'Nueva contraseña (mínimo 8 caracteres). Debe enviarse encriptada en backend.',
+    description: 'Nueva contraseña (mínimo 8 caracteres).',
     required: false,
     minLength: 8,
     maxLength: 255,
@@ -96,6 +106,7 @@ export class UpdateUserDto {
   @Transform(({ value }) => value.trim())
   @IsString()
   @Length(8, 255)
+  @IsNotEmpty()
   password_bash?: string;
 
   @ApiProperty({
@@ -105,6 +116,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   img_url?: string;
 
   @ApiProperty({
@@ -114,6 +126,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   direccion_facturacion?: string;
 
   @ApiProperty({
@@ -123,6 +136,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsBoolean()
+  @IsNotEmpty()
   suscrito_noticias?: boolean;
 
   @ApiProperty({
@@ -133,5 +147,6 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsEnum(usuario_tipo_usuario)
+  @IsNotEmpty()
   tipo_usuario?: usuario_tipo_usuario;
 }

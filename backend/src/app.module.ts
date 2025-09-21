@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProfileModule } from './modules/profile/profile.module';
+import { MailModule } from './mail/mail.module';
 
 
 
@@ -19,7 +20,8 @@ import { ProfileModule } from './modules/profile/profile.module';
     AuthModule,
     FlightsModule,
     UsersModule,
-    ProfileModule],
+    ProfileModule,
+    MailModule],
   controllers: [AppController],
   providers: [AppService],
 })

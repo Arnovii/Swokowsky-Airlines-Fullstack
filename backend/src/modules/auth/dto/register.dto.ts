@@ -5,6 +5,7 @@ import {
   IsDateString,
   Length,
   IsOptional,
+  IsNotEmpty,
 } from 'class-validator';
 import {nationalities, usuario_genero} from '@prisma/client';
 import { Transform } from 'class-transformer';
@@ -20,6 +21,7 @@ export class RegisterDto{
   })
   @Length(8, 20)
   @IsString()
+  @IsNotEmpty()
   dni: string;
 
   @ApiProperty({
@@ -27,6 +29,7 @@ export class RegisterDto{
     description: 'Nombre del usuario',
   })
   @IsString()
+  @IsNotEmpty()
   nombre: string;
 
   @ApiProperty({
@@ -34,6 +37,7 @@ export class RegisterDto{
     description: 'Apellido del usuario',
   })
   @IsString()
+  @IsNotEmpty()
   apellido: string;
 
   @ApiProperty({
@@ -41,6 +45,7 @@ export class RegisterDto{
     description: 'Fecha de nacimiento en formato ISO-8601 DateTime',
   })
   @IsDateString()
+  @IsNotEmpty()
   fecha_nacimiento: string;
 
   @ApiProperty({
@@ -48,6 +53,7 @@ export class RegisterDto{
     example: 'Colombia',
     description: 'Nacionalidad, debe ser uno de los valores permitidos',
   })
+  @IsNotEmpty()
   @IsEnum(nationalities)
   nacionalidad: nationalities;
 
@@ -56,6 +62,7 @@ export class RegisterDto{
     example: 'M',
     description: 'Género del usuario, debe ser uno de los valores permitidos (M-F-X)',
   })
+  @IsNotEmpty()
   @IsEnum(usuario_genero)
   genero: usuario_genero;
 
@@ -63,6 +70,7 @@ export class RegisterDto{
     example: 'correo@ejemplo.com',
     description: 'Correo electrónico válido y único',
   })
+  @IsNotEmpty()
   @IsEmail()
   correo: string;
 
@@ -72,6 +80,7 @@ export class RegisterDto{
     minLength: 5,
     maxLength: 20,
   })
+  @IsNotEmpty()
   @Length(5, 20)
   @Transform(({value}) => value.trim())
   @IsString()
@@ -94,5 +103,6 @@ export class RegisterDto{
     required: false,
   })
   @IsString()
+  @IsNotEmpty()
   img_url: string;
 }
