@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailModule } from '../../mail/mail.module';
 
 @Module({
   //Importo el module de Users para recibir lo que está exportando (UsersService)
@@ -20,6 +21,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         },
       }),
     }),
+    MailModule
   ],
   controllers: [AuthController],
   providers: [AuthService]
