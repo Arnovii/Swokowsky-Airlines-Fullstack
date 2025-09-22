@@ -17,14 +17,14 @@ export class ProfileController {
   ){}
 
   @Get()
-  @ApiOperation({ summary: 'Consigue toda la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  @ApiOperation({ summary: 'Consigue toda la información del usuario autentificado (se debe enviar el bearer token en el apartado de Authorization). Roles admitidos: admin, cliente, root' })  
   getProfileInfo(@ActiveUser() authenticatedUser: PayloadInterface) {
     const data = this.profileService.getProfileInfo(authenticatedUser.email)
     return data
   }
 
   @Patch()
-  @ApiOperation({ summary: 'Actualizar la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  @ApiOperation({ summary: 'Actualizar la información del usuario autentificado (se debe enviar el bearer token en el apartado de Authorization). Roles admitidos: admin, cliente, root' })  
   update(@ActiveUser() authenticatedUser: PayloadInterface, @Body() data: UpdateUserDto) {
     return this.profileService.updateProfileInfo(+authenticatedUser.id_usuario, data);
   }
