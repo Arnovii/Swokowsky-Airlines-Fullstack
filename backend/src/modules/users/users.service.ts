@@ -3,6 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { usuario, usuario_tipo_usuario } from '@prisma/client';
+import * as bcryptjs from 'bcryptjs'
 
 
 
@@ -135,6 +136,10 @@ export class UsersService {
       if (!existingUser) {
         throw new BadRequestException(`El usuario #${id} no existe.`);
       }
+
+      //Validar que si el dato que se trata de actualizar es la contraseña (password_bash), entonces encriptarla antes de guardarla
+      if(data.password_bash) data.password_bash = await bcryptjs.hash(data.password_bash, 10)
+      
 
       const updatedUser = await this.prisma.usuario.update({
         where: { id_usuario: id },

@@ -96,7 +96,7 @@ export class UpdateUserDto {
   username?: string;
 
   @ApiProperty({
-    example: 'P@ssword123',
+    example: '12345678',
     description: 'Nueva contraseña (mínimo 8 caracteres).',
     required: false,
     minLength: 8,
