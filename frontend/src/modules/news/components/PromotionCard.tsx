@@ -2,6 +2,7 @@
 import React from 'react';
 import { Calendar, MapPin, Tag } from 'lucide-react';
 import type { Promotion } from '../hooks/usePromotions';
+import { Link } from "react-router-dom"
 
 interface PromotionCardProps {
   promotion: Promotion;
@@ -28,8 +29,8 @@ const PromotionCard: React.FC<PromotionCardProps> = ({ promotion }) => {
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
       {/* Imagen con badge de descuento */}
       <div className="relative h-48 bg-gradient-to-br from-blue-500 to-purple-600">
-        <img 
-          src={promotion.image} 
+        <img
+          src={promotion.image}
           alt={promotion.destination}
           className="w-full h-full object-cover"
           onError={(e) => {
@@ -87,10 +88,12 @@ const PromotionCard: React.FC<PromotionCardProps> = ({ promotion }) => {
           <span className="font-sans">Válido hasta: {formatDate(promotion.validUntil)}</span>
         </div>
 
-        {/* Botón */}
-        <button className="w-full bg-gradient-to-r from-[#081225] to-[#1a2332] text-white py-3 px-4 rounded-lg hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg">
+        <Link
+          to={`/noticias/oferta/${promotion.id}`} // usa el id real de la oferta
+          className="inline-block bg-[#0e254d] text-white px-4 py-2 rounded font-sans hover:bg-[#0a1a3a] transition-colors w-full text-center"
+        >
           Reservar Ahora
-        </button>
+        </Link>
       </div>
     </div>
   );

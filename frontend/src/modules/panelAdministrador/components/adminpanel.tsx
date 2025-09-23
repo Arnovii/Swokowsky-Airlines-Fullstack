@@ -73,6 +73,13 @@ export const AdminPanel: React.FC = () => {
           Crear Nuevo Vuelo
         </button>
 
+        <button
+          onClick={() => handleAccion(vuelo.codigo)}
+          className="text-white px-3 py-1 rounded bg-[#0e254d] font-sans hover:bg-[#0a1a3a] transition-colors"
+        >
+          Editar Perfil Admin
+        </button>
+
 
 
 
@@ -114,13 +121,6 @@ export const AdminPanel: React.FC = () => {
                 <td className="py-2 px-4 border-b">{vuelo.ventas}</td>
                 <td className="py-2 px-4 border-b">
                   <div className="flex flex-wrap items-center space-x-2">
-                    <Link
-                      to={`/panelAdministrador/vuelo/${vuelo.codigo}`}
-                      className="inline-block min-w-[130px] text-center text-white px-3 py-2 rounded bg-[#0e254d] font-sans hover:bg-[#0a1a3a] transition-colors"
-                    >
-                      Ver Detalles
-                    </Link>
-
                     <button
                       onClick={() => handleAccion(vuelo.codigo)}
                       className="inline-block min-w-[130px] text-center text-white px-3 py-2 rounded bg-[#0e254d] font-sans hover:bg-[#0a1a3a] transition-colors"

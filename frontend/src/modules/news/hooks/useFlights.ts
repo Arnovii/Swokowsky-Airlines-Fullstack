@@ -17,6 +17,7 @@ export interface Flight {
     discount: number;
     originalPrice: number;
   };
+
 }
 
 export const useFlights = () => {
@@ -49,6 +50,7 @@ export const useFlights = () => {
               discount: 15,
               originalPrice: 2941176
             }
+            
           },
           {
             id: 2,
@@ -87,7 +89,7 @@ export const useFlights = () => {
           {
             id: 4,
             origin: "Bogotá",
-            destination: "Cartagena",
+            availableSeats: 12,
             originCode: "BOG",
             destinationCode: "CTG",
             departureTime: "16:20",
