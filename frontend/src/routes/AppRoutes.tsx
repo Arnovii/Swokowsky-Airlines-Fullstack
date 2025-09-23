@@ -9,6 +9,8 @@ import NotFound from "../modules/error/pages/NotFound"
 import FlightSearchResults from "../modules/flightsearch/pages/FlightSearchResults"
 import News from "../modules/news/pages/News"
 
+import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -21,6 +23,7 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
         <Route path="/news" element={<News />} />
+        <Route path="/panelAdministrador" element={<PanelAdministrador />} />
       </Route>
 
       {/* Página 404 */}
