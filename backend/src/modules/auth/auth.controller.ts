@@ -8,7 +8,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 
-@ApiTags('Autentificación')
+@ApiTags('Autentificación - Rutas públicas (No requiere token de autentificación)')
 @Public()
 @Controller('auth')
 export class AuthController {

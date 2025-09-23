@@ -52,7 +52,7 @@ async function main() {
   await prisma.aeronave.createMany({
     data: [
       { id_aeronave: 1, modelo: "Airbus A320", capacidad: 180 },
-      { id_aeronave: 2, modelo: "Boeing 787", capacidad: 300 },
+      { id_aeronave: 2, modelo: "Boeing 787", capacidad: 270 },
       { id_aeronave: 3, modelo: "Embraer E190", capacidad: 100 },
     ],
     skipDuplicates: true,
@@ -150,7 +150,7 @@ async function main() {
         descripcion_corta: "Conecta Bogotá y Medellín en 1 hora",
         descripcion_larga:
           "A partir de octubre, lanzamos un nuevo servicio directo entre Bogotá y Medellín con cómodos horarios y tarifas competitivas.",
-        url_imagen: "https://example.com/img/bog-mde.jpg",
+        url_imagen: "https://images.pexels.com/photos/3535926/pexels-photo-3535926.jpeg",
       },
       {
         id_noticia: 2,
@@ -159,7 +159,7 @@ async function main() {
         descripcion_corta: "Estreno de la ruta con descuento limitado",
         descripcion_larga:
           "Inauguramos la ruta Bogotá - Madrid con tarifas especiales por tiempo limitado. Reserva antes del 10/10 para aprovechar la promoción.",
-        url_imagen: "https://example.com/img/bog-mad.jpg",
+        url_imagen: "https://images.pexels.com/photos/670261/pexels-photo-670261.jpeg",
       },
       {
         id_noticia: 3,
@@ -168,7 +168,7 @@ async function main() {
         descripcion_corta: "Más conectividad entre ciudades costeras",
         descripcion_larga:
           "Nueva frecuencia regional entre Cali y Cartagena para mejorar la conectividad del suroccidente con la costa caribe.",
-        url_imagen: "https://example.com/img/clo-ctg.jpg",
+        url_imagen: "https://images.pexels.com/photos/33979920/pexels-photo-33979920.jpeg",
       },
     ],
     skipDuplicates: true,

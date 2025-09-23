@@ -27,7 +27,7 @@ export class UsersService {
   }
 
   //Nunca va a retornar Promise<null> gracias a la condición de if(!user), en su lugar, lanzará un error. 
-  async getUserByID(id: number): Promise<usuario | null> {
+  async getUserByID(id: number): Promise<usuario> {
     try {
       if (isNaN(id)) throw new BadRequestException('El ID debe ser un número');    //Validamos que el id sean caracteres numéricos
       const user: usuario | null = await this.prisma.usuario.findUnique({ where: { id_usuario: id } })

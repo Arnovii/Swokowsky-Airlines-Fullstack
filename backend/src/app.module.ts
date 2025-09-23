@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProfileModule } from './modules/profile/profile.module';
 import { MailModule } from './mail/mail.module';
+import { NewsModule } from './modules/news/news.module';
 
 
 
@@ -19,7 +20,8 @@ import { MailModule } from './mail/mail.module';
     AuthModule,
     UsersModule,
     ProfileModule,
-    MailModule],
+    MailModule,
+    NewsModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -8,7 +8,7 @@ import { UpdateUserDto } from './dto/update-profile.dto';
 
 
 
-@ApiTags('Perfil de usuario')
+@ApiTags('Perfil de usuario - Requiere token para autorización')
 @ApiBearerAuth('bearerAuth') // muestra candado en swagger y asocia el esquema 'bearerAuth'
 @Controller('profile')
 export class ProfileController {
