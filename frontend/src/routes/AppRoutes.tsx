@@ -6,8 +6,8 @@ import Login from "../modules/auth/pages/Login"
 import Register from "../modules/auth/pages/Register"
 import ForgotPassword from "../modules/auth/pages/ForgotPassword"
 import NotFound from "../modules/error/pages/NotFound"
-import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
-import DetalleVuelo from "../modules/panelAdministrador/pages/DetalleVuelo"
+import FlightSearchResults from "../modules/flightsearch/pages/FlightSearchResults"
+import News from "../modules/news/pages/News"
 
 export default function AppRoutes() {
   return (
@@ -19,9 +19,8 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/panelAdministrador"element={<PanelAdministrador/>} />
-        <Route path="/panelAdministrador/vuelo/:codigo" element={<DetalleVuelo />} />
-
+        <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
+        <Route path="/news" element={<News />} />
       </Route>
 
       {/* Página 404 */}
