@@ -2,6 +2,7 @@
 import React from 'react';
 import { Plane, Clock, Users, Globe, MapPin } from 'lucide-react';
 import type { Flight } from '../hooks/useFlights';
+import { Link } from "react-router-dom"
 
 interface FlightCardProps {
   flight: Flight;
@@ -28,15 +29,15 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
       {/* Imagen de destino */}
       <div className="relative h-40 bg-gradient-to-br from-blue-500 to-indigo-600">
-        <img 
-          src={flight.image} 
+        <img
+          src={flight.image}
           alt={`${flight.origin} - ${flight.destination}`}
           className="w-full h-full object-cover"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
           }}
         />
-        
+
         {/* Badges */}
         <div className="absolute top-3 left-3">
           {flight.isInternational && (
@@ -46,7 +47,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
             </span>
           )}
         </div>
-        
+
         {flight.promotion && (
           <div className="absolute top-3 right-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
             -{flight.promotion.discount}% OFF
@@ -120,9 +121,12 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
         </div>
 
         {/* Botón */}
-        <button className="w-full bg-gradient-to-r from-[#081225] to-[#1a2332] text-white py-3 px-4 rounded-lg hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg">
+        <Link
+          to={`/noticias/vuelo/${flight.id}`} // usa el id real de la oferta
+          className="inline-block bg-[#0e254d] text-white px-4 py-2 rounded font-sans hover:bg-[#0a1a3a] transition-colors w-full text-center"
+        >
           Seleccionar Vuelo
-        </button>
+        </Link>
       </div>
     </div>
   );
