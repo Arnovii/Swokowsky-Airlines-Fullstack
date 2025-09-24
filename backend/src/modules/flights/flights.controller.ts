@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body} from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { FlightsService } from './flights.service';
 import { SearchFlightsDto } from './dto/search-flights.dto';
 import { Public } from '../../common/decorators/public.decorator';
-import { ApiTags, ApiOperation} from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 
 @ApiTags('Vuelos')
@@ -11,10 +11,18 @@ import { ApiTags, ApiOperation} from '@nestjs/swagger';
 export class FlightsController {
   constructor(private readonly flightsService: FlightsService) { }
 
-  @Post()
+  @Post('search')
   @ApiOperation({ summary: 'Obtener lista de todos los vuelos con base a los filtros enviados en el body' })
-  filterBasic(@Body() filters: SearchFlightsDto) {
-    return this.flightsService.filterBasicBar(filters);
+  async filterBasic(@Body() filters: SearchFlightsDto) {
+    try {
+    // try {
+      // const result = await this.flightsService.searchFlights(filters);
+      const result = await this.flightsService.searchFlightsClean(filters);
+      return result;
+    } catch (err) {
+      throw err;      // Re-lanzar la excepción para que Nest la transforme correctamente
+
+    }
   }
 
   @Get()
