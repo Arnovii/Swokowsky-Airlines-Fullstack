@@ -8,7 +8,7 @@ import { UpdateUserDto } from './dto/update-profile.dto';
 
 
 
-@ApiTags('Perfil de usuario')
+@ApiTags('Perfil de usuario - Requiere token para autorización')
 @ApiBearerAuth('bearerAuth') // muestra candado en swagger y asocia el esquema 'bearerAuth'
 @Controller('profile')
 export class ProfileController {
@@ -17,14 +17,14 @@ export class ProfileController {
   ){}
 
   @Get()
-  @ApiOperation({ summary: 'Consigue toda la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  @ApiOperation({ summary: 'Consigue toda la información del usuario autentificado (se debe enviar el bearer token en el apartado de Authorization). Roles admitidos: admin, cliente, root' })  
   getProfileInfo(@ActiveUser() authenticatedUser: PayloadInterface) {
     const data = this.profileService.getProfileInfo(authenticatedUser.email)
     return data
   }
 
   @Patch()
-  @ApiOperation({ summary: 'Actualizar la información del usuario autentificado (se debe enviar el bearer token). Roles admitidos: admin, cliente, root' })  
+  @ApiOperation({ summary: 'Actualizar la información del usuario autentificado (se debe enviar el bearer token en el apartado de Authorization). Roles admitidos: admin, cliente, root' })  
   update(@ActiveUser() authenticatedUser: PayloadInterface, @Body() data: UpdateUserDto) {
     return this.profileService.updateProfileInfo(+authenticatedUser.id_usuario, data);
   }

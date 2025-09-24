@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as bcryptjs from 'bcryptjs'
 import { JwtService } from '@nestjs/jwt';
 import type { PayloadInterface } from '../../common/interfaces/payload.interface';
