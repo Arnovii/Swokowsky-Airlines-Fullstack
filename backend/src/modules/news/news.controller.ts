@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { NewsService } from './news.service';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 
 
-@ApiTags('Noticias - Rutas públicas (No requiere token de autentificación)')
+@ApiTags('Noticias')
 @Public()
 @Controller('news')
 export class NewsController {

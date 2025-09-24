@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient } from "@prisma/client";
+import { asiento, PrismaClient, ticket } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -11,6 +11,7 @@ async function main() {
     data: [
       { id_pais: 1, nombre: "Colombia", iso2: "CO" },
       { id_pais: 2, nombre: "Spain", iso2: "ES" },
+      { id_pais: 3, nombre: "Mexico", iso2: "MX" },
     ],
     skipDuplicates: true,
   });
@@ -20,11 +21,12 @@ async function main() {
     data: [
       { id_gmt: 1, name: "GMT-5", offset: -5 },
       { id_gmt: 2, name: "GMT+1", offset: 1 },
+      { id_gmt: 3, name: "GMT-6", offset: -6 },
     ],
     skipDuplicates: true,
   });
 
-  // Ciudades
+  // Ciudades (IDs fijos para pruebas)
   await prisma.ciudad.createMany({
     data: [
       { id_ciudad: 1, id_paisFK: 1, id_gmtFK: 1, nombre: "Bogotá", codigo: "BOG" },
@@ -32,6 +34,7 @@ async function main() {
       { id_ciudad: 3, id_paisFK: 2, id_gmtFK: 2, nombre: "Madrid", codigo: "MAD" },
       { id_ciudad: 4, id_paisFK: 1, id_gmtFK: 1, nombre: "Cartagena", codigo: "CTG" },
       { id_ciudad: 5, id_paisFK: 1, id_gmtFK: 1, nombre: "Cali", codigo: "CLO" },
+      { id_ciudad: 6, id_paisFK: 3, id_gmtFK: 3, nombre: "Ciudad de México", codigo: "MEX" },
     ],
     skipDuplicates: true,
   });
@@ -44,11 +47,12 @@ async function main() {
       { id_aeropuerto: 3, id_ciudadFK: 3, nombre: "Adolfo Suárez - Barajas", codigo_iata: "MAD" },
       { id_aeropuerto: 4, id_ciudadFK: 4, nombre: "Rafael Núñez", codigo_iata: "CTG" },
       { id_aeropuerto: 5, id_ciudadFK: 5, nombre: "Alfonso Bonilla Aragón", codigo_iata: "CLO" },
+      { id_aeropuerto: 6, id_ciudadFK: 6, nombre: "Benito Juárez", codigo_iata: "MEX" },
     ],
     skipDuplicates: true,
   });
 
-  // Aeronaves
+  // Aeronaves (corregidas para que la suma de configuracion_asientos coincida con capacidad)
   await prisma.aeronave.createMany({
     data: [
       { id_aeronave: 1, modelo: "Airbus A320", capacidad: 180 },
@@ -58,44 +62,64 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Configuración de asientos
+  // Configuración de asientos (sumas = capacidad)
   await prisma.configuracion_asientos.createMany({
     data: [
+      // A320
       { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 162 },
       { id_configuracion: 2, id_aeronaveFK: 1, clase: "primera_clase", cantidad: 18 },
 
+      // 787
       { id_configuracion: 3, id_aeronaveFK: 2, clase: "economica", cantidad: 240 },
       { id_configuracion: 4, id_aeronaveFK: 2, clase: "primera_clase", cantidad: 30 },
 
+      // E190
       { id_configuracion: 5, id_aeronaveFK: 3, clase: "economica", cantidad: 90 },
       { id_configuracion: 6, id_aeronaveFK: 3, clase: "primera_clase", cantidad: 10 },
     ],
     skipDuplicates: true,
   });
 
-  // Promocion (nota: descuento entre 0 y 1)
+  // Promociones (descuento entre 0 y 1)
   await prisma.promocion.createMany({
     data: [
       {
         id_promocion: 1,
         nombre: "Oferta estreno Madrid",
         descripcion: "Descuento por vuelo inaugural Bogotá–Madrid",
-        descuento: 0.20, // 20%
+        descuento: 0.20,
         fecha_inicio: new Date("2025-09-25T00:00:00Z"),
         fecha_fin: new Date("2025-10-10T23:59:59Z"),
+      },
+      {
+        id_promocion: 2,
+        nombre: "Promo Caribe",
+        descripcion: "Viaja a Cartagena con descuento",
+        descuento: 0.15,
+        fecha_inicio: new Date("2025-10-01T00:00:00Z"),
+        fecha_fin: new Date("2025-11-01T23:59:59Z"),
+      },
+      {
+        id_promocion: 3,
+        nombre: "Black Friday",
+        descripcion: "Descuento masivo",
+        descuento: 0.30,
+        fecha_inicio: new Date("2025-11-25T00:00:00Z"),
+        fecha_fin: new Date("2025-11-30T23:59:59Z"),
       },
     ],
     skipDuplicates: true,
   });
 
-  // Vuelos
+  // Vuelos (más variedad: nacionales, internacionales, distintas fechas)
   await prisma.vuelo.createMany({
     data: [
+      // existentes
       {
         id_vuelo: 1,
         id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 1,
-        id_aeropuerto_destinoFK: 2,
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 2, // MDE
         salida_programada_utc: new Date("2025-10-10T12:00:00Z"),
         llegada_programada_utc: new Date("2025-10-10T13:00:00Z"),
         id_promocionFK: null,
@@ -121,13 +145,66 @@ async function main() {
         id_promocionFK: null,
         estado: "Programado",
       },
+
+      // adicionales para pruebas
+      {
+        id_vuelo: 4,
+        id_aeronaveFK: 1,
+        id_aeropuerto_origenFK: 2, // MDE
+        id_aeropuerto_destinoFK: 4, // CTG
+        salida_programada_utc: new Date("2025-10-15T14:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-15T16:00:00Z"),
+        id_promocionFK: 2,
+        estado: "Programado",
+      },
+      {
+        id_vuelo: 5,
+        id_aeronaveFK: 2,
+        id_aeropuerto_origenFK: 3, // MAD
+        id_aeropuerto_destinoFK: 1, // BOG
+        salida_programada_utc: new Date("2025-11-28T08:00:00Z"),
+        llegada_programada_utc: new Date("2025-11-28T18:00:00Z"),
+        id_promocionFK: 3,
+        estado: "Programado",
+      },
+      {
+        id_vuelo: 6,
+        id_aeronaveFK: 2,
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 6, // MEX
+        salida_programada_utc: new Date("2025-12-05T06:00:00Z"),
+        llegada_programada_utc: new Date("2025-12-05T12:00:00Z"),
+        id_promocionFK: null,
+        estado: "Programado",
+      },
+      {
+        id_vuelo: 7,
+        id_aeronaveFK: 1,
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 4, // CTG
+        salida_programada_utc: new Date("2025-10-15T07:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-15T08:30:00Z"),
+        id_promocionFK: 2,
+        estado: "Programado",
+      },
+      {
+        id_vuelo: 8,
+        id_aeronaveFK: 3,
+        id_aeropuerto_origenFK: 6, // MEX
+        id_aeropuerto_destinoFK: 1, // BOG
+        salida_programada_utc: new Date("2025-12-06T13:00:00Z"),
+        llegada_programada_utc: new Date("2025-12-06T19:00:00Z"),
+        id_promocionFK: null,
+        estado: "Programado",
+      },
     ],
     skipDuplicates: true,
   });
 
-  // Tarifas (2 por vuelo)
+  // Tarifas (dos por vuelo)
   await prisma.tarifa.createMany({
     data: [
+      // vuelos 1..8
       { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 120.0 },
       { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 350.0 },
 
@@ -136,11 +213,26 @@ async function main() {
 
       { id_tarifa: 5, id_vueloFK: 3, clase: "economica", precio_base: 80.0 },
       { id_tarifa: 6, id_vueloFK: 3, clase: "primera_clase", precio_base: 220.0 },
+
+      { id_tarifa: 7, id_vueloFK: 4, clase: "economica", precio_base: 150.0 },
+      { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 400.0 },
+
+      { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 500.0 },
+      { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 1700.0 },
+
+      { id_tarifa: 11, id_vueloFK: 6, clase: "economica", precio_base: 600.0 },
+      { id_tarifa: 12, id_vueloFK: 6, clase: "primera_clase", precio_base: 1800.0 },
+
+      { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 90.0 },
+      { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 300.0 },
+
+      { id_tarifa: 15, id_vueloFK: 8, clase: "economica", precio_base: 550.0 },
+      { id_tarifa: 16, id_vueloFK: 8, clase: "primera_clase", precio_base: 1300.0 },
     ],
     skipDuplicates: true,
   });
 
-  // Noticias (1 por vuelo)
+  // Noticias (una por vuelo, nuevas incluidas)
   await prisma.noticia.createMany({
     data: [
       {
@@ -170,7 +262,232 @@ async function main() {
           "Nueva frecuencia regional entre Cali y Cartagena para mejorar la conectividad del suroccidente con la costa caribe.",
         url_imagen: "https://images.pexels.com/photos/33979920/pexels-photo-33979920.jpeg",
       },
+      {
+        id_noticia: 4,
+        id_vueloFK: 4,
+        titulo: "Nueva ruta Medellín — Cartagena",
+        descripcion_corta: "Vuela directo al Caribe",
+        descripcion_larga:
+          "Nuestra aerolínea inaugura un vuelo directo entre Medellín y Cartagena, con tarifas promocionales.",
+        url_imagen: "https://images.pexels.com/photos/358220/pexels-photo-358220.jpeg",
+      },
+      {
+        id_noticia: 5,
+        id_vueloFK: 5,
+        titulo: "Black Friday: Bogotá — Madrid",
+        descripcion_corta: "Descuentos hasta 30%",
+        descripcion_larga:
+          "Por Black Friday, aprovecha hasta un 30% de descuento en vuelos seleccionados entre Bogotá y Madrid. Solo del 25 al 30 de noviembre.",
+        url_imagen: "https://images.pexels.com/photos/1309644/pexels-photo-1309644.jpeg",
+      },
+      {
+        id_noticia: 6,
+        id_vueloFK: 6,
+        titulo: "Nuevos vuelos Bogotá — Ciudad de México",
+        descripcion_corta: "Conexión directa con México",
+        descripcion_larga: "Lanzamos ruta directa entre Bogotá y Ciudad de México con excelentes horarios.",
+        url_imagen: "https://images.pexels.com/photos/386009/pexels-photo-386009.jpeg",
+      },
+      {
+        id_noticia: 7,
+        id_vueloFK: 7,
+        titulo: "Más vuelos a Cartagena desde Bogotá",
+        descripcion_corta: "Conectividad ampliada",
+        descripcion_larga: "Sumamos una nueva frecuencia matutina entre Bogotá y Cartagena.",
+        url_imagen: "https://images.pexels.com/photos/461048/pexels-photo-461048.jpeg",
+      },
+      {
+        id_noticia: 8,
+        id_vueloFK: 8,
+        titulo: "Vuelo México — Bogotá: nueva frecuencia",
+        descripcion_corta: "Más opciones desde México",
+        descripcion_larga: "Incrementamos capacidad en la ruta Ciudad de México — Bogotá.",
+        url_imagen: "https://images.pexels.com/photos/373067/pexels-photo-373067.jpeg",
+      },
     ],
+    skipDuplicates: true,
+  });
+
+  // Usuarios (admin + clientes)
+  await prisma.usuario.createMany({
+    data: [
+      {
+        id_usuario: 1,
+        tipo_usuario: "admin",
+        dni: "90000001",
+        nombre: "Admin",
+        apellido: "General",
+        fecha_nacimiento: new Date("1985-01-01"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Cra 1 #1-1",
+        genero: "M",
+        correo: "admin@aerolinea.com",
+        username: "admin",
+        password_bash: "admin_pass_hashed",
+        img_url: "",
+        suscrito_noticias: true,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      {
+        id_usuario: 2,
+        tipo_usuario: "cliente",
+        dni: "90000002",
+        nombre: "Juan",
+        apellido: "Pérez",
+        fecha_nacimiento: new Date("1990-03-10"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Cll 10 #20-30",
+        genero: "M",
+        correo: "juan.perez@example.com",
+        username: "juanp",
+        password_bash: "juan_pass_hashed",
+        img_url: "",
+        suscrito_noticias: false,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      {
+        id_usuario: 3,
+        tipo_usuario: "cliente",
+        dni: "90000003",
+        nombre: "Ana",
+        apellido: "Gómez",
+        fecha_nacimiento: new Date("1992-07-12"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Av 5 #30-40",
+        genero: "F",
+        correo: "ana.gomez@example.com",
+        username: "anag",
+        password_bash: "ana_pass_hashed",
+        img_url: "",
+        suscrito_noticias: true,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      {
+        id_usuario: 4,
+        tipo_usuario: "cliente",
+        dni: "90000004",
+        nombre: "Pedro",
+        apellido: "Martinez",
+        fecha_nacimiento: new Date("1988-11-05"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Cll 20 #10-15",
+        genero: "M",
+        correo: "pedro.m@example.com",
+        username: "pedrom",
+        password_bash: "pedro_pass_hashed",
+        img_url: "",
+        suscrito_noticias: false,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      {
+        id_usuario: 5,
+        tipo_usuario: "cliente",
+        dni: "90000005",
+        nombre: "Luisa",
+        apellido: "Rodríguez",
+        fecha_nacimiento: new Date("1995-06-20"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Cra 7 #40-50",
+        genero: "F",
+        correo: "luisa.r@example.com",
+        username: "luisar",
+        password_bash: "luisa_pass_hashed",
+        img_url: "",
+        suscrito_noticias: true,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+    ],
+    skipDuplicates: true,
+  });
+
+  // Asientos (creamos asientos "representativos" — no todos, pero suficientes para tickets de prueba)
+  const asientoData: asiento[]  = [];
+
+  // aeronave 1: asientos 1..30
+  for (let i = 1; i <= 30; i++) {
+    asientoData.push({
+      id_asiento: i,
+      id_aeronaveFK: 1,
+      numero: `A${i}`,
+      clases: i <= 18 ? "primera_clase" : "economica", // primeras 18 son primera_clase
+    });
+  }
+
+  // aeronave 2: asientos 31..80 (50 asientos creados)
+  for (let i = 31; i <= 80; i++) {
+    asientoData.push({
+      id_asiento: i,
+      id_aeronaveFK: 2,
+      numero: `B${i}`,
+      clases: i <= 60 ? "primera_clase" : "economica", // approx: primeros 30 -> primera_clase (ids 31..60)
+    });
+  }
+
+  // aeronave 3: asientos 81..110 (30 asientos)
+  for (let i = 81; i <= 110; i++) {
+    asientoData.push({
+      id_asiento: i,
+      id_aeronaveFK: 3,
+      numero: `C${i}`,
+      clases: i <= 90 ? "primera_clase" : "economica", // small split
+    });
+  }
+
+  await prisma.asiento.createMany({
+    data: asientoData,
+    skipDuplicates: true,
+  });
+
+  // Tickets (simulamos ocupación en vuelos)
+  // Para vuelo 1 (BOG->MDE) creamos 12 tickets ocupados (usuarios 2..5 rotando)
+  const ticketsData: ticket[] = [];
+  let ticketId = 1;
+
+  for (let seatId = 1; seatId <= 12; seatId++) {
+    ticketsData.push({
+      id_ticket: ticketId++,
+      id_usuarioFK: 2 + ((seatId - 1) % 4), // 2,3,4,5 repeating
+      id_vueloFK: 1,
+      id_asientoFK: seatId,
+      precio: 120.0,
+      estado: "pagado",
+      creado_en: new Date(),
+    });
+  }
+
+  // Para vuelo 4 (MDE->CTG) creamos 3 tickets
+  for (let seatId = 13; seatId <= 15; seatId++) {
+    ticketsData.push({
+      id_ticket: ticketId++,
+      id_usuarioFK: 3,
+      id_vueloFK: 4,
+      id_asientoFK: seatId,
+      precio: 150.0,
+      estado: "reservado",
+      creado_en: new Date(),
+    });
+  }
+
+  // Para vuelo 5 (MAD->BOG) hacemos 20 tickets para simular alta ocupación
+  for (let seatId = 31; seatId <= 50; seatId++) {
+    ticketsData.push({
+      id_ticket: ticketId++,
+      id_usuarioFK: 4 + ((seatId - 31) % 2), // 4,5 repeating
+      id_vueloFK: 5,
+      id_asientoFK: seatId,
+      precio: 500.0,
+      estado: seatId % 7 === 0 ? "cancelado" : "pagado", // algunos cancelados
+      creado_en: new Date(),
+    });
+  }
+
+  await prisma.ticket.createMany({
+    data: ticketsData,
     skipDuplicates: true,
   });
 
