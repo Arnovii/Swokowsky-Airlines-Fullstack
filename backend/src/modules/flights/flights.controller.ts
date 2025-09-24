@@ -1,35 +1,28 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete} from '@nestjs/common';
+import { Controller, Get, Post, Body} from '@nestjs/common';
 import { FlightsService } from './flights.service';
-import { CreateFlightDto } from './dto/create-flight.dto';
-import { UpdateFlightDto } from './dto/update-flight.dto';
+import { SearchFlightsDto } from './dto/search-flights.dto';
+import { Public } from '../../common/decorators/public.decorator';
+import { ApiTags, ApiOperation} from '@nestjs/swagger';
 
+
+@ApiTags('Vuelos')
 @Controller('flights')
+@Public()
 export class FlightsController {
-  constructor(private readonly flightsService: FlightsService) {}
+  constructor(private readonly flightsService: FlightsService) { }
 
   @Post()
-  create(@Body() createFlightDto: CreateFlightDto) {
-    return this.flightsService.create(createFlightDto);
+  @ApiOperation({ summary: 'Obtener lista de todos los vuelos con base a los filtros enviados en el body' })
+  filterBasic(@Body() filters: SearchFlightsDto) {
+    return this.flightsService.filterBasicBar(filters);
   }
 
   @Get()
-  findAll() {
-    return this.flightsService.findAll();
+  @ApiOperation({ summary: 'Obtener lista de todos los vuelos' })
+  getAll() {
+    return this.flightsService.getAllFlights();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.flightsService.findOne(id);
-  }
 
-  @Patch(':id')
-  update(@Param('id') id: number, @Body() updateFlightDto: UpdateFlightDto) {
-    return this.flightsService.update(id, updateFlightDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: number) {
-    return this.flightsService.remove(id);
-  }
 }
 

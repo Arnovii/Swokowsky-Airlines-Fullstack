@@ -9,6 +9,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { MailModule } from './mail/mail.module';
 import { NewsModule } from './modules/news/news.module';
 import { FlightsModule } from './modules/flights/flights.module';
+import { CitysModule } from './modules/citys/citys.module';
 
 
 
@@ -23,7 +24,8 @@ import { FlightsModule } from './modules/flights/flights.module';
     FlightsModule,
     ProfileModule,
     MailModule,
-    NewsModule],
+    NewsModule,
+    CitysModule],
   controllers: [AppController],
   providers: [AppService],
 })
