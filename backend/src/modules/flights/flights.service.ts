@@ -9,7 +9,15 @@ export class FlightsService {
   constructor(private prisma: PrismaService) { }
 
   async getAllFlights() {
-    return this.prisma.vuelo.findMany();
+    return this.prisma.vuelo.findMany({
+      include: {
+        aeronave: true,
+        tarifa: true,
+        promocion: true,
+        aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
+        aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
+      },
+    });
   }
 
   private dayRangeFromDateString(dateStr: string) {
