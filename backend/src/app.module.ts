@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ProfileModule } from './modules/profile/profile.module';
 import { MailModule } from './mail/mail.module';
 import { NewsModule } from './modules/news/news.module';
+import { FlightsModule } from './modules/flights/flights.module';
 
 
 
@@ -19,6 +20,7 @@ import { NewsModule } from './modules/news/news.module';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    FlightsModule,
     ProfileModule,
     MailModule,
     NewsModule],
