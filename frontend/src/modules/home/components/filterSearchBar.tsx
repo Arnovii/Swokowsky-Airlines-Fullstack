@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
-
+import { useNavigate } from 'react-router-dom';
 
 const PlaneDepartureIcon = () => (
   <svg
@@ -113,6 +113,10 @@ const PlusIcon = () => (
 
 
 export default function BuscadorVuelosModerno() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    console.log("Navigate en useEffect:", navigate);
+  }, [navigate]);
   const [modo, setModo] = useState("ida_vuelta");
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
@@ -122,6 +126,16 @@ export default function BuscadorVuelosModerno() {
   const [mostrarPasajeros, setMostrarPasajeros] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
+  
+  // AGREGAR ESTE NUEVO ESTADO
+  const [camposInvalidos, setCamposInvalidos] = useState({
+    origen: false,
+    destino: false,
+    ida: false,
+    vuelta: false
+  });
+
   const [sugerenciasOrigen, setSugerenciasOrigen] = useState([]);
   const [sugerenciasDestino, setSugerenciasDestino] = useState([]);
   const origenRef = useRef(null);
@@ -129,7 +143,7 @@ export default function BuscadorVuelosModerno() {
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [origenBloqueado, setOrigenBloqueado] = useState(false);
   const [destinoBloqueado, setDestinoBloqueado] = useState(false);
-
+  
 
  
   const ciudades = [
@@ -176,7 +190,7 @@ export default function BuscadorVuelosModerno() {
   const ciudadesColombia = ciudades.filter(c => c.pais === "Colombia").map(c => c.ciudad);
   const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
   const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
-
+  
   const hoy = new Date().toISOString().split("T")[0];
   const unAñoDespues = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -205,18 +219,31 @@ export default function BuscadorVuelosModerno() {
     });
   };
 
+  // AGREGAR ESTA NUEVA FUNCIÓN
+  const limpiarErrorCampo = (campo) => {
+    if (camposInvalidos[campo]) {
+      setCamposInvalidos(prev => ({
+        ...prev,
+        [campo]: false
+      }));
+    }
+  };
+
   // ================== FILTROS ==================
 const filtrarOrigen = (valor: string) => {
-  setOrigen(valor);
-  const q = normalize(valor);
-
-  setSugerenciasOrigen(
-    q ? ciudades.filter((c) => normalize(c.ciudad).includes(q)) : []
-  );
-};
+    setOrigen(valor);
+    if (errors.origen) setErrors(prev => ({ ...prev, origen: false })); // Limpia el error
+    // AGREGAR ESTA LÍNEA
+    if (camposInvalidos.origen) limpiarErrorCampo('origen');
+    const q = normalize(valor);
+    setSugerenciasOrigen(q ? ciudades.filter((c) => normalize(c.ciudad).includes(q)) : []);
+  };
 
 const filtrarDestino = (valor: string) => {
   setDestino(valor);
+  if (errors.destino) setErrors(prev => ({ ...prev, destino: false }));
+  // AGREGAR ESTA LÍNEA
+  if (camposInvalidos.destino) limpiarErrorCampo('destino');
   const q = normalize(valor);
   let listaPermitida: typeof ciudades = [];
 
@@ -248,11 +275,7 @@ const filtrarDestino = (valor: string) => {
   }
 
   // Aplicar filtro por lo que escribe el usuario
-  setSugerenciasDestino(
-    q.length > 0 
-      ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q))
-      : []
-  );
+  setSugerenciasDestino( q.length > 0 ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q)) : []);
 };
 
   // ================== EFFECTS ==================
@@ -268,40 +291,106 @@ const filtrarDestino = (valor: string) => {
   }
 };
 
+  // AGREGAR ESTA NUEVA FUNCIÓN
+  const validarYBuscarVuelo = () => {
+    // Resetear errores previos
+    setCamposInvalidos({
+      origen: false,
+      destino: false,
+      ida: false,
+      vuelta: false
+    });
 
+    let hayErrores = false;
+    const errores = {};
+
+    // Validar origen
+    if (!origen.trim()) {
+      errores.origen = true;
+      hayErrores = true;
+    }
+
+    // Validar destino
+    if (!destino.trim()) {
+      errores.destino = true;
+      hayErrores = true;
+    }
+
+    // Validar fecha de ida
+    if (!ida) {
+      errores.ida = true;
+      hayErrores = true;
+    }
+
+    // Validar fecha de vuelta solo si es ida y vuelta
+    if (modo === "ida_vuelta" && !vuelta) {
+      errores.vuelta = true;
+      hayErrores = true;
+    }
+
+    // Si hay errores, mostrarlos y no continuar
+    if (hayErrores) {
+      setCamposInvalidos(errores);
+      return;
+    }
+
+    // Si no hay errores, llamar a la función original de validación
+    validarVuelo();
+  };
 
   // ================== VALIDACIÓN ==================
   const validarVuelo = () => {
     setMensaje("");
+    const newErrors: { [key: string]: boolean } = {};
 
-    if (!origen || !destino) return setMensaje("❌ Ingresa origen y destino.");
+    // 1. Revisar campos obligatorios
+    if (!origen) newErrors.origen = true;
+    if (!destino) newErrors.destino = true;
+    if (!ida) newErrors.ida = true;
+    if (modo === "ida_vuelta" && !vuelta) newErrors.vuelta = true;
 
+    // 2. Si hay errores, mostrarlos y detenerse
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setMensaje("Por favor, completa los campos marcados en rojo.");
+      return;
+    }
+
+    // 3. Si no hay errores, limpiar y proceder con la lógica existente
+    setErrors({});
     const origenCiudad = limpiarCiudad(origen);
     const destinoCiudad = limpiarCiudad(destino);
-
     const origenEsInt = origenesInternacionales.includes(origenCiudad);
     const destinoEsInt = destinosInternacionales.includes(destinoCiudad);
 
-    if (origenEsInt && destinoEsInt) {
-      // validacion vuelos
-    } else if (destinoEsInt && !origenEsInt) {
-        return setMensaje("❌ Solo puedes salir internacional desde: Bogotá, Medellín, Cali, Cartagena o Pereira.");
-    } else if (!ciudadesColombia.includes(origenCiudad) || !ciudadesColombia.includes(destinoCiudad)) {
-        return setMensaje("❌ Los vuelos nacionales solo son entre ciudades de Colombia.");
-
-    
+    if (destinoEsInt && !origenEsInt) {
+      return setMensaje("Solo puedes salir internacionalmente desde aeropuertos autorizados.");
     }
 
-    // Validación de fechas
-    if (!ida) return setMensaje("❌ Selecciona fecha de ida.");
-    if (modo === "ida_vuelta" && !vuelta) return setMensaje("❌ Selecciona fecha de vuelta.");
-    if (modo === "ida_vuelta" && ida && vuelta && vuelta < ida) {
-      return setMensaje("❌ La vuelta no puede ser antes de la ida.");
-    }
+    // Si todo está válido, navegar a resultados
+    const searchParams = new URLSearchParams({
+      origen: origenCiudad,
+      destino: destinoCiudad,
+      fecha: ida,
+      ...(modo === "ida_vuelta" && vuelta && { fechaVuelta: vuelta }),
+      pasajeros: totalPasajeros.toString(),
+      adultos: pasajeros.adultos.toString(),
+      menores: pasajeros.menores.toString(),
+      modo
+    });
 
-    return setMensaje("✅ Búsqueda válida.");
+    setTimeout(() => {
+      try {
+        navigate(`/buscar-vuelos?${searchParams.toString()}`);
+        setMensaje("✅ Búsqueda válida. Redirigiendo...");
+      } catch (error) {
+        console.error("Error al navegar:", error);
+        // Fallback a window.location
+        window.location.href = `/buscar-vuelos?${searchParams.toString()}`;
+      }
+    }, 0);
   };
-
+  
 
   const formatDateToYYYYMMDD = (date) => {
     if (!date) return "";
@@ -312,8 +401,6 @@ const filtrarDestino = (valor: string) => {
     const dayPadded = String(day).padStart(2, '0');
     return `${year}-${monthPadded}-${dayPadded}`;
   };
-
-
 
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
@@ -350,14 +437,17 @@ const filtrarDestino = (valor: string) => {
           {/* Origen */}
           <div className="flex flex-col relative" ref={origenRef}>
             <label className="text-sm text-gray-600 mb-2">Origen</label>
-            <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-3 shadow-sm h-14">
+            <div className={`flex items-center gap-3 border ${camposInvalidos.origen ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
               <PlaneTakeoff className="w-5 h-5 text-[#0e254d]" />
               <input
                 type="text"
                 placeholder="Bogotá"
                 value={origen}
                 onChange={(e) => {
-                  if (!origenBloqueado) filtrarOrigen(e.target.value); // solo filtra si no está bloqueado
+                  if (!origenBloqueado) {
+                    filtrarOrigen(e.target.value);
+                    if (camposInvalidos.origen) limpiarErrorCampo('origen');
+                  }
                 }}
                 readOnly={origenBloqueado}
                 onClick={() => {
@@ -367,6 +457,7 @@ const filtrarDestino = (valor: string) => {
                     setOrigenBloqueado(false);
                     setSugerenciasOrigen(ciudades);
                   }
+                  if (camposInvalidos.origen) limpiarErrorCampo('origen');
                 }}
                 className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${origenBloqueado ? "cursor-pointer" : ""}`}
               />
@@ -397,14 +488,17 @@ const filtrarDestino = (valor: string) => {
           {/* Destino */}
           <div className="flex flex-col relative" ref={destinoRef}>
             <label className="text-sm text-gray-600 mb-2">Destino</label>
-            <div className="flex items-center gap-3 border border-gray-300 bg-white rounded-xl p-3 shadow-sm h-14">
+            <div className={`flex items-center gap-3 border ${camposInvalidos.destino ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
               <PlaneLanding className="w-5 h-5 text-[#0e254d]" />
               <input
                 type="text"
                 placeholder="Madrid"
                 value={destino}
                 onChange={(e) => {
-                  if (!destinoBloqueado) filtrarDestino(e.target.value);
+                  if (!destinoBloqueado) {
+                    filtrarDestino(e.target.value);
+                    if (camposInvalidos.destino) limpiarErrorCampo('destino');
+                  }
                 }}
                 readOnly={destinoBloqueado}
                 onClick={() => {
@@ -413,6 +507,7 @@ const filtrarDestino = (valor: string) => {
                     setDestinoBloqueado(false);
                     setSugerenciasDestino(ciudades);
                   }
+                  if (camposInvalidos.destino) limpiarErrorCampo('destino');
                 }}
                 className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${
                   destinoBloqueado ? "cursor-pointer" : ""
@@ -445,16 +540,20 @@ const filtrarDestino = (valor: string) => {
           {/* Fechas */}
           <div className="flex flex-col">
             <label className="text-sm text-gray-600 mb-2">Fechas</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-hidden">
               {/* Fecha Ida */}
               <div 
-                className="flex-1 border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2"
-                onClick={() => setMostrarCalendario(true)}
+                className={`flex-1 border ${camposInvalidos.ida ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
+                onClick={() => {
+                  setMostrarCalendario(true);
+                  if (camposInvalidos.ida) limpiarErrorCampo('ida');
+                  if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
+                }}
               >
                 <CalendarIcon />
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs text-gray-500">Ida</div>
-                  <div className="text-sm font-sans text-gray-900">
+                  <div className="text-xs sm:text-sm font-sans text-gray-900 truncate">
                     {ida ? new Date(`${ida}T00:00:00`).toLocaleDateString("es-ES", {
                       day: "2-digit",
                       month: "2-digit",
@@ -467,13 +566,17 @@ const filtrarDestino = (valor: string) => {
               {/* Fecha Vuelta */}
               {modo === "ida_vuelta" && (
                 <div 
-                  className="flex-1 border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2"
-                  onClick={() => setMostrarCalendario(true)}
+                  className={`flex-1 border ${camposInvalidos.vuelta ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
+                  onClick={() => {
+                    setMostrarCalendario(true);
+                    if (camposInvalidos.ida) limpiarErrorCampo('ida');
+                    if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
+                  }}
                 >
                   <CalendarIcon />
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs text-gray-500">Vuelta</div>
-                    <div className="text-sm font-sans text-gray-900">
+                    <div className="text-xs sm:text-sm font-sans text-gray-900 truncate">
                       {vuelta ? new Date(`${vuelta}T00:00:00`).toLocaleDateString("es-ES", {
                         day: "2-digit",
                         month: "2-digit",
@@ -496,9 +599,11 @@ const filtrarDestino = (valor: string) => {
         
                 if (startDate) {
                   setIda(formatDateToYYYYMMDD(startDate));
+                  if (camposInvalidos.ida) limpiarErrorCampo('ida');
                 }
                 if (endDate && modo === "ida_vuelta") {
                   setVuelta(formatDateToYYYYMMDD(endDate));
+                  if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
                 } else {
                   setVuelta("");
                 }
@@ -612,7 +717,7 @@ const filtrarDestino = (valor: string) => {
 
           <div className="flex items-end h-full">
             <button
-              onClick={validarVuelo}
+              onClick={validarYBuscarVuelo}
               className="w-full h-14 flex items-center justify-center bg-[#0e254d] text-white font-sans rounded-xl shadow-lg hover:bg-[#0a1a3a] transition-colors text-base font-medium"
             >
               Buscar

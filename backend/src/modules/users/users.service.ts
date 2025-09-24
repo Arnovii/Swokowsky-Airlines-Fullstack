@@ -3,6 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { usuario, usuario_tipo_usuario } from '@prisma/client';
+import * as bcryptjs from 'bcryptjs'
 
 
 
@@ -26,7 +27,7 @@ export class UsersService {
   }
 
   //Nunca va a retornar Promise<null> gracias a la condición de if(!user), en su lugar, lanzará un error. 
-  async getUserByID(id: number): Promise<usuario | null> {
+  async getUserByID(id: number): Promise<usuario> {
     try {
       if (isNaN(id)) throw new BadRequestException('El ID debe ser un número');    //Validamos que el id sean caracteres numéricos
       const user: usuario | null = await this.prisma.usuario.findUnique({ where: { id_usuario: id } })
@@ -135,6 +136,10 @@ export class UsersService {
       if (!existingUser) {
         throw new BadRequestException(`El usuario #${id} no existe.`);
       }
+
+      //Validar que si el dato que se trata de actualizar es la contraseña (password_bash), entonces encriptarla antes de guardarla
+      if(data.password_bash) data.password_bash = await bcryptjs.hash(data.password_bash, 10)
+      
 
       const updatedUser = await this.prisma.usuario.update({
         where: { id_usuario: id },
