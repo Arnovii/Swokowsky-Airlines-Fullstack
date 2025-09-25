@@ -11,6 +11,8 @@ import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
 import DetalleVuelo from "../modules/news/pages/detallevuelo"
 import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
+import PrivateRoute from "./PrivateRoute"
+import AdminRoute from "./AdminRoute"
 
 
 export default function AppRoutes() {
@@ -19,7 +21,12 @@ export default function AppRoutes() {
       {/* Rutas principales con header/footer */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/perfil" element={<Perfil />} />
+        <Route path="/perfil"
+          element={
+            <PrivateRoute>
+              <Perfil />
+            </PrivateRoute>
+          } />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -27,7 +34,12 @@ export default function AppRoutes() {
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
-        <Route path="/panelAdministrador" element={<PanelAdministrador />} />
+        <Route path="/panelAdministrador"
+          element={
+            <AdminRoute>
+              <PanelAdministrador />
+            </AdminRoute>
+          } />
       </Route>
 
       {/* Página 404 */}
