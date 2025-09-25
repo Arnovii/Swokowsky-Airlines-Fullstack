@@ -2,6 +2,37 @@ import { useState } from "react";
 import { Calendar, MapPin, Plane, ArrowLeft, Tag } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { usePromotions } from "../hooks/usePromotions";
+import axios from "axios";
+
+export interface Noticia {
+  titulo: string;
+  descripcion_corta: string;
+  descripcion_larga: string;
+  url_imagen: string;
+  modelo_aeronave: string;
+  capacidad_aeronave: number;
+  asientos_economica: number;
+  asientos_primera_clase: number;
+  precio_economica: number;
+  precio_primera_clase: number;
+  promocion: string | null;
+  estado: string;
+  salida_programada_utc: string;
+  llegada_programada_utc: string;
+  salida_local_origen: string;
+  llegada_local_destino: string;
+  salida_colombia: string;
+  llegada_colombia: string;
+  origen: {
+    ciudad: string;
+    pais: string;
+  };
+  destino: {
+    ciudad: string;
+    pais: string;
+  };
+}
+
 
 export default function DetalleOferta() {
   // ✅ todos los hooks primero

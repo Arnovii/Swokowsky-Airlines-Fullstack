@@ -9,7 +9,15 @@ export class FlightsService {
   constructor(private prisma: PrismaService) { }
 
   async getAllFlights() {
-    return this.prisma.vuelo.findMany();
+    return this.prisma.vuelo.findMany({
+      include: {
+        aeronave: true,
+        tarifa: true,
+        promocion: true,
+        aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
+        aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
+      },
+    });
   }
 
   private dayRangeFromDateString(dateStr: string) {
@@ -208,7 +216,25 @@ export class FlightsService {
     // Filtramos por disponibilidad >= passengers
     const outboundAvailable = outbound.filter((f) => f.available_seats >= passengers);
 
-    // Helper para limpiar cada vuelo
+    // Helper para limpiar cada vuelo y separar fecha/hora
+    const formatDate = (iso: string | Date | null) => {
+      if (!iso) return null;
+      const d = typeof iso === 'string' ? new Date(iso) : iso;
+      // yyyy-mm-dd
+      return d.toISOString().slice(0, 10);
+    };
+    const formatHour = (iso: string | Date | null) => {
+      if (!iso) return null;
+      const d = typeof iso === 'string' ? new Date(iso) : iso;
+      // HH:mm (24h)
+      return d.toISOString().slice(11, 16);
+    };
+    const toColombiaTime = (iso: string | Date | null) => {
+      if (!iso) return null;
+      const d = typeof iso === 'string' ? new Date(iso) : iso;
+      const colombia = new Date(d.getTime() + (-5) * 60 * 60 * 1000);
+      return colombia;
+    };
     const cleanFlight = (v) => {
       // Extraer precios por clase
       let precio_economica = null;
@@ -219,6 +245,9 @@ export class FlightsService {
           if (t.clase === 'primera_clase') precio_primera_clase = t.precio_base;
         }
       }
+      // Horas locales y Colombia
+      const salidaColombia = toColombiaTime(v.salida_programada_utc);
+      const llegadaColombia = toColombiaTime(v.llegada_programada_utc);
       return {
         estado: v.estado,
         modelo_aeronave: v.aeronave?.modelo ?? null,
@@ -231,10 +260,14 @@ export class FlightsService {
               descuento: v.promocion.descuento,
             }
           : null,
-        salida_programada_utc: v.salida_programada_utc,
-        llegada_programada_utc: v.llegada_programada_utc,
-        salida_local: v.salida_local,
-        llegada_local: v.llegada_local,
+        fecha_salida_programada: formatDate(v.salida_programada_utc),
+        fecha_llegada_programada: formatDate(v.llegada_programada_utc),
+        hora_salida_utc: formatHour(v.salida_programada_utc),
+        hora_llegada_utc: formatHour(v.llegada_programada_utc),
+        hora_salida_local_destino: formatHour(v.llegada_local),
+        hora_llegada_local_destino: formatHour(v.llegada_local),
+        hora_salida_colombia: salidaColombia ? formatHour(salidaColombia) : null,
+        hora_llegada_colombia: llegadaColombia ? formatHour(llegadaColombia) : null,
         available_seats: v.available_seats,
         origen: v.aeropuerto_origen
           ? {
