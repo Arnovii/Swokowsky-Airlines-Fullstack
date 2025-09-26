@@ -4,7 +4,6 @@ export interface Article {
   summary: string;
   content: string; // Contenido en formato HTML
   imageUrl: string;
-  publishDate: string; // Formato ISO 8601
   isFeatured: boolean;
 }
 
@@ -12,47 +11,66 @@ export interface Article {
 const mockArticles: Article[] = [
   {
     id: 1,
-    title: '¡Oferta Imperdible! Vuela a Madrid por menos de lo que imaginas',
-    summary: 'Descubre la capital española con nuestros precios especiales. ¡Reserva ahora y vive una experiencia inolvidable!',
-    content: '<h2>Descubre Madrid como nunca antes</h2><p>Hemos preparado una oferta especial para que viajes a Madrid, una ciudad vibrante llena de cultura, arte y gastronomía. Pasea por el Parque del Retiro, visita el Museo del Prado y disfruta de unas tapas en el Mercado de San Miguel.</p><p>Esta promoción es por tiempo limitado. No dejes pasar la oportunidad de crear recuerdos inolvidables.</p>',
-    imageUrl: 'https://placehold.co/800x400/0e254d/ffffff?text=Madrid',
-    publishDate: '2025-09-20T12:00:00Z',
+    title: '¡Madrid te espera con una oferta única!',
+    summary: 'Vuela a la capital española a un precio increíble y vive la magia de sus calles, su arte y su gastronomía.',
+    content: `
+      <h2>Descubre Madrid como nunca antes</h2>
+      <p>Recorre el Parque del Retiro, maravíllate en el Museo del Prado y disfruta de unas tapas con amigos en el Mercado de San Miguel. 
+      Madrid es una ciudad que combina historia, modernidad y vida vibrante.</p>
+      <p>Esta promoción es por tiempo limitado, ¡reserva ya y crea recuerdos inolvidables!</p>
+    `,
+    imageUrl: 'https://images.pexels.com/photos/3254729/pexels-photo-3254729.jpeg',
     isFeatured: true,
   },
   {
     id: 2,
-    title: 'Promoción a Cartagena: Sol, playa y historia',
-    summary: 'El caribe te espera. Vuela a Cartagena con descuentos de hasta el 30%. ¡No te quedes por fuera!',
-    content: '<h3>Cartagena, la joya del Caribe</h3><p>Sumérgete en la historia de la ciudad amurallada, relájate en las playas de Bocagrande y disfruta de la increíble vida nocturna. Nuestra promoción incluye tarifas especiales en vuelos y hoteles seleccionados.</p>',
-    imageUrl: 'https://placehold.co/800x400/f0ad4e/ffffff?text=Cartagena',
-    publishDate: '2025-09-18T10:00:00Z',
+    title: 'Cartagena: sol, playa y un 30% de descuento',
+    summary: 'Déjate seducir por el Caribe colombiano con esta promo especial. Historia, mar y fiesta te esperan.',
+    content: `
+      <h3>Cartagena, la joya del Caribe</h3>
+      <p>Camina por las coloridas calles de la ciudad amurallada, relájate en las playas de Bocagrande y 
+      vive noches inolvidables en su vibrante vida nocturna. </p>
+      <p>Aprovecha nuestros descuentos exclusivos en vuelos y hoteles seleccionados. ¡Haz tu maleta ya!</p>
+    `,
+    imageUrl: 'https://images.pexels.com/photos/20184103/pexels-photo-20184103.jpeg',
     isFeatured: true,
   },
   {
     id: 3,
-    title: 'Aventura en la Amazonía: Conecta con la naturaleza',
-    summary: 'Explora la selva amazónica con nuestros paquetes todo incluido. Una experiencia única para los amantes de la aventura.',
-    content: '<p>Navega por el río Amazonas, camina por la selva y descubre la increíble biodiversidad de la región. Nuestros guías expertos te acompañarán en esta aventura segura y emocionante.</p>',
-    imageUrl: 'https://placehold.co/800x400/5cb85c/ffffff?text=Amazonas',
-    publishDate: '2025-09-15T09:00:00Z',
+    title: 'Aventura en la Amazonía: conecta con la naturaleza',
+    summary: 'Embárcate en un viaje único por la selva amazónica con nuestros paquetes todo incluido.',
+    content: `
+      <p>Navega por el majestuoso río Amazonas, adéntrate en senderos llenos de vida salvaje 
+      y descubre la biodiversidad más fascinante del planeta.</p>
+      <p>Con guías expertos y experiencias seguras, este viaje será un antes y un después en tu vida. 
+      ¡La Amazonía te está llamando!</p>
+    `,
+    imageUrl: 'https://images.pexels.com/photos/2739664/pexels-photo-2739664.jpeg',
     isFeatured: false,
   },
   {
     id: 4,
-    title: 'Nuevas rutas nacionales: ¡Descubre Colombia!',
-    summary: 'Ampliamos nuestras rutas para que puedas conocer más rincones de nuestro hermoso país. Compra tus tiquetes ya.',
-    content: '<p>Ahora puedes volar a destinos como el Eje Cafetero, La Guajira y los Llanos Orientales con la comodidad y el servicio que nos caracteriza.</p>',
-    imageUrl: 'https://placehold.co/800x400/d9534f/ffffff?text=Colombia',
-    publishDate: '2025-09-12T15:00:00Z',
+    title: 'Nuevas rutas en Colombia: ¡explora más!',
+    summary: 'Llegamos a más rincones del país para que descubras su diversidad y belleza natural.',
+    content: `
+      <p>Ahora puedes volar con nosotros al Eje Cafetero, La Guajira y los Llanos Orientales. 
+      Playas, montañas y llanuras, todo con la comodidad y servicio que nos caracteriza.</p>
+      <p>Conecta con tu país de una forma única y redescubre la grandeza de Colombia.</p>
+    `,
+    imageUrl: 'https://images.pexels.com/photos/2884864/pexels-photo-2884864.jpeg',
     isFeatured: true,
   },
-    {
+  {
     id: 5,
-    title: 'Viaja a Nueva York: La ciudad que nunca duerme',
-    summary: 'Cumple tu sueño de conocer la Gran Manzana con tarifas especiales saliendo desde Bogotá y Medellín.',
-    content: '<h2>¡Nueva York te espera!</h2><p>Desde Times Square hasta la Estatua de la Libertad, Nueva York ofrece un sinfín de atracciones. Aprovecha nuestros precios de temporada y vuela con nosotros.</p>',
-    imageUrl: 'https://placehold.co/800x400/337ab7/ffffff?text=New+York',
-    publishDate: '2025-09-10T11:00:00Z',
+    title: 'Nueva York: la ciudad que nunca duerme te llama',
+    summary: 'Cumple tu sueño de conocer la Gran Manzana con nuestras tarifas especiales desde Bogotá y Medellín.',
+    content: `
+      <h2>¡Vive el sueño neoyorquino!</h2>
+      <p>Camina por Times Square, sube al Empire State y contempla la Estatua de la Libertad. 
+      Nueva York es energía pura, diversidad y experiencias que no terminan.</p>
+      <p>No dejes pasar esta oportunidad, ¡reserva ya tu vuelo a la ciudad que lo tiene todo!</p>
+    `,
+    imageUrl: 'https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg',
     isFeatured: false,
   },
 ];
