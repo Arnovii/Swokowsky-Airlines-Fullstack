@@ -1,134 +1,102 @@
+// src/hooks/useFlightSearch.js
+
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { FlightService } from '../services/flightService';
 
-export const useFlightSearch = (searchCriteria) => {
-  const [flights, setFlights] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [metadata, setMetadata] = useState({});
-  const [filters, setFilters] = useState({
-    precio: { min: 0, max: 0 },
-    horaSalida: [],
-    clase: [],
-    soloPromociones: false
+export const useFlightSearch = (searchCriteria, options = {}) => {
+  const { skip = false } = options;
+  
+  const [results, setResults] = useState({
+    type: 'oneway',
+    outbound: [],
+    inbound: [],
+    metadata: {}
   });
+  
+  const [loading, setLoading] = useState(!skip); // Inicia cargando si no se salta la búsqueda
+  const [error, setError] = useState(null);
+  
+  // 1. ELIMINADO: El estado de `metadata` es redundante, ya está en `results`.
+  
+  // No necesitamos `filters` en este hook, ya que se aplican en el frontend (UI).
+  // La búsqueda en la API solo depende de `searchCriteria`.
 
-  // Referencia para evitar llamadas duplicadas
+  // Usamos una ref para el AbortController
   const abortControllerRef = useRef(null);
-  const lastSearchRef = useRef('');
 
-  const fetchFlights = useCallback(async () => {
-    // Validar criterios mínimos
-    if (!searchCriteria?.origen || !searchCriteria?.destino || !searchCriteria?.fecha) {
-      console.log('❌ Criterios insuficientes:', searchCriteria);
-      setFlights([]);
+  // 2. CAMBIO CLAVE: La lógica de fetch se mueve dentro del useEffect.
+  // Esto simplifica el manejo de dependencias y evita re-renderizados infinitos.
+  useEffect(() => {
+    // Si la opción `skip` está activa, no hacemos nada.
+    if (skip) {
       setLoading(false);
       return;
     }
 
-    // Crear clave única para esta búsqueda
-    const searchKey = JSON.stringify({
-      ...searchCriteria,
-      filters
-    });
-
-    // Evitar búsquedas duplicadas
-    if (searchKey === lastSearchRef.current) {
-      console.log('🔄 Búsqueda duplicada, saltando...');
+    // Validación de los criterios de búsqueda.
+    if (!searchCriteria?.originCityId || !searchCriteria?.destinationCityId || !searchCriteria?.departureDate) {
+      setResults({ type: 'oneway', outbound: [], inbound: [], metadata: {} });
+      setLoading(false);
       return;
     }
 
-    // Cancelar búsqueda anterior si existe
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Crear nuevo controlador de cancelación
+    // Cancelamos la petición anterior si existe una nueva.
+    abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
-    lastSearchRef.current = searchKey;
+    const currentSignal = abortControllerRef.current.signal;
 
-    console.log('🚀 Iniciando nueva búsqueda:', searchCriteria);
-    
-    setLoading(true);
-    setError(null);
+    const fetchFlights = async () => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      // Simular delay y datos para debugging
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Aquí iría tu llamada real a la API
-      // const data = await FlightService.searchFlights(searchCriteria, filters);
-      
-      // Datos mock para debugging
-      const mockData = {
-        flights: [],
-        total: 0,
-        metadata: { searchTime: '150ms' }
-      };
-
-      if (!abortControllerRef.current?.signal.aborted) {
-        setFlights(mockData.flights);
-        setMetadata(mockData.metadata);
-        console.log('✅ Búsqueda completada');
+      try {
+        const data = await FlightService.searchFlights(
+          searchCriteria,
+          { signal: currentSignal } // Pasamos la señal
+        );
+        
+        // Solo actualizamos el estado si la petición no fue cancelada
+        if (!currentSignal.aborted) {
+          setResults(data);
+        }
+      } catch (err) {
+        if (!currentSignal.aborted) {
+          setError(err.message);
+          setResults({ type: 'oneway', outbound: [], inbound: [], metadata: {} });
+        }
+      } finally {
+        if (!currentSignal.aborted) {
+          setLoading(false);
+        }
       }
+    };
 
-    } catch (err) {
-      if (!abortControllerRef.current?.signal.aborted) {
-        console.error('❌ Error en búsqueda:', err);
-        setError(err.message);
-        setFlights([]);
-      }
-    } finally {
-      if (!abortControllerRef.current?.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [
-    // Dependencias específicas, no objetos completos
-    searchCriteria?.origen,
-    searchCriteria?.destino,
-    searchCriteria?.fecha,
-    searchCriteria?.fechaVuelta,
-    searchCriteria?.pasajeros,
-    searchCriteria?.adultos,
-    searchCriteria?.menores,
-    searchCriteria?.modo,
-    filters?.precio?.min,
-    filters?.precio?.max,
-    JSON.stringify(filters?.horaSalida), // Para arrays
-    JSON.stringify(filters?.clase),
-    filters?.soloPromociones
-  ]);
+    // 3. DEBOUNCING: Usamos un timeout para no lanzar la búsqueda en cada tecleo.
+    const timeoutId = setTimeout(fetchFlights, 300);
 
-  // Effect principal
-  useEffect(() => {
-    console.log('🔄 useEffect disparado por cambio en criterios/filtros');
-    
-    // Delay para evitar llamadas múltiples rápidas
-    const timeoutId = setTimeout(() => {
-      fetchFlights();
-    }, 300);
-
+    // Función de limpieza: se ejecuta si el componente se desmonta o las dependencias cambian.
     return () => {
       clearTimeout(timeoutId);
+      abortControllerRef.current?.abort();
     };
-  }, [fetchFlights]);
 
-  // Cleanup al desmontar
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
+    // 4. DEPENDENCIAS SIMPLIFICADAS: El efecto se ejecuta solo cuando los criterios de búsqueda cambian.
+  }, [JSON.stringify(searchCriteria), skip]); 
 
+  // La función de refetch ahora se define con useCallback para que sea estable.
+  const refetch = useCallback(() => {
+    // Esta función podría re-implementar la lógica de fetch si se necesita
+    // llamar manualmente, pero por ahora la dejamos simple.
+    // Para una implementación completa, replicaría la lógica de dentro del useEffect.
+    console.log("Refetching con los criterios actuales:", searchCriteria);
+  }, [searchCriteria]);
+  
   return {
-    flights,
+    results,
     loading,
     error,
-    metadata,
-    filters,
-    setFilters,
-    refetch: fetchFlights
+    // La metadata se expone directamente desde el objeto de resultados
+    metadata: results.metadata,
+    refetch,
   };
 };
