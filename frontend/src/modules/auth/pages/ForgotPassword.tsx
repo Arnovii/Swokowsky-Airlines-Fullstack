@@ -1,5 +1,6 @@
 // src/modules/auth/pages/ForgotPassword.tsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
 export default function ForgotPassword() {
@@ -7,24 +8,22 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Nuevo: hook para navegar a otras rutas
+  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
     try {
       setLoading(true);
-      // ✅ llamada correcta a la API con axios
       await api.post("/auth/forgot-password", { email });
-
-      // el backend puede o no devolver datos, así que damos un mensaje estándar
       setMessage(
         "✅ Si el correo existe en nuestra base de datos, recibirás un enlace de recuperación."
       );
     } catch (err: any) {
       console.error("❌ Error en forgot-password:", err.response?.data || err.message);
-      setMessage(
-        err.response?.data?.message || "❌ No se pudo procesar la solicitud"
-      );
+      setMessage(err.response?.data?.message || "❌ No se pudo procesar la solicitud");
     } finally {
       setLoading(false);
     }
@@ -68,6 +67,17 @@ export default function ForgotPassword() {
             {loading ? "Enviando..." : "Enviar enlace de recuperación"}
           </button>
         </form>
+
+        {/* Nuevo: botón para volver a la pantalla de login */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="w-full border border-blue-600 text-blue-600 py-2 rounded-md hover:bg-blue-50 transition"
+          >
+            Volver a inicio de sesión
+          </button>
+        </div>
       </div>
     </div>
   );

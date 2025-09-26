@@ -5,8 +5,7 @@ import api from "../../../api/axios";
 
 export default function ResetPassword() {
     const [searchParams] = useSearchParams();
-    const token = searchParams.get("token"); // token viene en la URL
-
+    const token = searchParams.get("token");
     const navigate = useNavigate();
 
     const [newPassword, setNewPassword] = useState("");
@@ -112,6 +111,17 @@ export default function ResetPassword() {
             {loading ? "Procesando..." : "Restablecer contraseña"}
             </button>
         </form>
+
+        {/* Nuevo: botón para volver a la pantalla de inicio de sesión */}
+        <div className="mt-6 text-center">
+            <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="w-full border border-blue-600 text-blue-600 py-2 rounded-md hover:bg-blue-50 transition"
+            >
+            Volver a inicio de sesión
+            </button>
+        </div>
         </div>
     </div>
     );
