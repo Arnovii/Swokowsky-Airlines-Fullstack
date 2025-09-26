@@ -5,9 +5,6 @@ import axios from "axios";
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-
-
-
 export interface Noticia {
   titulo: string;
   descripcion_corta: string;
@@ -62,7 +59,6 @@ function formatearPesos(valor: number) {
   }).format(valor);
 }
 
-
 export default function DetalleVuelo() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -91,6 +87,18 @@ export default function DetalleVuelo() {
   if (loading) return <p className="text-center mt-10">Cargando...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
   if (!vuelo) return <p className="text-center mt-10">Vuelo no encontrado</p>;
+
+  // Helper para detectar Colombia (case-insensitive y tolerant)
+  const isColombia = (pais?: string | null) => {
+    if (!pais) return false;
+    const s = String(pais).toLowerCase();
+    return s === 'colombia' || s === 'co' || s.includes('col');
+  };
+
+  // Determinamos si el vuelo es nacional (origen y destino en Colombia)
+  const origenPaisRaw = vuelo.origen?.pais ?? '';
+  const destinoPaisRaw = vuelo.destino?.pais ?? '';
+  const esNacional = isColombia(origenPaisRaw) && isColombia(destinoPaisRaw);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 py-8 px-4 font-sans">
@@ -153,43 +161,54 @@ export default function DetalleVuelo() {
                 title="Horarios"
                 icon={<Calendar className="w-5 h-5 text-[#0e254d]" />}
               >
-                {[
-                  {
-                    label: 'Salida Local Origen',
-                    value: vuelo.salida_local_origen,
-                    pais: vuelo.destino?.pais,
-                    tipo: 'local'
-                  },
-                  {
-                    label: 'Llegada Local Destino',
-                    value: vuelo.llegada_local_destino,
-                    pais: vuelo.destino?.pais,
-                    tipo: 'local'
-                  },
-                  { label: 'Salida Colombia', value: vuelo.salida_programada_utc, tipo: 'colombia' },
-                  { label: 'Llegada Colombia', value: vuelo.llegada_programada_utc, tipo: 'colombia' }
-                ].map(({ label, value, pais, tipo }) => {
-                  const { fecha, hora } = formatDateTime(value)
-                  return (
-                    <div key={label} className="mb-3">
-                      <p className="text-sm font-semibold text-gray-700">
-                        {label}
-                        {label === 'Llegada Local Destino' && pais ? ` (${pais})` : ''}
-                      </p>
+                {(() => {
+                  // Construimos horarios dinámicamente: solo mostramos "local" si NO es nacional
+                  const horarios: Array<{ label: string; value: string; pais?: string; tipo?: string }> = [];
 
-                      {tipo === 'colombia' ? (
-                        <>
-                          <p className="text-gray-900">{fecha}</p>
-                          <p className="text-gray-500">{hora}</p>
-                        </>
-                      ) : (
-                        <p className="text-gray-900">{hora}</p>
-                      )}
-                    </div>
-                  )
-                })}
+                  if (!esNacional) {
+                    horarios.push(
+                      {
+                        label: 'Salida Local Origen',
+                        value: vuelo.salida_local_origen,
+                        pais: vuelo.destino?.pais,
+                        tipo: 'local'
+                      },
+                      {
+                        label: 'Llegada Local Destino',
+                        value: vuelo.llegada_local_destino,
+                        pais: vuelo.destino?.pais,
+                        tipo: 'local'
+                      }
+                    );
+                  }
+
+                  horarios.push(
+                    { label: 'Salida Colombia', value: vuelo.salida_programada_utc, tipo: 'colombia' },
+                    { label: 'Llegada Colombia', value: vuelo.llegada_programada_utc, tipo: 'colombia' }
+                  );
+
+                  return horarios.map(({ label, value, pais, tipo }) => {
+                    const { fecha, hora } = formatDateTime(value)
+                    return (
+                      <div key={label} className="mb-3">
+                        <p className="text-sm font-semibold text-gray-700">
+                          {label}
+                          {label === 'Llegada Local Destino' && pais ? ` (${pais})` : ''}
+                        </p>
+
+                        {tipo === 'colombia' ? (
+                          <>
+                            <p className="text-gray-900">{fecha}</p>
+                            <p className="text-gray-500">{hora}</p>
+                          </>
+                        ) : (
+                          <p className="text-gray-900">{hora}</p>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </Card>
-
 
               <Card
                 title="Detalles del Avión"
@@ -206,18 +225,18 @@ export default function DetalleVuelo() {
                 icon={<Tag className="w-5 h-5 text-[#0e254d]" />}
               >
                 <PrecioConDescuento
-      label="Precio Económica"
-      price={vuelo.precio_economica}
-      promocion={vuelo.promocion}
-      formatearPesos={formatearPesos}
-    />
+                  label="Precio Económica"
+                  price={vuelo.precio_economica}
+                  promocion={vuelo.promocion}
+                  formatearPesos={formatearPesos}
+                />
 
-    <PrecioConDescuento
-      label="Precio Primera Clase"
-      price={vuelo.precio_primera_clase}
-      promocion={vuelo.promocion}
-      formatearPesos={formatearPesos}
-    />
+                <PrecioConDescuento
+                  label="Precio Primera Clase"
+                  price={vuelo.precio_primera_clase}
+                  promocion={vuelo.promocion}
+                  formatearPesos={formatearPesos}
+                />
 
                 {vuelo.promocion ? (
                   <div className="mt-3 space-y-1">
@@ -279,7 +298,6 @@ function Item({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-
 /**
  * Props:
  * - label: string
@@ -293,6 +311,12 @@ function PrecioConDescuento({
   promocion,
   formatearPesos,
   compact = false,
+}: {
+  label: string;
+  price: number;
+  promocion: any;
+  formatearPesos: (v: number) => string;
+  compact?: boolean;
 }) {
   const descuento = promocion?.descuento ?? 0;
   const tienePromo = descuento > 0;
