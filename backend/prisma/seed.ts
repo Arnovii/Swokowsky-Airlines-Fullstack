@@ -431,7 +431,7 @@ async function main() {
       {
         id_usuario: 6,
         tipo_usuario: "admin",
-        dni: "90000001",
+        dni: 90000001,
         nombre: "Admin",
         apellido: "General",
         fecha_nacimiento: new Date("1992-07-12"),
