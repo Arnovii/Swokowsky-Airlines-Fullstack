@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Plane, Calendar, MapPin, Tag } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+
+
+
 
 export interface Noticia {
   titulo: string;
@@ -37,6 +42,26 @@ export interface Noticia {
     pais: string;
   };
 }
+
+function formatDateTime(dateString: string) {
+  if (!dateString) return { fecha: '-', hora: '-' }
+  const date = new Date(dateString)
+  return {
+    // fecha completa para Colombia
+    fecha: format(date, 'dd/MM/yyyy', { locale: es }),
+    // hora con AM/PM en español
+    hora: format(date, 'hh:mm a', { locale: es })
+  }
+}
+
+function formatearPesos(valor: number) {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0
+  }).format(valor);
+}
+
 
 export default function DetalleVuelo() {
   const { id } = useParams<{ id: string }>();
@@ -128,13 +153,43 @@ export default function DetalleVuelo() {
                 title="Horarios"
                 icon={<Calendar className="w-5 h-5 text-[#0e254d]" />}
               >
-                <Item label="Salida Programada (UTC)" value={vuelo.salida_programada_utc} />
-                <Item label="Llegada Programada (UTC)" value={vuelo.llegada_programada_utc} />
-                <Item label="Salida Local Origen" value={vuelo.salida_local_origen} />
-                <Item label="Llegada Local Destino" value={vuelo.llegada_local_destino} />
-                <Item label="Salida Colombia" value={vuelo.salida_colombia} />
-                <Item label="Llegada Colombia" value={vuelo.llegada_colombia} />
+                {[
+                  {
+                    label: 'Salida Local Origen',
+                    value: vuelo.salida_local_origen,
+                    pais: vuelo.destino?.pais,
+                    tipo: 'local'
+                  },
+                  {
+                    label: 'Llegada Local Destino',
+                    value: vuelo.llegada_local_destino,
+                    pais: vuelo.destino?.pais,
+                    tipo: 'local'
+                  },
+                  { label: 'Salida Colombia', value: vuelo.salida_colombia, tipo: 'colombia' },
+                  { label: 'Llegada Colombia', value: vuelo.llegada_colombia, tipo: 'colombia' }
+                ].map(({ label, value, pais, tipo }) => {
+                  const { fecha, hora } = formatDateTime(value)
+                  return (
+                    <div key={label} className="mb-3">
+                      <p className="text-sm font-semibold text-gray-700">
+                        {label}
+                        {label === 'Llegada Local Destino' && pais ? ` (${pais})` : ''}
+                      </p>
+
+                      {tipo === 'colombia' ? (
+                        <>
+                          <p className="text-gray-900">{fecha}</p>
+                          <p className="text-gray-500">{hora}</p>
+                        </>
+                      ) : (
+                        <p className="text-gray-900">{hora}</p>
+                      )}
+                    </div>
+                  )
+                })}
               </Card>
+
 
               <Card
                 title="Detalles del Avión"
@@ -150,8 +205,14 @@ export default function DetalleVuelo() {
                 title="Tarifas"
                 icon={<Tag className="w-5 h-5 text-[#0e254d]" />}
               >
-                <Item label="Precio Económica" value={`$${vuelo.precio_economica}`} />
-                <Item label="Precio Primera Clase" value={`$${vuelo.precio_primera_clase}`} />
+                <Item
+                  label="Precio Económica"
+                  value={formatearPesos(vuelo.precio_economica)}
+                />
+                <Item
+                  label="Precio Primera Clase"
+                  value={formatearPesos(vuelo.precio_primera_clase)}
+                />
 
                 {vuelo.promocion ? (
                   <div className="mt-3 space-y-1">
@@ -162,16 +223,15 @@ export default function DetalleVuelo() {
                       {vuelo.promocion.descripcion}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Válida hasta:{" "}
+                      Válida hasta:{' '}
                       {new Date(vuelo.promocion.fecha_fin).toLocaleDateString()}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 mt-2">
-                    Sin promoción disponible
-                  </div>
+                  <div className="text-sm text-gray-500 mt-2">Sin promoción disponible</div>
                 )}
               </Card>
+
             </section>
           </div>
         </div>

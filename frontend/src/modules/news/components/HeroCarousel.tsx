@@ -137,14 +137,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({
           <p className="text-lg md:text-xl text-gray-200 mb-6">{currentItem.excerpt}</p>
 
           <div className="flex flex-wrap items-center gap-4 text-gray-300 mb-6">
-            <div className="flex items-center gap-2">
-              <Calendar size={18} />
-              <span className="text-sm">{formatDate(currentItem.publishedAt)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock size={18} />
-              <span className="text-sm">{currentItem.readTime}</span>
-            </div>
+        
             {currentItem.views && (
               <div className="flex items-center gap-2">
                 <Eye size={18} />
