@@ -1,7 +1,20 @@
-export class NewsService {
-  static BASE_URL = '/api/news';
-  static UPLOAD_URL = '/api/upload';
+// services/newsService.ts
+import api from '@/api/axios'; // Importa tu instancia de axios configurada
 
+export interface CreateNewsData {
+  title: string;
+  content: string;
+  excerpt?: string;
+  categoryId?: string;
+  tags?: string[];
+  featured?: boolean;
+  status?: string;
+  publishedAt?: string;
+  imageFile?: File;
+  [key: string]: any;
+}
+
+export class NewsService {
   // Obtener todas las noticias (con filtros)
   static async getNews(params?: {
     page?: number;
@@ -11,124 +24,140 @@ export class NewsService {
     featured?: boolean;
     search?: string;
   }) {
-    const queryParams = new URLSearchParams();
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
-          queryParams.append(key, value.toString());
-        }
-      });
+    try {
+      const response = await api.get('/news', { params });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al obtener noticias');
     }
-
-    const response = await fetch(`${this.BASE_URL}?${queryParams}`);
-    if (!response.ok) throw new Error('Error al obtener noticias');
-    return await response.json();
   }
 
   // Obtener noticias destacadas para el home
   static async getFeaturedNews(limit = 6) {
-    const response = await fetch(`${this.BASE_URL}/featured?limit=${limit}`);
-    if (!response.ok) throw new Error('Error al obtener noticias destacadas');
-    return await response.json();
+    try {
+      // Cambio la ruta para coincidir con tu endpoint
+      const response = await api.get('/news', {
+        params: { limit }
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al obtener noticias destacadas');
+    }
   }
 
   // Obtener una noticia por ID
   static async getNewsById(id: string) {
-    const response = await fetch(`${this.BASE_URL}/${id}`);
-    if (!response.ok) throw new Error('Noticia no encontrada');
-    return await response.json();
+    try {
+      const response = await api.get(`/news/${id}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        throw new Error('Noticia no encontrada');
+      }
+      throw new Error(error.response?.data?.message || 'Error al obtener la noticia');
+    }
   }
 
   // Crear nueva noticia
   static async createNews(data: CreateNewsData) {
-    const formData = new FormData();
-    
-    // Agregar campos de texto
-    Object.entries(data).forEach(([key, value]) => {
-      if (key !== 'imageFile' && value !== undefined) {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value.toString());
+    try {
+      const formData = new FormData();
+      
+      // Agregar campos de texto
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'imageFile' && value !== undefined) {
+          if (Array.isArray(value)) {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
         }
+      });
+
+      // Agregar imagen si existe
+      if (data.imageFile) {
+        formData.append('image', data.imageFile);
       }
-    });
 
-    // Agregar imagen si existe
-    if (data.imageFile) {
-      formData.append('image', data.imageFile);
+      const response = await api.post('/news', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al crear noticia');
     }
-
-    const response = await fetch(this.BASE_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error al crear noticia');
-    }
-
-    return await response.json();
   }
 
   // Actualizar noticia
   static async updateNews(id: string, data: Partial<CreateNewsData>) {
-    const formData = new FormData();
-    
-    Object.entries(data).forEach(([key, value]) => {
-      if (key !== 'imageFile' && value !== undefined) {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value.toString());
+    try {
+      const formData = new FormData();
+      
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'imageFile' && value !== undefined) {
+          if (Array.isArray(value)) {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
         }
+      });
+
+      if (data.imageFile) {
+        formData.append('image', data.imageFile);
       }
-    });
 
-    if (data.imageFile) {
-      formData.append('image', data.imageFile);
+      const response = await api.put(`/news/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al actualizar noticia');
     }
-
-    const response = await fetch(`${this.BASE_URL}/${id}`, {
-      method: 'PUT',
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error('Error al actualizar noticia');
-    return await response.json();
   }
 
   // Eliminar noticia
   static async deleteNews(id: string) {
-    const response = await fetch(`${this.BASE_URL}/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) throw new Error('Error al eliminar noticia');
-    return await response.json();
+    try {
+      const response = await api.delete(`/news/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al eliminar noticia');
+    }
   }
 
   // Obtener categorías
   static async getCategories() {
-    const response = await fetch(`${this.BASE_URL}/categories`);
-    if (!response.ok) throw new Error('Error al obtener categorías');
-    return await response.json();
+    try {
+      const response = await api.get('/news/categories');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al obtener categorías');
+    }
   }
 
   // Subir imagen
   static async uploadImage(file: File, type: 'news' | 'thumbnail' = 'news') {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('type', type);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('type', type);
 
-    const response = await fetch(`${this.UPLOAD_URL}/news`, {
-      method: 'POST',
-      body: formData,
-    });
+      const response = await api.post('/upload/news', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    if (!response.ok) throw new Error('Error al subir imagen');
-    return await response.json();
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al subir imagen');
+    }
   }
 }

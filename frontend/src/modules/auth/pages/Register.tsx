@@ -32,10 +32,12 @@ export default function Register() {
     confirmPassword: "",
   });
 
+
   // Estado para la imagen seleccionada, previsualización y flags de carga
   const [imgFile, setImgFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,6 +71,7 @@ export default function Register() {
   };
 
   // Validación del formulario
+
   const validateForm = () => {
     if (form.dni.length < 8 || form.dni.length > 20) {
       return "El DNI debe tener entre 8 y 20 caracteres";
@@ -138,6 +141,7 @@ export default function Register() {
         imageUrl = await uploadToCloudinary(imgFile);
         setUploading(false);
       }
+
       const payload = {
         dni: form.dni,
         nombre: form.nombre,
@@ -151,6 +155,7 @@ export default function Register() {
         img_url: imageUrl,
       };
       const res = await api.post("/auth/register", payload);
+
       if (res.status === 201 || res.status === 200) {
         navigate("/login");
       }
@@ -158,6 +163,7 @@ export default function Register() {
       // Captura el mensaje devuelto por el backend o por Cloudinary
       const message = err.response?.data?.message || err.message;
       setError(message ?? "Error al registrarse, inténtalo nuevamente.");
+
     } finally {
       setLoading(false);
       setUploading(false);
@@ -210,7 +216,9 @@ export default function Register() {
           </div>
           {/* Fecha de nacimiento */}
           <div>
-            <label className="block text-sm font-medium">Fecha de nacimiento</label>
+            <label className="block text-sm font-medium">
+              Fecha de nacimiento
+            </label>
             <input
               type="date"
               name="fecha_nacimiento"
@@ -278,6 +286,7 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
+
           {/* Contraseña */}
           <div>
             <label className="block text-sm font-medium">Contraseña</label>
@@ -299,9 +308,12 @@ export default function Register() {
               </button>
             </div>
           </div>
+
           {/* Confirmar Contraseña */}
           <div>
-            <label className="block text-sm font-medium">Confirmar contraseña</label>
+            <label className="block text-sm font-medium">
+              Confirmar contraseña
+            </label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -344,6 +356,7 @@ export default function Register() {
           {uploading && (
             <div className="text-sm text-gray-600">Subiendo imagen a Cloudinary...</div>
           )}
+
           {error && (
             <div className="text-red-600 text-sm font-medium">{error}</div>
           )}
