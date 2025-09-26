@@ -166,8 +166,8 @@ export default function DetalleVuelo() {
                     pais: vuelo.destino?.pais,
                     tipo: 'local'
                   },
-                  { label: 'Salida Colombia', value: vuelo.salida_colombia, tipo: 'colombia' },
-                  { label: 'Llegada Colombia', value: vuelo.llegada_colombia, tipo: 'colombia' }
+                  { label: 'Salida Colombia', value: vuelo.salida_programada_utc, tipo: 'colombia' },
+                  { label: 'Llegada Colombia', value: vuelo.llegada_programada_utc, tipo: 'colombia' }
                 ].map(({ label, value, pais, tipo }) => {
                   const { fecha, hora } = formatDateTime(value)
                   return (
@@ -205,14 +205,19 @@ export default function DetalleVuelo() {
                 title="Tarifas"
                 icon={<Tag className="w-5 h-5 text-[#0e254d]" />}
               >
-                <Item
-                  label="Precio Económica"
-                  value={formatearPesos(vuelo.precio_economica)}
-                />
-                <Item
-                  label="Precio Primera Clase"
-                  value={formatearPesos(vuelo.precio_primera_clase)}
-                />
+                <PrecioConDescuento
+      label="Precio Económica"
+      price={vuelo.precio_economica}
+      promocion={vuelo.promocion}
+      formatearPesos={formatearPesos}
+    />
+
+    <PrecioConDescuento
+      label="Precio Primera Clase"
+      price={vuelo.precio_primera_clase}
+      promocion={vuelo.promocion}
+      formatearPesos={formatearPesos}
+    />
 
                 {vuelo.promocion ? (
                   <div className="mt-3 space-y-1">
@@ -270,6 +275,68 @@ function Item({ label, value }: { label: string; value: string | number }) {
         {label}
       </div>
       <div className="text-lg font-semibold text-[#081225]">{value}</div>
+    </div>
+  );
+}
+
+
+/**
+ * Props:
+ * - label: string
+ * - price: number (precio original en COP)
+ * - promocion: { descuento: number }  // descuento = 0.2 para 20%
+ * - formatearPesos: funcion para formatear números a COP
+ */
+function PrecioConDescuento({
+  label,
+  price,
+  promocion,
+  formatearPesos,
+  compact = false,
+}) {
+  const descuento = promocion?.descuento ?? 0;
+  const tienePromo = descuento > 0;
+  const precioConDescuento = Math.round(price * (1 - descuento));
+  const ahorro = price - precioConDescuento;
+
+  return (
+    <div className={`w-full ${compact ? "py-2" : "py-3"}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium text-gray-700">{label}</div>
+        {tienePromo ? (
+          <span className="text-xs font-semibold text-green-800 bg-green-100 px-2 py-0.5 rounded">
+            {Math.round(descuento * 100)}% OFF
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-2 flex flex-col gap-1">
+        {tienePromo ? (
+          <>
+            <div className="text-sm text-gray-500 line-through" aria-hidden>
+              {formatearPesos(price)}
+            </div>
+
+            <div className="flex items-baseline gap-3">
+              <div className="text-xl font-semibold text-green-700">
+                {formatearPesos(precioConDescuento)}
+              </div>
+              <div className="text-sm text-gray-600">
+                <span className="sr-only">Ahorro:</span>
+                ahorras {formatearPesos(ahorro)}
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500">
+              {promocion?.nombre ? promocion.nombre : "Promoción vigente"}
+            </div>
+          </>
+        ) : (
+          <div className="text-lg font-semibold text-gray-900">
+            {formatearPesos(price)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
