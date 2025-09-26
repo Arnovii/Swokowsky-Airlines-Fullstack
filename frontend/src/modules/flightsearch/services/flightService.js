@@ -1,72 +1,73 @@
-export class FlightService {
-  static BASE_URL = '/api/flights'; // Cambia por tu URL real
+// src/services/flightService.js
 
-  static async searchFlights(searchCriteria, filters) {
+import api from '@/api/axios'; // Asegúrate que la ruta a tu instancia de axios sea correcta
+
+// La función de normalización que arregla todos los problemas de datos
+function normalizeFlightData(flight) {
+  const departureDate = new Date(`${flight.fecha_salida_programada}T${flight.hora_salida_utc}:00Z`);
+  const arrivalDate = new Date(`${flight.fecha_llegada_programada}T${flight.hora_llegada_utc}:00Z`);
+
+  let durationInMinutes = 0;
+  if (!isNaN(departureDate) && !isNaN(arrivalDate)) {
+    durationInMinutes = (arrivalDate.getTime() - departureDate.getTime()) / (1000 * 60);
+  }
+
+  const isInternational = (flight.origen?.pais || '') !== (flight.destino?.pais || '');
+
+  return {
+    id: flight.id_vuelo || `${flight.origen?.codigo_iata}-${flight.hora_salida_utc}`,
+    price: flight.precio_economica || flight.precio_base || 0,
+    priceFirstClass: flight.precio_primera_clase || 0,
+    departureTimeUTC: `${flight.fecha_salida_programada || ''}T${flight.hora_salida_utc || ''}:00Z`,
+    arrivalTimeUTC: `${flight.fecha_llegada_programada || ''}T${flight.hora_llegada_utc || ''}:00Z`,
+    durationMinutes: durationInMinutes,
+    availableSeats: flight.available_seats || 0,
+    origin: flight.origen,
+    destination: flight.destino,
+    aircraftModel: flight.modelo_aeronave || "No especificado",
+    isInternational: isInternational,
+    availableClasses: flight.clases_disponibles || [],
+    promotion: flight.promocion ? {
+      name: flight.promocion.nombre || '',
+      discount: flight.promocion.descuento || 0,
+      remainingSeats: flight.promocion.cupoRestante || 0,
+    } : null,
+  };
+}
+
+
+export class FlightService {
+  /**
+   * Busca vuelos y devuelve los datos ya normalizados.
+   */
+  static async searchFlights(searchCriteria, options = {}) {
     try {
-      const queryParams = new URLSearchParams({
-        origen: searchCriteria.origen,
-        destino: searchCriteria.destino,
-        fecha: searchCriteria.fecha,
-        ...(searchCriteria.fechaVuelta && { fechaVuelta: searchCriteria.fechaVuelta }),
-        pasajeros: searchCriteria.pasajeros.toString(),
-        adultos: searchCriteria.adultos.toString(),
-        menores: searchCriteria.menores.toString(),
-        modo: searchCriteria.modo,
-        // Filtros
-        ...(filters.precio.min > 0 && { precioMin: filters.precio.min.toString() }),
-        ...(filters.precio.max > 0 && { precioMax: filters.precio.max.toString() }),
-        ...(filters.horaSalida.length > 0 && { horaSalida: filters.horaSalida.join(',') }),
-        ...(filters.clase.length > 0 && { clase: filters.clase.join(',') }),
-        ...(filters.soloPromociones && { soloPromociones: 'true' })
+      const response = await api.post('/flights/search', searchCriteria, {
+        signal: options.signal,
       });
 
-      const response = await fetch(`${this.BASE_URL}/search?${queryParams}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      const data = response.data;
+
+      // Paso clave: Mapeamos sobre las listas 'outbound' e 'inbound'
+      const outboundFlights = (data.outbound || []).map(normalizeFlightData);
+      const inboundFlights = (data.inbound || []).map(normalizeFlightData);
+
+      // Devolvemos el objeto con las listas ya normalizadas.
+      return {
+        type: data.type,
+        outbound: outboundFlights,
+        inbound: inboundFlights,
+        metadata: data.metadata || {},
+      };
+
+    } catch (error) {
+      if (error.name === 'CanceledError') {
+        console.log('Request canceled');
+        return { type: 'oneway', outbound: [], inbound: [], metadata: {} };
       }
       
-      const data = await response.json();
-      return {
-        flights: data.flights || [],
-        total: data.total || 0,
-        filters: data.availableFilters || {},
-        metadata: data.metadata || {}
-      };
-    } catch (error) {
-      // Para desarrollo, simular datos
-      console.warn('API no disponible, usando datos simulados:', error.message);
-      return this.getMockData(searchCriteria, filters);
-    }
-  }
-
-  static async getFlightDetails(flightId) {
-    try {
-      const response = await fetch(`${this.BASE_URL}/${flightId}`);
-      if (!response.ok) throw new Error('Error al obtener detalles del vuelo');
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting flight details:', error);
+      console.error('API Error in searchFlights:', error);
       throw error;
     }
-  }
-
-  // Datos mock para desarrollo
-  static getMockData(searchCriteria, filters) {
-    // Simular delay de API
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          flights: [], // Array vacío para desarrollo
-          total: 0,
-          metadata: {
-            searchTime: '150ms',
-            page: 1,
-            totalPages: 0
-          },
-          filters: {}
-        });
-      }, 800);
-    });
   }
 }

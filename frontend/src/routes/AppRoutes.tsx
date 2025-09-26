@@ -7,7 +7,7 @@ import Register from "../modules/auth/pages/Register"
 import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword"
 import NotFound from "../modules/error/pages/NotFound"
-import FlightSearchResults from "../modules/flightsearch/pages/FlightSearchResults"
+import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
 import DetalleVuelo from "../modules/news/pages/detallevuelo"
