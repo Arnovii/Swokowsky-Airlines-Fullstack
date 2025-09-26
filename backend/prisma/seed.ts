@@ -14,7 +14,6 @@ async function main() {
       { id_pais: 3, nombre: "Reino Unido", iso2: "GB" },
       { id_pais: 4, nombre: "Estados Unidos", iso2: "US" },
       { id_pais: 5, nombre: "Argentina", iso2: "AR" },
-      { id_pais: 6, nombre: "México", iso2: "MX" }, // Agregado México
     ],
     skipDuplicates: true,
   });
@@ -71,7 +70,6 @@ async function main() {
       { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 1, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-5
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
       { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 1, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-5
-      { id_ciudad: 36, id_paisFK: 6, id_gmtFK: 5, nombre: "Ciudad de México", codigo: "MEX" }, // México, GMT-6
       
     ],
     skipDuplicates: true,
@@ -117,7 +115,6 @@ async function main() {
       { id_aeropuerto: 33, id_ciudadFK: 33, nombre: "John F. Kennedy", codigo_iata: "JFK" },
       { id_aeropuerto: 34, id_ciudadFK: 34, nombre: "Ministro Pistarini", codigo_iata: "EZE" },
       { id_aeropuerto: 35, id_ciudadFK: 35, nombre: "Internacional de Miami", codigo_iata: "MIA" },
-      { id_aeropuerto: 36, id_ciudadFK: 36, nombre: "Benito Juárez", codigo_iata: "MEX" }, // Ciudad de México
     ],
     skipDuplicates: true,
   });
@@ -241,7 +238,7 @@ async function main() {
         id_vuelo: 6,
         id_aeronaveFK: 2,
         id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 36, // MEX - CORREGIDO: era 6 (BGA)
+        id_aeropuerto_destinoFK: 26, // MEX - CORREGIDO: era 6 (BGA)
         salida_programada_utc: new Date("2025-12-05T06:00:00Z"),
         llegada_programada_utc: new Date("2025-12-05T12:00:00Z"),
         id_promocionFK: null,
@@ -260,7 +257,7 @@ async function main() {
       {
         id_vuelo: 8,
         id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 36, // MEX - CORREGIDO: era 6 (BGA)
+        id_aeropuerto_origenFK: 26, // MEX - CORREGIDO: era 6 (BGA)
         id_aeropuerto_destinoFK: 1, // BOG
         salida_programada_utc: new Date("2025-12-06T13:00:00Z"),
         llegada_programada_utc: new Date("2025-12-06T19:00:00Z"),
