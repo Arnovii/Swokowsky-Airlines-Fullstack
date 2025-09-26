@@ -5,7 +5,7 @@ import api from "../../../api/axios";
 
 export default function ResetPassword() {
     const [searchParams] = useSearchParams();
-  const token = searchParams.get("token"); // token viene en la URL
+    const token = searchParams.get("token"); // token viene en la URL
 
     const navigate = useNavigate();
 
@@ -27,7 +27,10 @@ export default function ResetPassword() {
         return;
     }
     if (!token) {
-        setMessage("❌ Token inválido o expirado");
+        const confirmRedirect = window.confirm(
+        "❌ Este enlace ya no es válido. ¿Quieres solicitar un nuevo correo de recuperación?"
+        );
+        if (confirmRedirect) navigate("/forgot-password");
         return;
     }
 
@@ -42,9 +45,16 @@ export default function ResetPassword() {
         setTimeout(() => navigate("/login"), 2000);
     } catch (err: any) {
         console.error("❌ Error en reset:", err.response?.data || err.message);
-        setMessage(
-        err.response?.data?.message || "No se pudo restablecer la contraseña"
+        if (err.response?.status === 400 || err.response?.status === 401) {
+        const confirmRedirect = window.confirm(
+            "❌ Este enlace ha expirado o es inválido. ¿Quieres solicitar un nuevo correo de recuperación?"
         );
+        if (confirmRedirect) navigate("/forgot-password");
+        } else {
+        setMessage(
+            err.response?.data?.message || "No se pudo restablecer la contraseña"
+        );
+        }
     } finally {
         setLoading(false);
     }
