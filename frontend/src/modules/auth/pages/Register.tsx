@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
+import { useAuth } from "../../../context/AuthContext";
 
 // Lista de nacionalidades (ejemplo, puedes ampliarla)
 const NATIONALITIES = [
@@ -17,6 +18,7 @@ const NATIONALITIES = [
 ];
 
 export default function Register() {
+  const auth = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -157,7 +159,8 @@ export default function Register() {
       const res = await api.post("/auth/register", payload);
 
       if (res.status === 201 || res.status === 200) {
-        navigate("/login");
+        auth.login(form.correo,form.password)
+        navigate("/");
       }
     } catch (err: any) {
       // Captura el mensaje devuelto por el backend o por Cloudinary
