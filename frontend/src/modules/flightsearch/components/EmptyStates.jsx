@@ -1,26 +1,42 @@
 import React from 'react';
 import { Search, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Importa useNavigate
 
-export const NoFlightsFound = ({ onClearFilters }) => (
-  <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
-    <div className="mb-6">
-      <Search size={64} className="text-gray-400 mx-auto mb-4" />
-      <h3 className="text-2xl font-bold text-[#081225] mb-3 font-sans">
-        No se encontraron vuelos
-      </h3>
-      <p className="text-gray-600 max-w-md mx-auto font-sans">
-        No se encontraron vuelos que coincidan con los criterios seleccionados.
-        Intenta ajustar los filtros para ver más opciones.
-      </p>
+
+
+
+export const NoFlightsFound = ({ onClearFilters }) => {
+  const navigate = useNavigate(); // Usamos useNavigate para la navegación
+
+  const handleClearFilters = () => {
+    // Aquí podrías ejecutar onClearFilters si es necesario
+
+    
+    // Luego redirigir a la página de inicio
+    navigate('/'); // Asumiendo que la página de inicio es la ruta "/"
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
+      <div className="mb-6">
+        <Search size={64} className="text-gray-400 mx-auto mb-4" />
+        <h3 className="text-2xl font-bold text-[#081225] mb-3 font-sans">
+          No se encontraron vuelos
+        </h3>
+        <p className="text-gray-600 max-w-md mx-auto font-sans">
+          No se encontraron vuelos que coincidan con los criterios seleccionados.
+          Intenta ajustar los filtros para ver más opciones.
+        </p>
+      </div>
+      <button
+        onClick={handleClearFilters} // Cambiar la función onClick
+                className="px-8 py-3 bg-gradient-to-r from-[#081225] to-[#1a2332] text-white rounded-xl hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg cursor-pointer" 
+      >
+        🔄 Volver a la página de inicio
+      </button>
     </div>
-    <button
-      onClick={onClearFilters}
-      className="px-8 py-3 bg-gradient-to-r from-[#081225] to-[#1a2332] text-white rounded-xl hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg"
-    >
-      🔄 Limpiar filtros
-    </button>
-  </div>
-);
+  );
+};
 
 export const ErrorState = ({ error, onRetry }) => (
   <div className="bg-white rounded-2xl p-12 text-center border border-red-200">
