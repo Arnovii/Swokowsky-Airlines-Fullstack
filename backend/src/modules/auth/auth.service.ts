@@ -107,7 +107,10 @@ export class AuthService {
             resetLink,
         });
 
-        return { message: 'Se ha enviado un correo con instrucciones para recuperar tu contraseña.' };
+        return {
+            message: 'Se ha enviado un correo con instrucciones para recuperar tu contraseña.',
+            token
+        };
     }
 
     async resetPassword(token: string, newPassword: string) {
@@ -122,11 +125,14 @@ export class AuthService {
 
             const hashedPassword = await bcryptjs.hash(newPassword, 10);
 
+            const isSamePassword = await bcryptjs.compare(newPassword, user.password_bash);
+            if (isSamePassword) throw new BadRequestException('no puedes usar tu contraseña actual');
+
             await this.userService.updateUser(user.id_usuario, { password_bash: hashedPassword });
 
             return { message: 'Contraseña actualizada correctamente.' };
         } catch (error) {
-            throw new UnauthorizedException('Token inválido o expirado.');
+            throw error;
         }
     }
 
