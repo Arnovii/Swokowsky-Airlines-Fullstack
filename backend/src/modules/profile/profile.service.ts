@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { UpdateUserDto } from './dto/update-profile.dto';
+import * as bcryptjs from 'bcryptjs'
 
 @Injectable()
 export class ProfileService {
@@ -20,7 +21,8 @@ export class ProfileService {
   }
 
   async updateProfileInfo(id: number, data: UpdateUserDto) {
-    const userUploaded = await this.userService.updateUser(id,data);
+    if(data.password_bash) data.password_bash = await bcryptjs.hash(data.password_bash, 10);
+    const userUploaded = await this.userService.updateUser(id, data);
     const { password_bash, ...userWithoutPassword } = userUploaded;
     return userWithoutPassword;
   }
