@@ -104,23 +104,28 @@ export class UsersService {
 
   async createUser(data: CreateUserDto): Promise<usuario> {
     try {
-
       const userCreated = await this.prisma.usuario.create({
         data: {
           ...data,
-          //El backend define estos valores, el cliente no debería de enviarlos al momento de crearse  
           direccion_facturacion: "",
           suscrito_noticias: false,
           tipo_usuario: usuario_tipo_usuario.cliente,
           creado_en: new Date(),
         },
       });
-
       return userCreated;
-    } catch (error) {
-      throw new BadRequestException(
-        `Hubo un problema al crear el usuario. Por favor, intente nuevamente. ${error}`,
-      );
+    } catch (error: any) {
+      // Prisma error: unique constraint
+      if (error.code === 'P2002' && error.meta?.target?.includes('dni')) {
+        throw new BadRequestException('Ya existe un usuario con ese DNI.');
+      }
+      if (error.code === 'P2002' && error.meta?.target?.includes('correo')) {
+        throw new BadRequestException('Ya existe un usuario con ese correo.');
+      }
+      if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
+        throw new BadRequestException('Ya existe un usuario con ese username.');
+      }
+      throw new BadRequestException('Hubo un problema al crear el usuario. Por favor, intente nuevamente.');
     }
   }
 

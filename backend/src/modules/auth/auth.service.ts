@@ -23,10 +23,10 @@ export class AuthService {
         try {
             //verifications
             const userByEmail = await this.userService.findUserByEmail(data.correo)
-            if (userByEmail) throw new BadRequestException("Este correo ya se ha utilizado")
+            if (userByEmail) throw new BadRequestException("Ya existe un usuario con ese correo.")
 
             const userByUsername = await this.userService.findUserByUsername(data.username)
-            if (userByUsername) throw new BadRequestException("Este username ya se ha utilizado")
+            if (userByUsername) throw new BadRequestException("Ya existe un usuario con ese username.")
 
             //hashing password
             data.password_bash = await bcryptjs.hash(data.password_bash, 10)
@@ -44,8 +44,20 @@ export class AuthService {
 
             return { message: `Se ha creado el usuario ${userCreated.username} con correo ${userCreated.correo}` };
 
-
-        } catch (error) { return new BadRequestException(`El usuario no se ha podido registrar. ${error}`) }
+        } catch (error: any) {
+            if (error instanceof BadRequestException) throw error;
+            // Prisma error: unique constraint
+            if (error.code === 'P2002' && error.meta?.target?.includes('dni')) {
+                throw new BadRequestException('Ya existe un usuario con ese DNI.');
+            }
+            if (error.code === 'P2002' && error.meta?.target?.includes('correo')) {
+                throw new BadRequestException('Ya existe un usuario con ese correo.');
+            }
+            if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
+                throw new BadRequestException('Ya existe un usuario con ese username.');
+            }
+            throw new BadRequestException('El usuario no se ha podido registrar. Por favor, intente nuevamente.');
+        }
     }
 
     async login(data: LoginDto) {
