@@ -1,5 +1,4 @@
-// src/modules/auth/pages/Register.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
@@ -23,7 +22,7 @@ type FieldErrors = Partial<{
   username: string;
   password: string;
   confirmPassword: string;
-  img_url: string;
+  img_file: string;
   general: string;
 }>;
 
@@ -41,78 +40,107 @@ export default function Register() {
     username: "",
     password: "",
     confirmPassword: "",
-    img_url: "",
   });
+
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!imgFile) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(imgFile);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imgFile]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setForm((s) => ({ ...s, [name]: value }));
-    // limpiar error del campo editado
     setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrors((prev) => ({ ...prev, img_file: undefined, general: undefined }));
+    const file = e.target.files && e.target.files[0];
+    if (!file) {
+      setImgFile(null);
+      return;
+    }
+    setImgFile(file);
   };
 
   const validateClient = (): FieldErrors => {
     const e: FieldErrors = {};
 
-    // DNI: 8-20
     if (form.dni.length < 8 || form.dni.length > 20) {
       e.dni = "El DNI debe tener entre 8 y 20 caracteres.";
     }
 
-    // Username: 6-20 (más de 5 como pediste)
     if (form.username.length < 6 || form.username.length > 20) {
       e.username = "El nombre de usuario debe tener entre 6 y 20 caracteres.";
     }
 
-    // Email formato
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
       e.correo = "El correo no es válido.";
     }
 
-    // Password >= 8
     if (form.password.length < 8) {
       e.password = "La contraseña debe tener al menos 8 caracteres.";
     }
 
-    // Confirm igual a password
     if (form.confirmPassword !== form.password) {
       e.confirmPassword = "Las contraseñas no coinciden.";
     }
 
-    // Imagen: extensión simple (ajusta si usas upload real)
-    if (!/\.(jpg|jpeg|png|gif)$/i.test(form.img_url)) {
-      e.img_url = "La imagen debe ser .jpg, .jpeg, .png o .gif";
+    if (!imgFile) {
+      e.img_file = "Debes seleccionar una imagen.";
+    } else {
+      const name = imgFile.name || "";
+      if (!/\.(jpg|jpeg|png|gif)$/i.test(name)) {
+        e.img_file = "La imagen debe ser .jpg, .jpeg, .png o .gif";
+      }
+      const maxBytes = 5 * 1024 * 1024; // 5 MB
+      if (imgFile.size > maxBytes) {
+        e.img_file = "La imagen no puede ser mayor a 5 MB.";
+      }
+      if (!imgFile.type.startsWith("image/")) {
+        e.img_file = "El archivo debe ser una imagen.";
+      }
     }
 
     return e;
   };
 
-  // ⚠️ PRE-CHECK OPCIONAL (solo si tu backend expone endpoints de disponibilidad)
-  // Si no existen, esto no bloquea ni rompe: se ignora el fallo.
-  const precheckDuplicates = async (): Promise<FieldErrors> => {
-    const e: FieldErrors = {};
-    try {
-      // Intenta alguna ruta de disponibilidad si existe en tu backend:
-      // Ejemplos posibles (ajústalos si existen):
-      // const [dniRes, emailRes, userRes] = await Promise.all([
-      //   api.get("/users/check-dni", { params: { dni: form.dni } }),
-      //   api.get("/users/check-email", { params: { email: form.correo } }),
-      //   api.get("/users/check-username", { params: { username: form.username } }),
-      // ]);
-      // if (dniRes.data?.exists) e.dni = "Ese DNI ya está registrado.";
-      // if (emailRes.data?.exists) e.correo = "Ese correo ya está registrado.";
-      // if (userRes.data?.exists) e.username = "Ese nombre de usuario ya está en uso.";
-    } catch {
-      // Si 404/No existe endpoint, no hacemos nada: el backend lo validará en el POST.
+  // Subida directa a Cloudinary (unsigned preset)
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", "Swokowsky-bucket");
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: fd,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Upload a Cloudinary falló: ${res.status} ${text}`);
     }
-    return e;
+
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("No se recibió secure_url desde Cloudinary");
+    return data.secure_url as string;
   };
 
   const handleSubmit = async (ev: React.FormEvent) => {
@@ -120,7 +148,6 @@ export default function Register() {
     setErrors({});
     setLoading(true);
 
-    // Validación en el cliente
     const clientErr = validateClient();
     if (Object.keys(clientErr).length) {
       setErrors(clientErr);
@@ -128,44 +155,36 @@ export default function Register() {
       return;
     }
 
-    // Pre-check opcional (si endpoints existen)
-    const dupErr = await precheckDuplicates();
-    if (Object.keys(dupErr).length) {
-      setErrors(dupErr);
-      setLoading(false);
-      return;
-    }
-
-    // Payload para backend
-    const payload = {
-      dni: form.dni,
-      nombre: form.nombre,
-      apellido: form.apellido,
-      // si tu backend espera fecha sin hora: new Date(...).toISOString().split("T")[0]
-      fecha_nacimiento: new Date(form.fecha_nacimiento).toISOString(),
-      nacionalidad: form.nacionalidad,
-      genero: form.genero, // "M" | "F" | "X"
-      correo: form.correo,
-      username: form.username,
-      password_bash: form.password,
-      img_url: form.img_url,
-    };
-
     try {
+      let imageUrl = "";
+      if (imgFile) {
+        setUploading(true);
+        imageUrl = await uploadToCloudinary(imgFile);
+        setUploading(false);
+      }
+
+      const payload = {
+        dni: form.dni,
+        nombre: form.nombre,
+        apellido: form.apellido,
+        fecha_nacimiento: form.fecha_nacimiento ? new Date(form.fecha_nacimiento).toISOString() : null,
+        nacionalidad: form.nacionalidad,
+        genero: form.genero,
+        correo: form.correo,
+        username: form.username,
+        password_bash: form.password,
+        img_url: imageUrl,
+      } as any;
+
       const res = await api.post("/auth/register", payload);
 
       if (res.status === 201 || res.status === 200) {
-        // éxito
         navigate("/login");
         return;
       }
 
-      // Si no es 2xx, mostrar genérico
       setErrors({ general: "No se pudo crear el usuario." });
     } catch (err: any) {
-      // ---- Manejo de duplicados por respuesta del backend ----
-      // Prisma suele mandar:
-      // { code: 'P2002', meta: { target: ['correo'] } }
       const data = err?.response?.data;
       const msg: string | undefined = data?.message;
       const code: string | undefined = data?.code;
@@ -173,17 +192,13 @@ export default function Register() {
 
       const e: FieldErrors = {};
 
-      // Si es P2002 (unique constraint)
       if (code === "P2002" || /unique constraint/i.test(msg || "")) {
         const targets = Array.isArray(target)
           ? target
           : typeof target === "string"
           ? [target]
           : [];
-
-        // Intenta detectar cuál campo chocó
         const text = (msg || "").toLowerCase();
-
         const mark = (field: keyof FieldErrors, label: string) => {
           if (!e[field]) e[field] = `${label} ya está registrado.`;
         };
@@ -196,24 +211,25 @@ export default function Register() {
             if (k.includes("username") || k.includes("usuario")) mark("username", "El nombre de usuario");
           });
         } else {
-          // Fallback: inspecciona el mensaje
           if (text.includes("dni")) mark("dni", "El DNI");
           if (text.includes("correo") || text.includes("email")) mark("correo", "El correo");
           if (text.includes("username") || text.includes("usuario")) mark("username", "El nombre de usuario");
         }
 
-        // Si no logramos identificar, muestra genérico
         if (!e.dni && !e.correo && !e.username) {
           e.general = "Alguno de los campos (DNI / correo / usuario) ya existe.";
         }
       } else {
-        // Otros errores del backend
-        e.general =
-          Array.isArray(data?.message) ? data.message.join(", ") : data?.message || "Error al registrarse.";
+        if (err?.message && err?.message.includes("Cloudinary")) {
+          e.general = err.message;
+        } else {
+          e.general = Array.isArray(data?.message) ? data.message.join(", ") : data?.message || "Error al registrarse.";
+        }
       }
 
       setErrors(e);
     } finally {
+      setUploading(false);
       setLoading(false);
     }
   };
@@ -392,29 +408,31 @@ export default function Register() {
             )}
           </div>
 
-          {/* Imagen */}
+          {/* Imagen: file input */}
           <div>
-            <label className="block text-sm font-medium">Imagen (URL)</label>
+            <label className="block text-sm font-medium">Imagen (subir)</label>
             <input
-              type="url"
-              name="img_url"
-              value={form.img_url}
-              onChange={handleChange}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               required
-              placeholder="https://...jpg"
-              className={`w-full px-3 py-2 border rounded-lg ${errors.img_url ? "border-red-500" : ""}`}
+              className={`w-full px-3 py-2 border rounded-lg ${errors.img_file ? "border-red-500" : ""}`}
             />
-            {errors.img_url && <p className="text-red-600 text-sm mt-1">{errors.img_url}</p>}
+            {errors.img_file && <p className="text-red-600 text-sm mt-1">{errors.img_file}</p>}
+
+            {preview && (
+              <div className="mt-2">
+                <img src={preview} alt="preview" className="w-32 h-32 object-cover rounded-md border" />
+              </div>
+            )}
           </div>
 
-          {/* Error general */}
-          {errors.general && (
-            <div className="text-red-600 text-sm font-medium">{errors.general}</div>
-          )}
+          {uploading && <div className="text-sm text-gray-600">Subiendo imagen a Cloudinary...</div>}
+          {errors.general && <div className="text-red-600 text-sm font-medium">{errors.general}</div>}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || uploading}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-50"
           >
             {loading ? "Registrando..." : "Registrarse"}

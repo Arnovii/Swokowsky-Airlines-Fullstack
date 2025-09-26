@@ -1,17 +1,18 @@
 // src/modules/auth/pages/Login.tsx
-/* ... */
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || "/"; //Esto almacena la ruta a la que intentó acceder al usuario previo a llegar al Login, de esta manera una vez inicie sesión podrá ser llevado a dicha ruta.
+  const from = (location.state as any)?.from?.pathname || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,49 +26,105 @@ export default function Login() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Correo electrónico
-        </label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="ejemplo@dominio.com"
-        />
-      </div>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-100 to-blue-300">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
+        {/* efecto difuso detrás */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-400 rounded-2xl blur-2xl opacity-50 -z-10"></div>
 
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Contraseña
-        </label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="mt-1 p-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="********"
-        />
-      </div>
+        {/* encabezado */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Bienvenido</h1>
+          <p className="text-gray-500">Inicia sesión para continuar</p>
+        </div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+        {/* formulario funcional */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* email */}
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="ejemplo@dominio.com"
+              className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-      <div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Iniciar sesión
-        </button>
+          {/* contraseña */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Contraseña
+              </label>
+              {/* 🔗 enlace a ForgotPassword */}
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="********"
+                className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {/* error */}
+          {error && (
+            <div className="text-red-600 text-sm font-medium">{error}</div>
+          )}
+
+          {/* botón login */}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
+          >
+            Iniciar sesión
+          </button>
+        </form>
+
+        {/* sección registro */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-600 text-sm mb-2">¿No tienes cuenta?</p>
+          <button
+            type="button"
+            onClick={() => navigate("/registro")}
+            className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition duration-300"
+          >
+            Registrarse
+          </button>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }

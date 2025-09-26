@@ -4,6 +4,7 @@ import Home from "../modules/home/pages/Home"
 import Perfil from "../modules/user_profile/pages/Perfil"
 import Login from "../modules/auth/pages/Login"
 import Register from "../modules/auth/pages/Register"
+import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword"
 import NotFound from "../modules/error/pages/NotFound"
 import FlightSearchResults from "../modules/flightsearch/pages/FlightSearchResults"
@@ -30,6 +31,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />

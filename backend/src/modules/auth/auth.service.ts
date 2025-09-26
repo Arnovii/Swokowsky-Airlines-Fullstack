@@ -99,7 +99,7 @@ export class AuthService {
 
         // 2. Construir enlace dinámicamente desde FRONTEND_URL
         const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-        const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+        const resetLink = `${frontendUrl}reset-password?token=${token}`;
 
         // 3. Enviar correo usando tu servicio de mail
         await this.mailService.sendResetPasswordEmail(user.correo, {
