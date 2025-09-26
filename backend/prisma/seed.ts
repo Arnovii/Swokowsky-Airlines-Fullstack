@@ -377,7 +377,7 @@ async function main() {
       {
         id_usuario: 1,
         tipo_usuario: "admin",
-        dni: "90000001",
+        dni: 90000001,
         nombre: "Admin",
         apellido: "General",
         fecha_nacimiento: new Date("1992-07-12"),
@@ -395,7 +395,7 @@ async function main() {
       {
         id_usuario: 4,
         tipo_usuario: "cliente",
-        dni: "90000004",
+        dni: 90000004,
         nombre: "Pedro",
         apellido: "Martinez",
         fecha_nacimiento: new Date("1988-11-05"),
@@ -413,7 +413,7 @@ async function main() {
       {
         id_usuario: 5,
         tipo_usuario: "cliente",
-        dni: "90000005",
+        dni: 90000005,
         nombre: "Luisa",
         apellido: "Rodríguez",
         fecha_nacimiento: new Date("1995-06-20"),

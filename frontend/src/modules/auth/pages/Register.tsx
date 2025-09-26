@@ -209,7 +209,7 @@ export default function Register() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    dni: "",
+    dni: 0,
     nombre: "",
     apellido: "",
     fecha_nacimiento: "",
@@ -259,8 +259,8 @@ export default function Register() {
 
   // Validación del formulario
   const validateForm = () => {
-    if (form.dni.length < 8 || form.dni.length > 20) {
-      return "El DNI debe tener entre 8 y 20 caracteres";
+    if (form.dni && form.dni.toString().length < 8) {
+      return "El DNI debe tener almenos 8 caracteres";
     }
     if (form.username.length < 4 || form.username.length > 21) {
       return "El nombre de usuario debe tener entre 5 y 20 caracteres";
@@ -329,7 +329,7 @@ export default function Register() {
       }
 
       const payload = {
-        dni: form.dni,
+        dni: Math.floor(form.dni),
         nombre: form.nombre,
         apellido: form.apellido,
         fecha_nacimiento: new Date(form.fecha_nacimiento).toISOString(),
@@ -343,8 +343,7 @@ export default function Register() {
       const res = await api.post("/auth/register", payload);
 
       if (res.status === 201 || res.status === 200) {
-        // iniciar sesión de inmediato y redirigir al home
-        await auth.login(form.correo, form.password);
+        auth.login(form.correo, form.password)
         navigate("/");
       }
     } catch (err: any) {
@@ -377,9 +376,10 @@ export default function Register() {
           <div>
             <label className="block text-sm font-medium">DNI</label>
             <input
-              type="text"
+              type="number"
               name="dni"
-              value={form.dni}
+              defaultValue=""
+
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"

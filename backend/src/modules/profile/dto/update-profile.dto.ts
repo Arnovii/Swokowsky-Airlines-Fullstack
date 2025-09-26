@@ -11,7 +11,7 @@ import {
   IsBoolean,
   Length,
   IsNotEmpty,
-  length,
+  IsInt,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { nationalities, usuario_genero, usuario_tipo_usuario } from '@prisma/client';
@@ -21,14 +21,11 @@ export class UpdateUserDto {
     example: '123456789',
     description: 'Documento de identidad (8 a 20 caracteres)',
     required: false,
-    minLength: 8,
-    maxLength: 20,
   })
   @IsOptional()
-  @Length(8, 20)
-  @IsString()
+  @IsInt()
   @IsNotEmpty()
-  dni?: string;
+  dni?: number;
 
   @ApiProperty({
     example: 'Juan',

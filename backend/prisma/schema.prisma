@@ -158,7 +158,7 @@ model ticket {
 model usuario {
   id_usuario            Int                  @id @default(autoincrement())
   tipo_usuario          usuario_tipo_usuario
-  dni                   String               @unique @db.VarChar(255)
+  dni                   Int                  @unique  // Cambié de String a Int
   nombre                String               @db.VarChar(255)
   apellido              String               @db.VarChar(255)
   fecha_nacimiento      DateTime             @db.Date
