@@ -2,19 +2,206 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
+import imagenFondo from "../../../assets/imagen_login.jpg";
+import { FiEye, FiEyeOff } from "react-icons/fi";
+
 
 // Lista de nacionalidades (ejemplo, puedes ampliarla)
 const NATIONALITIES = [
-  { label: "Colombia", value: "Colombia" },
+  { label: "Afganistán", value: "Afghanistan" },
+  { label: "Albania", value: "Albania" },
+  { label: "Argelia", value: "Algeria" },
+  { label: "Andorra", value: "Andorra" },
+  { label: "Angola", value: "Angola" },
+  { label: "Antigua y Barbuda", value: "AntiguaAndBarbuda" },
   { label: "Argentina", value: "Argentina" },
-  { label: "México", value: "Mexico" },
-  { label: "España", value: "Spain" },
-  { label: "Estados Unidos", value: "UnitedStates" },
-  { label: "Venezuela", value: "Venezuela" },
-  { label: "Perú", value: "Peru" },
-  { label: "Chile", value: "Chile" },
+  { label: "Armenia", value: "Armenia" },
+  { label: "Australia", value: "Australia" },
+  { label: "Austria", value: "Austria" },
+  { label: "Azerbaiyán", value: "Azerbaijan" },
+  { label: "Bahamas", value: "Bahamas" },
+  { label: "Baréin", value: "Bahrain" },
+  { label: "Bangladés", value: "Bangladesh" },
+  { label: "Barbados", value: "Barbados" },
+  { label: "Bielorrusia", value: "Belarus" },
+  { label: "Bélgica", value: "Belgium" },
+  { label: "Belice", value: "Belize" },
+  { label: "Benín", value: "Benin" },
+  { label: "Bután", value: "Bhutan" },
+  { label: "Bolivia", value: "Bolivia" },
+  { label: "Bosnia y Herzegovina", value: "BosniaAndHerzegovina" },
+  { label: "Botsuana", value: "Botswana" },
   { label: "Brasil", value: "Brazil" },
+  { label: "Brunéi", value: "Brunei" },
+  { label: "Bulgaria", value: "Bulgaria" },
+  { label: "Burkina Faso", value: "BurkinaFaso" },
+  { label: "Burundi", value: "Burundi" },
+  { label: "Camboya", value: "Cambodia" },
+  { label: "Camerún", value: "Cameroon" },
+  { label: "Canadá", value: "Canada" },
+  { label: "Cabo Verde", value: "CapeVerde" },
+  { label: "República Centroafricana", value: "CentralAfricanRepublic" },
+  { label: "Chad", value: "Chad" },
+  { label: "Chile", value: "Chile" },
+  { label: "China", value: "China" },
+  { label: "Colombia", value: "Colombia" },
+  { label: "Comoras", value: "Comoros" },
+  { label: "Congo", value: "Congo" },
+  { label: "Costa Rica", value: "CostaRica" },
+  { label: "Croacia", value: "Croatia" },
+  { label: "Cuba", value: "Cuba" },
+  { label: "Chipre", value: "Cyprus" },
+  { label: "República Checa", value: "CzechRepublic" },
+  { label: "Dinamarca", value: "Denmark" },
+  { label: "Yibuti", value: "Djibouti" },
+  { label: "Dominica", value: "Dominica" },
+  { label: "República Dominicana", value: "DominicanRepublic" },
+  { label: "Ecuador", value: "Ecuador" },
+  { label: "Egipto", value: "Egypt" },
+  { label: "El Salvador", value: "ElSalvador" },
+  { label: "Guinea Ecuatorial", value: "EquatorialGuinea" },
+  { label: "Eritrea", value: "Eritrea" },
+  { label: "Estonia", value: "Estonia" },
+  { label: "Esuatini", value: "Eswatini" },
+  { label: "Etiopía", value: "Ethiopia" },
+  { label: "Fiyi", value: "Fiji" },
+  { label: "Finlandia", value: "Finland" },
+  { label: "Francia", value: "France" },
+  { label: "Gabón", value: "Gabon" },
+  { label: "Gambia", value: "Gambia" },
+  { label: "Georgia", value: "Georgia" },
   { label: "Alemania", value: "Germany" },
+  { label: "Ghana", value: "Ghana" },
+  { label: "Grecia", value: "Greece" },
+  { label: "Granada", value: "Grenada" },
+  { label: "Guatemala", value: "Guatemala" },
+  { label: "Guinea", value: "Guinea" },
+  { label: "Guinea-Bisáu", value: "GuineaBissau" },
+  { label: "Guyana", value: "Guyana" },
+  { label: "Haití", value: "Haiti" },
+  { label: "Honduras", value: "Honduras" },
+  { label: "Hungría", value: "Hungary" },
+  { label: "Islandia", value: "Iceland" },
+  { label: "India", value: "India" },
+  { label: "Indonesia", value: "Indonesia" },
+  { label: "Irán", value: "Iran" },
+  { label: "Irak", value: "Iraq" },
+  { label: "Irlanda", value: "Ireland" },
+  { label: "Israel", value: "Israel" },
+  { label: "Italia", value: "Italy" },
+  { label: "Costa de Marfil", value: "IvoryCoast" },
+  { label: "Jamaica", value: "Jamaica" },
+  { label: "Japón", value: "Japan" },
+  { label: "Jordania", value: "Jordan" },
+  { label: "Kazajistán", value: "Kazakhstan" },
+  { label: "Kenia", value: "Kenya" },
+  { label: "Kiribati", value: "Kiribati" },
+  { label: "Kuwait", value: "Kuwait" },
+  { label: "Kirguistán", value: "Kyrgyzstan" },
+  { label: "Laos", value: "Laos" },
+  { label: "Letonia", value: "Latvia" },
+  { label: "Líbano", value: "Lebanon" },
+  { label: "Lesoto", value: "Lesotho" },
+  { label: "Liberia", value: "Liberia" },
+  { label: "Libia", value: "Libya" },
+  { label: "Liechtenstein", value: "Liechtenstein" },
+  { label: "Lituania", value: "Lithuania" },
+  { label: "Luxemburgo", value: "Luxembourg" },
+  { label: "Madagascar", value: "Madagascar" },
+  { label: "Malaui", value: "Malawi" },
+  { label: "Malasia", value: "Malaysia" },
+  { label: "Maldivas", value: "Maldives" },
+  { label: "Malí", value: "Mali" },
+  { label: "Malta", value: "Malta" },
+  { label: "Islas Marshall", value: "MarshallIslands" },
+  { label: "Mauritania", value: "Mauritania" },
+  { label: "Mauricio", value: "Mauritius" },
+  { label: "México", value: "Mexico" },
+  { label: "Micronesia", value: "Micronesia" },
+  { label: "Moldavia", value: "Moldova" },
+  { label: "Mónaco", value: "Monaco" },
+  { label: "Mongolia", value: "Mongolia" },
+  { label: "Montenegro", value: "Montenegro" },
+  { label: "Marruecos", value: "Morocco" },
+  { label: "Mozambique", value: "Mozambique" },
+  { label: "Birmania", value: "Myanmar" },
+  { label: "Namibia", value: "Namibia" },
+  { label: "Nauru", value: "Nauru" },
+  { label: "NEpal", value: "Nepa" },
+  { label: "Países Bajos", value: "Netherlands" },
+  { label: "Nueva Zelanda", value: "NewZealand" },
+  { label: "Nicaragua", value: "Nicaragua" },
+  { label: "Níger", value: "Niger" },
+  { label: "Nigeria", value: "Nigeria" },
+  { label: "Corea del Norte", value: "NorthKorea" },
+  { label: "Macedonia del Norte", value: "NorthMacedonia" },
+  { label: "Noruega", value: "Norway" },
+  { label: "Omán", value: "Oman" },
+  { label: "Pakistán", value: "Pakistan" },
+  { label: "Palaos", value: "Palau" },
+  { label: "Panamá", value: "Panama" },
+  { label: "Papúa Nueva Guinea", value: "PapuaNewGuinea" },
+  { label: "Paraguay", value: "Paraguay" },
+  { label: "Perú", value: "Peru" },
+  { label: "Filipinas", value: "Philippines" },
+  { label: "Polonia", value: "Poland" },
+  { label: "Portugal", value: "Portugal" },
+  { label: "Catar", value: "Qatar" },
+  { label: "Rumanía", value: "Romania" },
+  { label: "Rusia", value: "Russia" },
+  { label: "Ruanda", value: "Rwanda" },
+  { label: "San Cristóbal y Nieves", value: "SaintKittsAndNevis" },
+  { label: "Santa Lucía", value: "SaintLucia" },
+  { label: "San Vicente y las Granadinas", value: "SaintVincentAndGrenadines" },
+  { label: "Samoa", value: "Samoa" },
+  { label: "San Marino", value: "SanMarino" },
+  { label: "Santo Tomé y Príncipe", value: "SaoTomeAndPrincipe" },
+  { label: "Arabia Saudita", value: "SaudiArabia" },
+  { label: "Senegal", value: "Senegal" },
+  { label: "Serbia", value: "Serbia" },
+  { label: "Seychelles", value: "Seychelles" },
+  { label: "Sierra Leona", value: "SierraLeone" },
+  { label: "Singapur", value: "Singapore" },
+  { label: "Eslovaquia", value: "Slovakia" },
+  { label: "Eslovenia", value: "Slovenia" },
+  { label: "Islas Salomón", value: "SolomonIslands" },
+  { label: "Somalia", value: "Somalia" },
+  { label: "Sudáfrica", value: "SouthAfrica" },
+  { label: "Corea del Sur", value: "SouthKorea" },
+  { label: "Sudán del Sur", value: "SouthSudan" },
+  { label: "España", value: "Spain" },
+  { label: "Sri Lanka", value: "SriLanka" },
+  { label: "Sudán", value: "Sudan" },
+  { label: "Surinam", value: "Suriname" },
+  { label: "Suecia", value: "Sweden" },
+  { label: "Suiza", value: "Switzerland" },
+  { label: "Siria", value: "Syria" },
+  { label: "Taiwán", value: "Taiwan" },
+  { label: "Tayikistán", value: "Tajikistan" },
+  { label: "Tanzania", value: "Tanzania" },
+  { label: "Tailandia", value: "Thailand" },
+  { label: "Timor Oriental", value: "TimorLeste" },
+  { label: "Togo", value: "Togo" },
+  { label: "Tonga", value: "Tonga" },
+  { label: "Trinidad y Tobago", value: "TrinidadAndTobago" },
+  { label: "Túnez", value: "Tunisia" },
+  { label: "Turquía", value: "Turkey" },
+  { label: "Turkmenistán", value: "Turkmenistan" },
+  { label: "Tuvalu", value: "Tuvalu" },
+  { label: "Uganda", value: "Uganda" },
+  { label: "Ucrania", value: "Ukraine" },
+  { label: "Emiratos Árabes Unidos", value: "UnitedArabEmirates" },
+  { label: "Reino Unido", value: "UnitedKingdom" },
+  { label: "Estados Unidos", value: "UnitedStates" },
+  { label: "Uruguay", value: "Uruguay" },
+  { label: "Uzbekistán", value: "Uzbekistan" },
+  { label: "Vanuatu", value: "Vanuatu" },
+  { label: "Ciudad del Vaticano", value: "VaticanCity" },
+  { label: "Venezuela", value: "Venezuela" },
+  { label: "Vietnam", value: "Vietnam" },
+  { label: "Yemen", value: "Yemen" },
+  { label: "Zambia", value: "Zambia" },
+  { label: "Zimbabue", value: "Zimbabwe" },
 ];
 
 export default function Register() {
@@ -34,12 +221,10 @@ export default function Register() {
     confirmPassword: "",
   });
 
-
   // Estado para la imagen seleccionada, previsualización y flags de carga
   const [imgFile, setImgFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,7 +258,6 @@ export default function Register() {
   };
 
   // Validación del formulario
-
   const validateForm = () => {
     if (form.dni.length < 8 || form.dni.length > 20) {
       return "El DNI debe tener entre 8 y 20 caracteres";
@@ -159,14 +343,14 @@ export default function Register() {
       const res = await api.post("/auth/register", payload);
 
       if (res.status === 201 || res.status === 200) {
-        auth.login(form.correo,form.password)
+        // iniciar sesión de inmediato y redirigir al home
+        await auth.login(form.correo, form.password);
         navigate("/");
       }
     } catch (err: any) {
       // Captura el mensaje devuelto por el backend o por Cloudinary
       const message = err.response?.data?.message || err.message;
       setError(message ?? "Error al registrarse, inténtalo nuevamente.");
-
     } finally {
       setLoading(false);
       setUploading(false);
@@ -174,13 +358,21 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-100 to-blue-300">
+    <div
+      className="flex items-center justify-center min-h-screen bg-cover bg-center pt-8 pb-6"
+      style={{
+        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.5)), url(${imagenFondo})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-lg">
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Crear cuenta</h1>
           <p className="text-gray-500">Completa todos los campos</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-8 mb-6">
           {/* DNI */}
           <div>
             <label className="block text-sm font-medium">DNI</label>
@@ -219,9 +411,7 @@ export default function Register() {
           </div>
           {/* Fecha de nacimiento */}
           <div>
-            <label className="block text-sm font-medium">
-              Fecha de nacimiento
-            </label>
+            <label className="block text-sm font-medium">Fecha de nacimiento</label>
             <input
               type="date"
               name="fecha_nacimiento"
@@ -289,7 +479,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Contraseña */}
           <div>
             <label className="block text-sm font-medium">Contraseña</label>
@@ -305,18 +494,16 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? "👁️" : "🙈"}
+                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
           </div>
 
           {/* Confirmar Contraseña */}
           <div>
-            <label className="block text-sm font-medium">
-              Confirmar contraseña
-            </label>
+            <label className="block text-sm font-medium">Confirmar contraseña</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -329,9 +516,9 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
-              >
-                {showConfirm ? "👁️" : "🙈"}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                >
+                {showConfirm ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
           </div>
@@ -357,12 +544,14 @@ export default function Register() {
           </div>
           {/* Mensajes de estado y error */}
           {uploading && (
-            <div className="text-sm text-gray-600">Subiendo imagen a Cloudinary...</div>
+            <div className="text-sm text-gray-600">
+              Subiendo imagen a Cloudinary...
+            </div>
           )}
-
           {error && (
             <div className="text-red-600 text-sm font-medium">{error}</div>
           )}
+          {/* Botón de envío */}
           <button
             type="submit"
             disabled={loading || uploading}
@@ -371,6 +560,8 @@ export default function Register() {
             {loading ? "Registrando..." : "Registrarse"}
           </button>
         </form>
+
+        {/* Sección inferior */}
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm mb-2">¿Ya tienes cuenta?</p>
           <button

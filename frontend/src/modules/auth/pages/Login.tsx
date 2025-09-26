@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import imagenFondo from "../../../assets/imagen_login.jpg"; // ajusta la ruta si es necesario
 
 export default function Login() {
   const auth = useAuth();
@@ -26,7 +27,14 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-100 to-blue-300">
+    <div
+      className="flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{
+        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.5)), url(${imagenFondo})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
         {/* efecto difuso detrás */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-400 rounded-2xl blur-2xl opacity-50 -z-10"></div>
