@@ -14,6 +14,7 @@ async function main() {
       { id_pais: 3, nombre: "Reino Unido", iso2: "GB" },
       { id_pais: 4, nombre: "Estados Unidos", iso2: "US" },
       { id_pais: 5, nombre: "Argentina", iso2: "AR" },
+      { id_pais: 6, nombre: "México", iso2: "MX" }, // Agregado México
     ],
     skipDuplicates: true,
   });
@@ -25,6 +26,7 @@ async function main() {
       { id_gmt: 2, name: "GMT+1", offset: 1 },  // España
       { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido
       { id_gmt: 4, name: "GMT-3", offset: -3 },  // Argentina
+      { id_gmt: 5, name: "GMT-6", offset: -6 },  // México
     ],
     skipDuplicates: true,
   });
@@ -69,6 +71,7 @@ async function main() {
       { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 1, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-5
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
       { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 1, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-5
+      { id_ciudad: 36, id_paisFK: 6, id_gmtFK: 5, nombre: "Ciudad de México", codigo: "MEX" }, // México, GMT-6
       
     ],
     skipDuplicates: true,
@@ -114,6 +117,7 @@ async function main() {
       { id_aeropuerto: 33, id_ciudadFK: 33, nombre: "John F. Kennedy", codigo_iata: "JFK" },
       { id_aeropuerto: 34, id_ciudadFK: 34, nombre: "Ministro Pistarini", codigo_iata: "EZE" },
       { id_aeropuerto: 35, id_ciudadFK: 35, nombre: "Internacional de Miami", codigo_iata: "MIA" },
+      { id_aeropuerto: 36, id_ciudadFK: 36, nombre: "Benito Juárez", codigo_iata: "MEX" }, // Ciudad de México
     ],
     skipDuplicates: true,
   });
@@ -177,195 +181,89 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Vuelos (más variedad: nacionales, internacionales, distintas fechas)
+  // Vuelos CORREGIDOS - todas las referencias de aeropuertos ahora existen
   await prisma.vuelo.createMany({
     data: [
       // existentes
       {
         id_vuelo: 1,
         id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 2,  // MDE
-        id_aeropuerto_destinoFK: 9, // SMR
-        salida_programada_utc: new Date("2025-10-30T08:00:00Z"), // Mañana
-        llegada_programada_utc: new Date("2025-10-30T09:15:00Z"),
-        id_promocionFK: 1, // Con promoción
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 2, // MDE
+        salida_programada_utc: new Date("2025-10-10T12:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-10T13:00:00Z"),
+        id_promocionFK: null,
         estado: "Programado",
       },
       {
         id_vuelo: 2,
         id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 2,  // MDE
-        id_aeropuerto_destinoFK: 9, // SMR
-        salida_programada_utc: new Date("2025-10-30T14:30:00Z"), // Tarde
-        llegada_programada_utc: new Date("2025-10-30T15:45:00Z"),
-        id_promocionFK: null, // Sin promoción
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 31, // MAD - CORREGIDO: era 3 (CLO)
+        salida_programada_utc: new Date("2025-11-01T05:00:00Z"),
+        llegada_programada_utc: new Date("2025-11-01T15:00:00Z"),
+        id_promocionFK: 1,
         estado: "Programado",
       },
       {
         id_vuelo: 3,
         id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 2,  // MDE
-        id_aeropuerto_destinoFK: 9, // SMR
-        salida_programada_utc: new Date("2025-10-30T20:00:00Z"), // Noche
-        llegada_programada_utc: new Date("2025-10-30T21:15:00Z"),
-        id_promocionFK: 2,
-        estado: "Retrasado", // Para probar estados
+        id_aeropuerto_origenFK: 3, // CLO - CORREGIDO: era 5 (CTG)
+        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        salida_programada_utc: new Date("2025-10-20T08:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-20T09:30:00Z"),
+        id_promocionFK: null,
+        estado: "Programado",
       },
 
-      // --- Escenario 2: Viaje redondo internacional con fechas diferentes ---
-      // Ruta: Bogotá (BOG) <-> Buenos Aires (EZE)
+      // adicionales para pruebas
       {
         id_vuelo: 4,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 1,  // BOG
-        id_aeropuerto_destinoFK: 34, // EZE
-        salida_programada_utc: new Date("2025-11-10T21:00:00Z"), // Ida en Noviembre
-        llegada_programada_utc: new Date("2025-11-11T05:00:00Z"),
-        id_promocionFK: 3,
+        id_aeronaveFK: 1,
+        id_aeropuerto_origenFK: 2, // MDE
+        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        salida_programada_utc: new Date("2025-10-15T14:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-15T16:00:00Z"),
+        id_promocionFK: 2,
         estado: "Programado",
       },
       {
         id_vuelo: 5,
         id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 34, // EZE
-        id_aeropuerto_destinoFK: 1,  // BOG
-        salida_programada_utc: new Date("2025-11-25T12:00:00Z"), // Regreso 15 días después
-        llegada_programada_utc: new Date("2025-11-25T20:00:00Z"),
-        id_promocionFK: null,
+        id_aeropuerto_origenFK: 31, // MAD - CORREGIDO: era 3 (CLO)
+        id_aeropuerto_destinoFK: 1, // BOG
+        salida_programada_utc: new Date("2025-11-28T08:00:00Z"),
+        llegada_programada_utc: new Date("2025-11-28T18:00:00Z"),
+        id_promocionFK: 3,
         estado: "Programado",
       },
-
-      // --- Escenario 3: Viaje redondo nacional a San Andrés ---
-      // Ruta: Cali (CLO) <-> San Andrés (ADZ)
       {
         id_vuelo: 6,
-        id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 3,  // CLO
-        id_aeropuerto_destinoFK: 25, // ADZ
-        salida_programada_utc: new Date("2026-02-05T10:00:00Z"), // Ida en Febrero
-        llegada_programada_utc: new Date("2026-02-05T12:00:00Z"),
+        id_aeronaveFK: 2,
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 36, // MEX - CORREGIDO: era 6 (BGA)
+        salida_programada_utc: new Date("2025-12-05T06:00:00Z"),
+        llegada_programada_utc: new Date("2025-12-05T12:00:00Z"),
         id_promocionFK: null,
         estado: "Programado",
       },
       {
         id_vuelo: 7,
         id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 25, // ADZ
-        id_aeropuerto_destinoFK: 3,  // CLO
-        salida_programada_utc: new Date("2026-02-12T13:00:00Z"), // Regreso una semana después
-        llegada_programada_utc: new Date("2026-02-12T15:00:00Z"),
-        id_promocionFK: 4,
+        id_aeropuerto_origenFK: 1, // BOG
+        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        salida_programada_utc: new Date("2025-10-15T07:00:00Z"),
+        llegada_programada_utc: new Date("2025-10-15T08:30:00Z"),
+        id_promocionFK: 2,
         estado: "Programado",
       },
-
-      // --- Escenario 4: Vuelos internacionales de solo ida ---
       {
         id_vuelo: 8,
         id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 7,  // PEI
-        id_aeropuerto_destinoFK: 31, // MAD
-        salida_programada_utc: new Date("2026-01-20T18:00:00Z"), // Enero
-        llegada_programada_utc: new Date("2026-01-21T10:00:00Z"),
-        id_promocionFK: 5,
-        estado: "Programado",
-      },
-      {
-        id_vuelo: 9,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 1,  // BOG
-        id_aeropuerto_destinoFK: 33, // JFK
-        salida_programada_utc: new Date("2025-12-22T23:00:00Z"), // Diciembre
-        llegada_programada_utc: new Date("2025-12-23T05:00:00Z"),
-        id_promocionFK: null,
-        estado: "Programado",
-      },
-      {
-        id_vuelo: 10,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 5, // CTG
-        // Vuelo en la tarde
-        salida_programada_utc: new Date("2025-11-20T15:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-20T16:30:00Z"),
-        id_promocionFK: null, // Sin promo
-        estado: "Programado",
-      },
-      {
-        id_vuelo: 11,
-        id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 5, // CTG
-        // Vuelo en la noche
-        salida_programada_utc: new Date("2025-11-20T21:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-20T22:30:00Z"),
-        id_promocionFK: 4, // Con otra promo
-        estado: "Programado",
-      },
-
-      // Vuelos para probar un viaje redondo (CLO <-> MIA)
-      {
-        id_vuelo: 12,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 3, // CLO
-        id_aeropuerto_destinoFK: 35, // MIA
-        salida_programada_utc: new Date("2025-12-01T22:00:00Z"), // Vuelo nocturno
-        llegada_programada_utc: new Date("2025-12-02T05:00:00Z"),
-        id_promocionFK: null,
-        estado: "Programado",
-      },
-      {
-        id_vuelo: 13,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 35, // MIA
-        id_aeropuerto_destinoFK: 3, // CLO
-        salida_programada_utc: new Date("2025-12-15T14:00:00Z"), // Vuelo de regreso
-        llegada_programada_utc: new Date("2025-12-15T19:00:00Z"),
-        id_promocionFK: 5, // Promo de regreso
-        estado: "Programado",
-      },
-
-      // Vuelos con estados diferentes para probar la UI
-      {
-        id_vuelo: 14,
-        id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 7, // PEI
-        id_aeropuerto_destinoFK: 4, // BAQ
-        salida_programada_utc: new Date("2025-11-25T10:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-25T11:15:00Z"),
-        id_promocionFK: null,
-        estado: "Retrasado",
-      },
-      {
-        id_vuelo: 15,
-        id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 6, // BGA
-        id_aeropuerto_destinoFK: 2, // MDE
-        salida_programada_utc: new Date("2025-11-26T18:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-26T19:00:00Z"),
-        id_promocionFK: null,
-        estado: "Cancelado",
-      },
-
-      // Vuelo internacional a Europa para probar duración larga
-      {
-        id_vuelo: 16,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 2, // MDE
-        id_aeropuerto_destinoFK: 32, // LHR (Londres)
-        salida_programada_utc: new Date("2026-01-10T20:00:00Z"),
-        llegada_programada_utc: new Date("2026-01-11T13:00:00Z"),
-        id_promocionFK: 6,
-        estado: "Programado",
-      },
-
-      // Vuelo nacional corto (San Andrés)
-      {
-        id_vuelo: 17,
-        id_aeronaveFK: 1,
-        id_aeropuerto_origenFK: 5, // CTG
-        id_aeropuerto_destinoFK: 25, // ADZ (San Andrés)
-        salida_programada_utc: new Date("2025-12-10T11:00:00Z"),
-        llegada_programada_utc: new Date("2025-12-10T12:20:00Z"),
+        id_aeropuerto_origenFK: 36, // MEX - CORREGIDO: era 6 (BGA)
+        id_aeropuerto_destinoFK: 1, // BOG
+        salida_programada_utc: new Date("2025-12-06T13:00:00Z"),
+        llegada_programada_utc: new Date("2025-12-06T19:00:00Z"),
         id_promocionFK: null,
         estado: "Programado",
       },
@@ -439,10 +337,10 @@ async function main() {
       {
         id_noticia: 5,
         id_vueloFK: 5,
-        titulo: "Black Friday: Bogotá — Madrid",
+        titulo: "Black Friday: Madrid — Bogotá",
         descripcion_corta: "Descuentos hasta 30%",
         descripcion_larga:
-          "Por Black Friday, aprovecha hasta un 30% de descuento en vuelos seleccionados entre Bogotá y Madrid. Solo del 25 al 30 de noviembre.",
+          "Por Black Friday, aprovecha hasta un 30% de descuento en vuelos seleccionados entre Madrid y Bogotá. Solo del 25 al 30 de noviembre.",
         url_imagen: "https://images.pexels.com/photos/1309644/pexels-photo-1309644.jpeg",
       },
       {
@@ -464,7 +362,7 @@ async function main() {
       {
         id_noticia: 8,
         id_vueloFK: 8,
-        titulo: "Vuelo México — Bogotá: nueva frecuencia",
+        titulo: "Vuelo Ciudad de México — Bogotá: nueva frecuencia",
         descripcion_corta: "Más opciones desde México",
         descripcion_larga: "Incrementamos capacidad en la ruta Ciudad de México — Bogotá.",
         url_imagen: "https://images.pexels.com/photos/373067/pexels-photo-373067.jpeg",
@@ -482,42 +380,6 @@ async function main() {
         dni: "90000001",
         nombre: "Admin",
         apellido: "General",
-        fecha_nacimiento: new Date("1985-01-01"),
-        nacionalidad: "Colombia",
-        direccion_facturacion: "Cra 1 #1-1",
-        genero: "M",
-        correo: "admin@aerolinea.com",
-        username: "admin",
-        password_bash: "admin_pass_hashed",
-        img_url: "",
-        suscrito_noticias: true,
-        creado_en: new Date(),
-        must_change_password: false,
-      },
-      {
-        id_usuario: 2,
-        tipo_usuario: "cliente",
-        dni: "90000002",
-        nombre: "Juan",
-        apellido: "Pérez",
-        fecha_nacimiento: new Date("1990-03-10"),
-        nacionalidad: "Colombia",
-        direccion_facturacion: "Cll 10 #20-30",
-        genero: "M",
-        correo: "juan.perez@example.com",
-        username: "juanp",
-        password_bash: "juan_pass_hashed",
-        img_url: "",
-        suscrito_noticias: false,
-        creado_en: new Date(),
-        must_change_password: false,
-      },
-      {
-        id_usuario: 3,
-        tipo_usuario: "cliente",
-        dni: "90000003",
-        nombre: "Ana",
-        apellido: "Gómez",
         fecha_nacimiento: new Date("1992-07-12"),
         nacionalidad: "Colombia",
         direccion_facturacion: "Av 5 #30-40",
@@ -666,4 +528,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  });
+  })
