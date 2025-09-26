@@ -1,5 +1,4 @@
-// src/modules/auth/pages/Register.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
@@ -31,14 +30,30 @@ export default function Register() {
     username: "",
     password: "",
     confirmPassword: "",
-    img_url: "",
   });
+
+  // Estado para la imagen seleccionada, previsualización y flags de carga
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Crear una URL de previsualización y limpiarla cuando cambie la imagen
+  useEffect(() => {
+    if (!imgFile) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(imgFile);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imgFile]);
+
+  // Maneja los cambios en los campos del formulario de texto/select
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -46,6 +61,14 @@ export default function Register() {
     setForm({ ...form, [name]: value });
   };
 
+  // Maneja la selección de archivo de imagen
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setImgFile(file ?? null);
+    setError(null);
+  };
+
+  // Validación del formulario
   const validateForm = () => {
     if (form.dni.length < 8 || form.dni.length > 20) {
       return "El DNI debe tener entre 8 y 20 caracteres";
@@ -62,12 +85,41 @@ export default function Register() {
     if (form.password !== form.confirmPassword) {
       return "Las contraseñas no coinciden";
     }
-    if (!/\.(jpg|jpeg|png|gif)$/i.test(form.img_url)) {
+    // Validación de la imagen
+    if (!imgFile) {
+      return "Debes seleccionar una imagen";
+    }
+    const maxBytes = 5 * 1024 * 1024; // 5MB
+    if (imgFile.size > maxBytes) {
+      return "La imagen no puede ser mayor a 5 MB";
+    }
+    if (!/\.(jpg|jpeg|png|gif)$/i.test(imgFile.name)) {
       return "La imagen debe ser un archivo válido (.jpg, .jpeg, .png, .gif)";
     }
     return null;
   };
 
+  // Sube la imagen a Cloudinary y devuelve la secure_url
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", "Swokowsky-bucket");
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Upload a Cloudinary falló: ${res.status} ${text}`);
+    }
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("No se recibió secure_url desde Cloudinary");
+    return data.secure_url as string;
+  };
+
+  // Maneja el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -80,7 +132,12 @@ export default function Register() {
 
     try {
       setLoading(true);
-
+      let imageUrl = "";
+      if (imgFile) {
+        setUploading(true);
+        imageUrl = await uploadToCloudinary(imgFile);
+        setUploading(false);
+      }
       const payload = {
         dni: form.dni,
         nombre: form.nombre,
@@ -91,26 +148,19 @@ export default function Register() {
         correo: form.correo,
         username: form.username,
         password_bash: form.password,
-        img_url: form.img_url,
+        img_url: imageUrl,
       };
-
       const res = await api.post("/auth/register", payload);
-      console.log(res);
-
       if (res.status === 201 || res.status === 200) {
         navigate("/login");
       }
     } catch (err: any) {
-      console.error("❌ Error en registro:", err.response?.data || err.message);
-
-      // 🔴 Captura el mensaje devuelto por el backend
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError("❌ Error al registrarse, inténtalo nuevamente.");
-      }
+      // Captura el mensaje devuelto por el backend o por Cloudinary
+      const message = err.response?.data?.message || err.message;
+      setError(message ?? "Error al registrarse, inténtalo nuevamente.");
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -121,7 +171,6 @@ export default function Register() {
           <h1 className="text-3xl font-bold text-gray-800">Crear cuenta</h1>
           <p className="text-gray-500">Completa todos los campos</p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* DNI */}
           <div>
@@ -135,7 +184,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium">Nombre</label>
@@ -148,7 +196,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Apellido */}
           <div>
             <label className="block text-sm font-medium">Apellido</label>
@@ -161,12 +208,9 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Fecha de nacimiento */}
           <div>
-            <label className="block text-sm font-medium">
-              Fecha de nacimiento
-            </label>
+            <label className="block text-sm font-medium">Fecha de nacimiento</label>
             <input
               type="date"
               name="fecha_nacimiento"
@@ -176,7 +220,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Nacionalidad */}
           <div>
             <label className="block text-sm font-medium">Nacionalidad</label>
@@ -195,7 +238,6 @@ export default function Register() {
               ))}
             </select>
           </div>
-
           {/* Género */}
           <div>
             <label className="block text-sm font-medium">Género</label>
@@ -212,7 +254,6 @@ export default function Register() {
               <option value="X">Otro</option>
             </select>
           </div>
-
           {/* Correo */}
           <div>
             <label className="block text-sm font-medium">Correo</label>
@@ -225,7 +266,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Username */}
           <div>
             <label className="block text-sm font-medium">Username</label>
@@ -238,7 +278,6 @@ export default function Register() {
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
-
           {/* Contraseña */}
           <div>
             <label className="block text-sm font-medium">Contraseña</label>
@@ -260,12 +299,9 @@ export default function Register() {
               </button>
             </div>
           </div>
-
           {/* Confirmar Contraseña */}
           <div>
-            <label className="block text-sm font-medium">
-              Confirmar contraseña
-            </label>
+            <label className="block text-sm font-medium">Confirmar contraseña</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -284,35 +320,41 @@ export default function Register() {
               </button>
             </div>
           </div>
-
-          {/* Imagen */}
+          {/* Imagen: archivo a subir */}
           <div>
-            <label className="block text-sm font-medium">Imagen (URL)</label>
+            <label className="block text-sm font-medium">Imagen (subir)</label>
             <input
-              type="url"
-              name="img_url"
-              value={form.img_url}
-              onChange={handleChange}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
               required
-              placeholder="https://...jpg"
               className="w-full px-3 py-2 border rounded-lg"
             />
+            {preview && (
+              <div className="mt-2">
+                <img
+                  src={preview}
+                  alt="preview"
+                  className="w-32 h-32 object-cover rounded-md border"
+                />
+              </div>
+            )}
           </div>
-
-          {/* Mensajes de error */}
+          {/* Mensajes de estado y error */}
+          {uploading && (
+            <div className="text-sm text-gray-600">Subiendo imagen a Cloudinary...</div>
+          )}
           {error && (
             <div className="text-red-600 text-sm font-medium">{error}</div>
           )}
-
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || uploading}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-50"
           >
             {loading ? "Registrando..." : "Registrarse"}
           </button>
         </form>
-
         <div className="mt-6 text-center">
           <p className="text-gray-600 text-sm mb-2">¿Ya tienes cuenta?</p>
           <button
