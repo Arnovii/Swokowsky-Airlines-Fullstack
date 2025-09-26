@@ -1,8 +1,6 @@
 // src/services/flightService.js
+import api from '@/api/axios';
 
-import api from '@/api/axios'; // Asegúrate que la ruta a tu instancia de axios sea correcta
-
-// La función de normalización que arregla todos los problemas de datos
 function normalizeFlightData(flight) {
   const departureDate = new Date(`${flight.fecha_salida_programada}T${flight.hora_salida_utc}:00Z`);
   const arrivalDate = new Date(`${flight.fecha_llegada_programada}T${flight.hora_llegada_utc}:00Z`);
@@ -25,7 +23,7 @@ function normalizeFlightData(flight) {
     origin: flight.origen,
     destination: flight.destino,
     aircraftModel: flight.modelo_aeronave || "No especificado",
-    isInternational: isInternational,
+    isInternational,
     availableClasses: flight.clases_disponibles || [],
     promotion: flight.promocion ? {
       name: flight.promocion.nombre || '',
@@ -35,11 +33,7 @@ function normalizeFlightData(flight) {
   };
 }
 
-
 export class FlightService {
-  /**
-   * Busca vuelos y devuelve los datos ya normalizados.
-   */
   static async searchFlights(searchCriteria, options = {}) {
     try {
       const response = await api.post('/flights/search', searchCriteria, {
@@ -48,11 +42,16 @@ export class FlightService {
 
       const data = response.data;
 
-      // Paso clave: Mapeamos sobre las listas 'outbound' e 'inbound'
-      const outboundFlights = (data.outbound || []).map(normalizeFlightData);
-      const inboundFlights = (data.inbound || []).map(normalizeFlightData);
+      let outboundFlights = [];
+      let inboundFlights = [];
 
-      // Devolvemos el objeto con las listas ya normalizadas.
+      if (data.type === 'roundtrip') {
+        outboundFlights = (data.outbound || []).map(normalizeFlightData);
+        inboundFlights = (data.inbound || []).map(normalizeFlightData);
+      } else if (data.type === 'oneway') {
+        outboundFlights = (data.results || []).map(normalizeFlightData);
+      }
+
       return {
         type: data.type,
         outbound: outboundFlights,
@@ -65,7 +64,7 @@ export class FlightService {
         console.log('Request canceled');
         return { type: 'oneway', outbound: [], inbound: [], metadata: {} };
       }
-      
+
       console.error('API Error in searchFlights:', error);
       throw error;
     }
