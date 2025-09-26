@@ -493,14 +493,14 @@ export default function Register() {
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                >
-                {showConfirm ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+              >
+                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
-
             </div>
           </div>
+
           {/* Confirmar Contraseña */}
           <div>
             <label className="block text-sm font-medium">Confirmar contraseña</label>
