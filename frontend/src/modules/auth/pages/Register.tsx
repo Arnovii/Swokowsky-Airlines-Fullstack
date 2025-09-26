@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
-// Lista de nacionalidades (puedes ampliarla)
+// Lista de nacionalidades (ejemplo, puedes ampliarla)
 const NATIONALITIES = [
   { label: "Colombia", value: "Colombia" },
   { label: "Argentina", value: "Argentina" },
@@ -16,16 +16,6 @@ const NATIONALITIES = [
   { label: "Brasil", value: "Brazil" },
   { label: "Alemania", value: "Germany" },
 ];
-
-type FieldErrors = Partial<{
-  dni: string;
-  correo: string;
-  username: string;
-  password: string;
-  confirmPassword: string;
-  img_url: string;
-  general: string;
-}>;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -44,7 +34,7 @@ export default function Register() {
     img_url: "",
   });
 
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -53,166 +43,72 @@ export default function Register() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setForm((s) => ({ ...s, [name]: value }));
-    // limpiar error del campo editado
-    setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
+    setForm({ ...form, [name]: value });
   };
 
-  const validateClient = (): FieldErrors => {
-    const e: FieldErrors = {};
-
-    // DNI: 8-20
+  const validateForm = () => {
     if (form.dni.length < 8 || form.dni.length > 20) {
-      e.dni = "El DNI debe tener entre 8 y 20 caracteres.";
+      return "El DNI debe tener entre 8 y 20 caracteres";
     }
-
-    // Username: 6-20 (más de 5 como pediste)
     if (form.username.length < 6 || form.username.length > 20) {
-      e.username = "El nombre de usuario debe tener entre 6 y 20 caracteres.";
+      return "El nombre de usuario debe tener entre 6 y 20 caracteres";
     }
-
-    // Email formato
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
-      e.correo = "El correo no es válido.";
+      return "El correo no es válido";
     }
-
-    // Password >= 8
     if (form.password.length < 8) {
-      e.password = "La contraseña debe tener al menos 8 caracteres.";
+      return "La contraseña debe tener al menos 8 caracteres";
     }
-
-    // Confirm igual a password
-    if (form.confirmPassword !== form.password) {
-      e.confirmPassword = "Las contraseñas no coinciden.";
+    if (form.password !== form.confirmPassword) {
+      return "Las contraseñas no coinciden";
     }
-
-    // Imagen: extensión simple (ajusta si usas upload real)
     if (!/\.(jpg|jpeg|png|gif)$/i.test(form.img_url)) {
-      e.img_url = "La imagen debe ser .jpg, .jpeg, .png o .gif";
+      return "La imagen debe ser un archivo válido (.jpg, .jpeg, .png, .gif)";
     }
-
-    return e;
+    return null;
   };
 
-  // ⚠️ PRE-CHECK OPCIONAL (solo si tu backend expone endpoints de disponibilidad)
-  // Si no existen, esto no bloquea ni rompe: se ignora el fallo.
-  const precheckDuplicates = async (): Promise<FieldErrors> => {
-    const e: FieldErrors = {};
-    try {
-      // Intenta alguna ruta de disponibilidad si existe en tu backend:
-      // Ejemplos posibles (ajústalos si existen):
-      // const [dniRes, emailRes, userRes] = await Promise.all([
-      //   api.get("/users/check-dni", { params: { dni: form.dni } }),
-      //   api.get("/users/check-email", { params: { email: form.correo } }),
-      //   api.get("/users/check-username", { params: { username: form.username } }),
-      // ]);
-      // if (dniRes.data?.exists) e.dni = "Ese DNI ya está registrado.";
-      // if (emailRes.data?.exists) e.correo = "Ese correo ya está registrado.";
-      // if (userRes.data?.exists) e.username = "Ese nombre de usuario ya está en uso.";
-    } catch {
-      // Si 404/No existe endpoint, no hacemos nada: el backend lo validará en el POST.
-    }
-    return e;
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
 
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    setErrors({});
-    setLoading(true);
-
-    // Validación en el cliente
-    const clientErr = validateClient();
-    if (Object.keys(clientErr).length) {
-      setErrors(clientErr);
-      setLoading(false);
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    // Pre-check opcional (si endpoints existen)
-    const dupErr = await precheckDuplicates();
-    if (Object.keys(dupErr).length) {
-      setErrors(dupErr);
-      setLoading(false);
-      return;
-    }
-
-    // Payload para backend
-    const payload = {
-      dni: form.dni,
-      nombre: form.nombre,
-      apellido: form.apellido,
-      // si tu backend espera fecha sin hora: new Date(...).toISOString().split("T")[0]
-      fecha_nacimiento: new Date(form.fecha_nacimiento).toISOString(),
-      nacionalidad: form.nacionalidad,
-      genero: form.genero, // "M" | "F" | "X"
-      correo: form.correo,
-      username: form.username,
-      password_bash: form.password,
-      img_url: form.img_url,
-    };
-
     try {
+      setLoading(true);
+
+      const payload = {
+        dni: form.dni,
+        nombre: form.nombre,
+        apellido: form.apellido,
+        fecha_nacimiento: new Date(form.fecha_nacimiento).toISOString(),
+        nacionalidad: form.nacionalidad,
+        genero: form.genero,
+        correo: form.correo,
+        username: form.username,
+        password_bash: form.password,
+        img_url: form.img_url,
+      };
+
       const res = await api.post("/auth/register", payload);
+      console.log(res);
 
       if (res.status === 201 || res.status === 200) {
-        // éxito
         navigate("/login");
-        return;
       }
-
-      // Si no es 2xx, mostrar genérico
-      setErrors({ general: "No se pudo crear el usuario." });
     } catch (err: any) {
-      // ---- Manejo de duplicados por respuesta del backend ----
-      // Prisma suele mandar:
-      // { code: 'P2002', meta: { target: ['correo'] } }
-      const data = err?.response?.data;
-      const msg: string | undefined = data?.message;
-      const code: string | undefined = data?.code;
-      const target: string[] | string | undefined = data?.meta?.target;
+      console.error("❌ Error en registro:", err.response?.data || err.message);
 
-      const e: FieldErrors = {};
-
-      // Si es P2002 (unique constraint)
-      if (code === "P2002" || /unique constraint/i.test(msg || "")) {
-        const targets = Array.isArray(target)
-          ? target
-          : typeof target === "string"
-          ? [target]
-          : [];
-
-        // Intenta detectar cuál campo chocó
-        const text = (msg || "").toLowerCase();
-
-        const mark = (field: keyof FieldErrors, label: string) => {
-          if (!e[field]) e[field] = `${label} ya está registrado.`;
-        };
-
-        if (targets.length) {
-          targets.forEach((t) => {
-            const k = t.toLowerCase();
-            if (k.includes("dni")) mark("dni", "El DNI");
-            if (k.includes("correo") || k.includes("email")) mark("correo", "El correo");
-            if (k.includes("username") || k.includes("usuario")) mark("username", "El nombre de usuario");
-          });
-        } else {
-          // Fallback: inspecciona el mensaje
-          if (text.includes("dni")) mark("dni", "El DNI");
-          if (text.includes("correo") || text.includes("email")) mark("correo", "El correo");
-          if (text.includes("username") || text.includes("usuario")) mark("username", "El nombre de usuario");
-        }
-
-        // Si no logramos identificar, muestra genérico
-        if (!e.dni && !e.correo && !e.username) {
-          e.general = "Alguno de los campos (DNI / correo / usuario) ya existe.";
-        }
+      // 🔴 Captura el mensaje devuelto por el backend
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
       } else {
-        // Otros errores del backend
-        e.general =
-          Array.isArray(data?.message) ? data.message.join(", ") : data?.message || "Error al registrarse.";
+        setError("❌ Error al registrarse, inténtalo nuevamente.");
       }
-
-      setErrors(e);
     } finally {
       setLoading(false);
     }
@@ -236,9 +132,8 @@ export default function Register() {
               value={form.dni}
               onChange={handleChange}
               required
-              className={`w-full px-3 py-2 border rounded-lg ${errors.dni ? "border-red-500" : ""}`}
+              className="w-full px-3 py-2 border rounded-lg"
             />
-            {errors.dni && <p className="text-red-600 text-sm mt-1">{errors.dni}</p>}
           </div>
 
           {/* Nombre */}
@@ -269,7 +164,9 @@ export default function Register() {
 
           {/* Fecha de nacimiento */}
           <div>
-            <label className="block text-sm font-medium">Fecha de nacimiento</label>
+            <label className="block text-sm font-medium">
+              Fecha de nacimiento
+            </label>
             <input
               type="date"
               name="fecha_nacimiento"
@@ -312,7 +209,7 @@ export default function Register() {
               <option value="">Seleccionar</option>
               <option value="M">Masculino</option>
               <option value="F">Femenino</option>
-              <option value="X">Prefiero no decirlo</option>
+              <option value="X">Otro</option>
             </select>
           </div>
 
@@ -325,9 +222,8 @@ export default function Register() {
               value={form.correo}
               onChange={handleChange}
               required
-              className={`w-full px-3 py-2 border rounded-lg ${errors.correo ? "border-red-500" : ""}`}
+              className="w-full px-3 py-2 border rounded-lg"
             />
-            {errors.correo && <p className="text-red-600 text-sm mt-1">{errors.correo}</p>}
           </div>
 
           {/* Username */}
@@ -339,12 +235,11 @@ export default function Register() {
               value={form.username}
               onChange={handleChange}
               required
-              className={`w-full px-3 py-2 border rounded-lg ${errors.username ? "border-red-500" : ""}`}
+              className="w-full px-3 py-2 border rounded-lg"
             />
-            {errors.username && <p className="text-red-600 text-sm mt-1">{errors.username}</p>}
           </div>
 
-          {/* Password */}
+          {/* Contraseña */}
           <div>
             <label className="block text-sm font-medium">Contraseña</label>
             <div className="relative">
@@ -354,22 +249,23 @@ export default function Register() {
                 value={form.password}
                 onChange={handleChange}
                 required
-                className={`w-full px-3 py-2 border rounded-lg pr-24 ${errors.password ? "border-red-500" : ""}`}
+                className="w-full px-3 py-2 border rounded-lg pr-10"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-0 px-3 m-1 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
               >
-                {showPassword ? "Ocultar" : "Mostrar"}
+                {showPassword ? "👁️" : "🙈"}
               </button>
             </div>
-            {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
           </div>
 
-          {/* Confirm Password */}
+          {/* Confirmar Contraseña */}
           <div>
-            <label className="block text-sm font-medium">Confirmar contraseña</label>
+            <label className="block text-sm font-medium">
+              Confirmar contraseña
+            </label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -377,19 +273,16 @@ export default function Register() {
                 value={form.confirmPassword}
                 onChange={handleChange}
                 required
-                className={`w-full px-3 py-2 border rounded-lg pr-24 ${errors.confirmPassword ? "border-red-500" : ""}`}
+                className="w-full px-3 py-2 border rounded-lg pr-10"
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                className="absolute inset-y-0 right-0 px-3 m-1 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+                onClick={() => setShowConfirm(!showConfirm)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
               >
-                {showConfirm ? "Ocultar" : "Mostrar"}
+                {showConfirm ? "👁️" : "🙈"}
               </button>
             </div>
-            {errors.confirmPassword && (
-              <p className="text-red-600 text-sm mt-1">{errors.confirmPassword}</p>
-            )}
           </div>
 
           {/* Imagen */}
@@ -402,14 +295,13 @@ export default function Register() {
               onChange={handleChange}
               required
               placeholder="https://...jpg"
-              className={`w-full px-3 py-2 border rounded-lg ${errors.img_url ? "border-red-500" : ""}`}
+              className="w-full px-3 py-2 border rounded-lg"
             />
-            {errors.img_url && <p className="text-red-600 text-sm mt-1">{errors.img_url}</p>}
           </div>
 
-          {/* Error general */}
-          {errors.general && (
-            <div className="text-red-600 text-sm font-medium">{errors.general}</div>
+          {/* Mensajes de error */}
+          {error && (
+            <div className="text-red-600 text-sm font-medium">{error}</div>
           )}
 
           <button
