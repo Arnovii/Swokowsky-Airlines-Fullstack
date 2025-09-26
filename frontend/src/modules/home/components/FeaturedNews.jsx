@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Eye, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NewsService } from '../services/newsService';
+import { Link } from 'react-router-dom';  
 
 const FeaturedNews = () => {
   const [news, setNews] = useState([]);
@@ -17,7 +18,7 @@ const FeaturedNews = () => {
       setLoading(true);
       setError(null);
       const response = await NewsService.getFeaturedNews(6);
-      
+
       // Adaptación para manejar diferentes estructuras de respuesta
       let newsData = [];
       if (Array.isArray(response)) {
@@ -29,7 +30,7 @@ const FeaturedNews = () => {
       } else if (response.noticias && Array.isArray(response.noticias)) {
         newsData = response.noticias;
       }
-      
+
       setNews(newsData);
     } catch (err) {
       setError(err.message || 'Error al cargar noticias');
@@ -144,7 +145,7 @@ const FeaturedNews = () => {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+    <section  className="py-16 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
@@ -177,8 +178,8 @@ const FeaturedNews = () => {
                   <div className="absolute top-4 left-4">
                     <span
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg"
-                      style={{ 
-                        backgroundColor: article.category?.color || article.categoria?.color || '#3B82F6' 
+                      style={{
+                        backgroundColor: article.category?.color || article.categoria?.color || '#3B82F6'
                       }}
                     >
                       {article.category?.name || article.categoria?.nombre || 'General'}
@@ -198,7 +199,7 @@ const FeaturedNews = () => {
                   <h3 className="text-xl font-bold text-[#081225] mb-3 line-clamp-2 group-hover:text-[#0e254d] transition-colors">
                     {getTitle(article)}
                   </h3>
-                  
+
                   <p className="text-gray-600 mb-4 line-clamp-3">
                     {getExcerpt(article)}
                   </p>
@@ -242,13 +243,13 @@ const FeaturedNews = () => {
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => window.location.href = `/news/${article.slug || article.id || article.id_noticia}`}
+                    <Link
+                      to={`/noticias/vuelo/${article.id || article.id_noticia}`}
                       className="inline-flex items-center gap-1 text-[#0e254d] hover:text-[#081225] font-medium transition-colors group"
                     >
                       <span>Leer más</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </article>
@@ -264,15 +265,14 @@ const FeaturedNews = () => {
               >
                 <ChevronLeft size={20} />
               </button>
-              
+
               <div className="flex gap-2">
                 {Array.from({ length: Math.ceil(news.length / 6) }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-3 h-3 rounded-full transition-all ${
-                      currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
+                    className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
                   />
                 ))}
               </div>

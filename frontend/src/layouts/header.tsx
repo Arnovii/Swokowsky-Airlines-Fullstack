@@ -41,9 +41,6 @@ export default function Header() {
         <Link to="/news" className="hover:text-cyan-400">
           Noticias
         </Link>
-        <Link to="/reserva" className="hover:text-cyan-400">
-          Reserva y Check-in
-        </Link>
         <Link to="/buscar-vuelos" className="hover:text-cyan-400">
           Buscar vuelos
         </Link>
@@ -57,12 +54,6 @@ export default function Header() {
               Hola, <span className="font-bold">{usernameDisplay}</span> 👋
             </Link>
 
-            <Link to="/carrito">
-              <ShoppingCart className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
-            </Link>
-            <Link to="/configuracion">
-              <Settings className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
-            </Link>
 
             {/* Logout button */}
             <button
@@ -90,20 +81,12 @@ export default function Header() {
           <Link to="/news" className="hover:text-cyan-400">
             Noticias
           </Link>
-          <Link to="/reserva" className="hover:text-cyan-400">
-            Reserva y Check-in
-          </Link>
+
           <Link to="/buscar-vuelos" className="hover:text-cyan-400">
             Buscar vuelos
           </Link>
 
           <div className="flex space-x-6 mt-4">
-            <Link to="/carrito">
-              <ShoppingCart className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
-            </Link>
-            <Link to="/configuracion">
-              <Settings className="h-6 w-6 hover:text-cyan-400 cursor-pointer" />
-            </Link>
 
             {auth.isAuthenticated ? (
               <>
