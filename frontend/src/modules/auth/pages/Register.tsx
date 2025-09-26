@@ -73,8 +73,8 @@ export default function Register() {
     if (form.dni.length < 8 || form.dni.length > 20) {
       return "El DNI debe tener entre 8 y 20 caracteres";
     }
-    if (form.username.length < 6 || form.username.length > 20) {
-      return "El nombre de usuario debe tener entre 6 y 20 caracteres";
+    if (form.username.length < 4 || form.username.length > 21) {
+      return "El nombre de usuario debe tener entre 5 y 20 caracteres";
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
       return "El correo no es válido";
