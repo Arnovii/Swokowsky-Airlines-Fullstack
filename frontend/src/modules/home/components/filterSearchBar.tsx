@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
@@ -166,6 +167,42 @@ export default function BuscadorVuelosModerno() {
 
   const totalPasajeros = pasajeros.adultos + pasajeros.menores;
 
+  // Datos de validación para vuelos nacionales e internacionales
+  const capitalesNacionales = ["Arauca",
+                              "Armenia",
+                              "Barranquilla",
+                              "Bogotá",
+                              "Bucaramanga",
+                              "Cali",
+                              "Cartagena",
+                              "Cúcuta",
+                              "Florencia",
+                              "Ibagué",
+                              "Leticia",
+                              "Manizales",
+                              "Medellín",
+                              "Mitú",
+                              "Mocoa",
+                              "Montería",
+                              "Neiva",
+                              "Pasto",
+                              "Pereira",
+                              "Popayán",
+                              "Puerto Carreño",
+                              "Puerto Inírida",
+                              "Quibdó",
+                              "Riohacha",
+                              "San Andrés",
+                              "San José del Guaviare",
+                              "Santa Marta",
+                              "Sincelejo",
+                              "Tunja",
+                              "Valledupar",
+                              "Villavicencio",
+                              "Yopal"];
+  const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
+  const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+
   // ================== CARGAR CIUDADES DESDE API ==================
   useEffect(() => {
     const cargarCiudades = async () => {
@@ -183,6 +220,29 @@ export default function BuscadorVuelosModerno() {
     };
 
     cargarCiudades();
+  }, []);
+
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Cerrar sugerencias de origen si se hace click fuera
+      if (origenRef.current && !origenRef.current.contains(event.target)) {
+        setSugerenciasOrigen([]);
+      }
+      
+      // Cerrar sugerencias de destino si se hace click fuera
+      if (destinoRef.current && !destinoRef.current.contains(event.target)) {
+        setSugerenciasDestino([]);
+      }
+    };
+
+    // Agregar event listener al documento
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup: remover event listener al desmontar el componente
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // ================== HELPERS ==================
@@ -215,6 +275,12 @@ export default function BuscadorVuelosModerno() {
     }
   };
 
+  // Helper del segundo código
+  const getCodigoDesdeString = (valorCompleto: string) => {
+    const match = valorCompleto.match(/\(([^)]+)\)/);
+    return match ? match[1] : valorCompleto;
+  };
+
   // ================== FILTROS ==================
   const filtrarOrigen = (valor: string) => {
     setOrigen(valor);
@@ -236,9 +302,49 @@ export default function BuscadorVuelosModerno() {
     let listaPermitida: Ciudad[] = [];
 
     if (ciudadOrigenSeleccionada) {
-      // Excluir la ciudad de origen de los destinos posibles
-      listaPermitida = ciudades.filter(c => c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad);
+      const origenNombre = ciudadOrigenSeleccionada.nombre;
+      
+      console.log("Ciudad origen seleccionada:", origenNombre); // Debug
+      
+      // Si el origen es una ciudad internacional, solo puede regresar a hubs internacionales
+      if (destinosInternacionales.includes(origenNombre)) {
+        listaPermitida = ciudades.filter(c => 
+          origenesInternacionales.includes(c.nombre)
+        );
+        console.log("Es ciudad internacional, destinos permitidos:", listaPermitida.length); // Debug
+      }
+      // Si el origen es un hub internacional, puede ir a:
+      // 1. Cualquier capital nacional (excepto él mismo)
+      // 2. Cualquier destino internacional
+      else if (origenesInternacionales.includes(origenNombre)) {
+        // Capitales nacionales (excepto el origen)
+        const destinosNacionales = ciudades.filter(c => 
+          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
+        );
+        // Destinos internacionales
+        const destinosInternacionalesPermitidos = ciudades.filter(c => 
+          destinosInternacionales.includes(c.nombre)
+        );
+        listaPermitida = [...destinosNacionales, ...destinosInternacionalesPermitidos];
+        console.log("Es hub internacional, destinos permitidos:", listaPermitida.length); // Debug
+      } 
+      // Si el origen es una capital nacional (pero no hub internacional), 
+      // solo puede ir a otras capitales nacionales
+      else if (capitalesNacionales.includes(origenNombre)) {
+        listaPermitida = ciudades.filter(c => 
+          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
+        );
+        console.log("Es capital nacional, destinos permitidos:", listaPermitida.length); // Debug
+      }
+      // Si no es capital nacional ni destino internacional, mostrar mensaje pero permitir ver todas las ciudades para debug
+      else {
+        // Para debug, mostrar todas las ciudades disponibles
+        listaPermitida = ciudades.filter(c => c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad);
+        console.log("No es capital reconocida:", origenNombre, "ciudades disponibles:", ciudades.length); // Debug
+        console.log("Capitales disponibles en lista:", ciudades.filter(c => capitalesNacionales.includes(c.nombre)).map(c => c.nombre)); // Debug
+      }
     } else {
+      // Si no hay origen seleccionado, mostrar todas las ciudades disponibles
       listaPermitida = ciudades;
     }
 
@@ -247,7 +353,98 @@ export default function BuscadorVuelosModerno() {
     );
   };
 
-  // ================== VALIDACIÓN Y BÚSQUEDA ==================
+  // ================== VALIDACIÓN AGREGADA DEL SEGUNDO CÓDIGO ==================
+  const validarVuelo = () => {
+    setMensaje("");
+    const newErrors: { [key: string]: boolean } = {};
+
+    // 1. Revisar campos obligatorios
+    if (!origen) newErrors.origen = true;
+    if (!destino) newErrors.destino = true;
+    if (!ida) newErrors.ida = true;
+    if (modo === "ida_vuelta" && !vuelta) newErrors.vuelta = true;
+
+    // 2. Si hay errores, mostrarlos y detenerse
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setMensaje("Por favor, completa los campos marcados en rojo.");
+      return;
+    }
+
+    // 3. Si no hay errores, limpiar y proceder con validaciones de negocio
+    setErrors({});
+    const origenCiudad = limpiarCiudad(origen);
+    const destinoCiudad = limpiarCiudad(destino);
+    
+    // Validaciones de reglas de negocio
+    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
+    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
+    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
+    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
+    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
+    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
+
+    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
+    if (origenEsInternacional) {
+      if (!destinoEsHubInternacional) {
+        return setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
+      }
+    }
+    // Validaciones para vuelos desde territorio nacional
+    else {
+      // Validación 1: El origen debe ser una capital principal
+      if (!origenEsCapitalNacional) {
+        return setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
+      }
+
+      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
+      if (destinoEsInternacional && !origenEsHubInternacional) {
+        return setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
+      }
+
+      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
+      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
+        return setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
+      }
+    }
+
+    // Validación 4: No puede ser el mismo origen y destino
+    if (origenCiudad === destinoCiudad) {
+      return setMensaje("El origen y destino no pueden ser la misma ciudad.");
+    }
+
+    // Si todo está válido, navegar a resultados
+    const searchParams = new URLSearchParams({
+      // Parámetros para la búsqueda (los IDs son cruciales)
+      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
+      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
+      departureDate: ida,
+      roundTrip: (modo === "ida_vuelta").toString(),
+      passengers: totalPasajeros.toString(),
+      
+      // Parámetros extra para mostrar en la UI de la página de resultados
+      origen: ciudadOrigenSeleccionada.nombre,
+      destino: ciudadDestinoSeleccionada.nombre,
+    });
+
+    // Añadimos la fecha de vuelta solo si existe
+    if (modo === "ida_vuelta" && vuelta) {
+      searchParams.append('returnDate', vuelta);
+    }
+
+    setTimeout(() => {
+      try {
+        navigate(`/buscar-vuelos?${searchParams.toString()}`);
+        setMensaje("✅ Búsqueda válida. Redirigiendo...");
+      } catch (error) {
+        console.error("Error al navegar:", error);
+        // Fallback a window.location
+        window.location.href = `/buscar-vuelos?${searchParams.toString()}`;
+      }
+    }, 0);
+  };
+
+  // ================== VALIDACIÓN Y BÚSQUEDA MODIFICADA ==================
   const validarYBuscarVuelo = async () => {
     // Resetear errores previos
     setCamposInvalidos({
@@ -291,6 +488,51 @@ export default function BuscadorVuelosModerno() {
       return;
     }
 
+    // Aplicar validaciones adicionales del segundo código
+    const origenCiudad = limpiarCiudad(origen);
+    const destinoCiudad = limpiarCiudad(destino);
+    
+    // Validaciones de reglas de negocio
+    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
+    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
+    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
+    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
+    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
+    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
+
+    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
+    if (origenEsInternacional) {
+      if (!destinoEsHubInternacional) {
+        setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
+        return;
+      }
+    }
+    // Validaciones para vuelos desde territorio nacional
+    else {
+      // Validación 1: El origen debe ser una capital principal
+      if (!origenEsCapitalNacional) {
+        setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
+        return;
+      }
+
+      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
+      if (destinoEsInternacional && !origenEsHubInternacional) {
+        setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
+        return;
+      }
+
+      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
+      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
+        setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
+        return;
+      }
+    }
+
+    // Validación 4: No puede ser el mismo origen y destino
+    if (origenCiudad === destinoCiudad) {
+      setMensaje("El origen y destino no pueden ser la misma ciudad.");
+      return;
+    }
 
     const searchParams = new URLSearchParams({
       // Parámetros para la búsqueda (los IDs son cruciales)
@@ -310,7 +552,7 @@ export default function BuscadorVuelosModerno() {
       searchParams.append('returnDate', vuelta);
     }
 
-    // 3. Navegamos a la página de resultados. ¡Eso es todo!
+    // Navegamos a la página de resultados
     navigate(`/buscar-vuelos?${searchParams.toString()}`);
   };
 
