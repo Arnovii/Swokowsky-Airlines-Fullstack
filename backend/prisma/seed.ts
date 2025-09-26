@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import { asiento, PrismaClient, ticket } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -14,7 +13,7 @@ async function main() {
       { id_pais: 3, nombre: "Reino Unido", iso2: "GB" },
       { id_pais: 4, nombre: "Estados Unidos", iso2: "US" },
       { id_pais: 5, nombre: "Argentina", iso2: "AR" },
-      { id_pais: 6, nombre: "México", iso2: "MX" }, // Agregado México
+      // México eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -26,7 +25,7 @@ async function main() {
       { id_gmt: 2, name: "GMT+1", offset: 1 },  // España
       { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido
       { id_gmt: 4, name: "GMT-3", offset: -3 },  // Argentina
-      { id_gmt: 5, name: "GMT-6", offset: -6 },  // México
+      // GMT-6 (México) eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -71,8 +70,7 @@ async function main() {
       { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 1, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-5
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
       { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 1, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-5
-      { id_ciudad: 36, id_paisFK: 6, id_gmtFK: 5, nombre: "Ciudad de México", codigo: "MEX" }, // México, GMT-6
-      
+      // Ciudad de México (id_ciudad: 36) eliminada intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -117,7 +115,7 @@ async function main() {
       { id_aeropuerto: 33, id_ciudadFK: 33, nombre: "John F. Kennedy", codigo_iata: "JFK" },
       { id_aeropuerto: 34, id_ciudadFK: 34, nombre: "Ministro Pistarini", codigo_iata: "EZE" },
       { id_aeropuerto: 35, id_ciudadFK: 35, nombre: "Internacional de Miami", codigo_iata: "MIA" },
-      { id_aeropuerto: 36, id_ciudadFK: 36, nombre: "Benito Juárez", codigo_iata: "MEX" }, // Ciudad de México
+      // Benito Juárez (id_aeropuerto: 36) eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -199,7 +197,7 @@ async function main() {
         id_vuelo: 2,
         id_aeronaveFK: 2,
         id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 31, // MAD - CORREGIDO: era 3 (CLO)
+        id_aeropuerto_destinoFK: 31, // MAD
         salida_programada_utc: new Date("2025-11-01T05:00:00Z"),
         llegada_programada_utc: new Date("2025-11-01T15:00:00Z"),
         id_promocionFK: 1,
@@ -208,8 +206,8 @@ async function main() {
       {
         id_vuelo: 3,
         id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 3, // CLO - CORREGIDO: era 5 (CTG)
-        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        id_aeropuerto_origenFK: 3, // CLO
+        id_aeropuerto_destinoFK: 5, // CTG
         salida_programada_utc: new Date("2025-10-20T08:00:00Z"),
         llegada_programada_utc: new Date("2025-10-20T09:30:00Z"),
         id_promocionFK: null,
@@ -221,7 +219,7 @@ async function main() {
         id_vuelo: 4,
         id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 2, // MDE
-        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        id_aeropuerto_destinoFK: 5, // CTG
         salida_programada_utc: new Date("2025-10-15T14:00:00Z"),
         llegada_programada_utc: new Date("2025-10-15T16:00:00Z"),
         id_promocionFK: 2,
@@ -230,7 +228,7 @@ async function main() {
       {
         id_vuelo: 5,
         id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 31, // MAD - CORREGIDO: era 3 (CLO)
+        id_aeropuerto_origenFK: 31, // MAD
         id_aeropuerto_destinoFK: 1, // BOG
         salida_programada_utc: new Date("2025-11-28T08:00:00Z"),
         llegada_programada_utc: new Date("2025-11-28T18:00:00Z"),
@@ -238,43 +236,24 @@ async function main() {
         estado: "Programado",
       },
       {
-        id_vuelo: 6,
-        id_aeronaveFK: 2,
-        id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 36, // MEX - CORREGIDO: era 6 (BGA)
-        salida_programada_utc: new Date("2025-12-05T06:00:00Z"),
-        llegada_programada_utc: new Date("2025-12-05T12:00:00Z"),
-        id_promocionFK: null,
-        estado: "Programado",
-      },
-      {
         id_vuelo: 7,
         id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 1, // BOG
-        id_aeropuerto_destinoFK: 5, // CTG - CORREGIDO: era 4 (BAQ)
+        id_aeropuerto_destinoFK: 5, // CTG
         salida_programada_utc: new Date("2025-10-15T07:00:00Z"),
         llegada_programada_utc: new Date("2025-10-15T08:30:00Z"),
         id_promocionFK: 2,
         estado: "Programado",
       },
-      {
-        id_vuelo: 8,
-        id_aeronaveFK: 3,
-        id_aeropuerto_origenFK: 36, // MEX - CORREGIDO: era 6 (BGA)
-        id_aeropuerto_destinoFK: 1, // BOG
-        salida_programada_utc: new Date("2025-12-06T13:00:00Z"),
-        llegada_programada_utc: new Date("2025-12-06T19:00:00Z"),
-        id_promocionFK: null,
-        estado: "Programado",
-      },
+      // Vuelos que referenciaban Ciudad de México (id_ciudad:36 / id_aeropuerto:36) han sido eliminados intencionalmente
     ],
     skipDuplicates: true,
   });
 
-  // Tarifas (dos por vuelo)
+  // Tarifas (dos por vuelo) — se eliminaron las tarifas relacionadas con vuelos a/de Ciudad de México
   await prisma.tarifa.createMany({
     data: [
-      // vuelos 1..8
+      // vuelos 1..5,7
       { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 480000 },     
       { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 1400000 },  
       { id_tarifa: 3, id_vueloFK: 2, clase: "economica", precio_base: 1800000 },    
@@ -285,17 +264,14 @@ async function main() {
       { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 1600000 },  
       { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 2000000 },    
       { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 6800000 }, 
-      { id_tarifa: 11, id_vueloFK: 6, clase: "economica", precio_base: 2400000 },    
-      { id_tarifa: 12, id_vueloFK: 6, clase: "primera_clase", precio_base: 7200000 }, 
+      // tarifas para vuelo 6 y 8 (Ciudad de México) eliminadas intencionalmente
       { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 360000 },     
       { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 1200000 },  
-      { id_tarifa: 15, id_vueloFK: 8, clase: "economica", precio_base: 2200000 },    
-      { id_tarifa: 16, id_vueloFK: 8, clase: "primera_clase", precio_base: 5200000 }, 
     ],
     skipDuplicates: true,
   });
 
-  // Noticias (una por vuelo, nuevas incluidas)
+  // Noticias (una por vuelo, nuevas incluidas). Se quitaron noticias relacionadas con Ciudad de México
   await prisma.noticia.createMany({
     data: [
       {
@@ -344,14 +320,6 @@ async function main() {
         url_imagen: "https://images.pexels.com/photos/1309644/pexels-photo-1309644.jpeg",
       },
       {
-        id_noticia: 6,
-        id_vueloFK: 6,
-        titulo: "Nuevos vuelos Bogotá — Ciudad de México",
-        descripcion_corta: "Conexión directa con México",
-        descripcion_larga: "Lanzamos ruta directa entre Bogotá y Ciudad de México con excelentes horarios.",
-        url_imagen: "https://images.pexels.com/photos/386009/pexels-photo-386009.jpeg",
-      },
-      {
         id_noticia: 7,
         id_vueloFK: 7,
         titulo: "Más vuelos a Cartagena desde Bogotá",
@@ -359,14 +327,7 @@ async function main() {
         descripcion_larga: "Sumamos una nueva frecuencia matutina entre Bogotá y Cartagena.",
         url_imagen: "https://images.pexels.com/photos/461048/pexels-photo-461048.jpeg",
       },
-      {
-        id_noticia: 8,
-        id_vueloFK: 8,
-        titulo: "Vuelo Ciudad de México — Bogotá: nueva frecuencia",
-        descripcion_corta: "Más opciones desde México",
-        descripcion_larga: "Incrementamos capacidad en la ruta Ciudad de México — Bogotá.",
-        url_imagen: "https://images.pexels.com/photos/373067/pexels-photo-373067.jpeg",
-      },
+      // noticias que referenciaban vuelos desde/hacia Ciudad de México eliminadas intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -546,4 +507,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  })
+  });
