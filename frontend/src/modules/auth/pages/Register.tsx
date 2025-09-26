@@ -187,7 +187,8 @@ export default function Register() {
             <input
               type="number"
               name="dni"
-              value={form.dni}
+              defaultValue=""
+
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
