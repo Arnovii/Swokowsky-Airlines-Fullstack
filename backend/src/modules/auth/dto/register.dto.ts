@@ -4,8 +4,8 @@ import {
   IsEnum,
   IsDateString,
   Length,
-  IsOptional,
   IsNotEmpty,
+  IsInt,
 } from 'class-validator';
 import {nationalities, usuario_genero} from '@prisma/client';
 import { Transform } from 'class-transformer';
@@ -15,14 +15,11 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RegisterDto{
   @ApiProperty({
     example: '123456789',
-    description: 'Documento de identidad del usuario (8 a 20 caracteres)',
-    minLength: 8,
-    maxLength: 20,
+    description: 'Documento de identidad del usuario (8 a 20 caracteres)'
   })
-  @Length(8, 20)
-  @IsString()
+  @IsInt()
   @IsNotEmpty()
-  dni: string;
+  dni: number;
 
   @ApiProperty({
     example: 'Juan',

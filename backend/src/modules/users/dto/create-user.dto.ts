@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsDateString,
   Length,
+  IsInt,
 } from 'class-validator';
 import {nationalities, usuario_genero} from '@prisma/client';
 import { Transform } from 'class-transformer';
@@ -30,8 +31,8 @@ import { Transform } from 'class-transformer';
 
 */
 export class CreateUserDto {
-  @IsString()
-  dni: string;
+  @IsInt()
+  dni: number;
 
   @IsString()
   nombre: string;

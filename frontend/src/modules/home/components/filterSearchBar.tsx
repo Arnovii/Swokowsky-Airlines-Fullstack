@@ -1,7 +1,27 @@
+
 import { useState, useEffect, useRef } from "react";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
 import { useNavigate } from 'react-router-dom';
+import api from '@/api/axios'; // Importar la instancia de axios
+
+// Tipos para las respuestas de la API
+interface Ciudad {
+  id_ciudad: number;
+  id_paisFK: number;
+  id_gmtFK: number;
+  nombre: string;
+  codigo: string;
+}
+
+interface FlightSearchRequest {
+  originCityId: number;
+  destinationCityId: number;
+  departureDate: string;
+  roundTrip: boolean;
+  returnDate?: string;
+  passengers: number;
+}
 
 const PlaneDepartureIcon = () => (
   <svg
@@ -109,14 +129,8 @@ const PlusIcon = () => (
   </svg>
 );
 
-
-
-
 export default function BuscadorVuelosModerno() {
   const navigate = useNavigate();
-  useEffect(() => {
-    console.log("Navigate en useEffect:", navigate);
-  }, [navigate]);
   const [modo, setModo] = useState("ida_vuelta");
   const [origen, setOrigen] = useState("");
   const [destino, setDestino] = useState("");
@@ -125,10 +139,13 @@ export default function BuscadorVuelosModerno() {
   const [pasajeros, setPasajeros] = useState({ adultos: 1, menores: 0 });
   const [mostrarPasajeros, setMostrarPasajeros] = useState(false);
   const [mensaje, setMensaje] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [errors, setErrors] = useState<{ [key: string]: boolean }>({})
-  
-  // AGREGAR ESTE NUEVO ESTADO
+  // Estados para ciudades desde API
+  const [ciudades, setCiudades] = useState<Ciudad[]>([]);
+  const [ciudadesLoaded, setCiudadesLoaded] = useState(false);
+
+  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
   const [camposInvalidos, setCamposInvalidos] = useState({
     origen: false,
     destino: false,
@@ -136,67 +153,97 @@ export default function BuscadorVuelosModerno() {
     vuelta: false
   });
 
-  const [sugerenciasOrigen, setSugerenciasOrigen] = useState([]);
-  const [sugerenciasDestino, setSugerenciasDestino] = useState([]);
+  const [sugerenciasOrigen, setSugerenciasOrigen] = useState<Ciudad[]>([]);
+  const [sugerenciasDestino, setSugerenciasDestino] = useState<Ciudad[]>([]);
   const origenRef = useRef(null);
   const destinoRef = useRef(null);
   const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const [origenBloqueado, setOrigenBloqueado] = useState(false);
   const [destinoBloqueado, setDestinoBloqueado] = useState(false);
   
-
- 
-  const ciudades = [
-
-  { ciudad: "Bogotá", pais: "Colombia", codigo: "BOG" },
-  { ciudad: "Medellín", pais: "Colombia", codigo: "MDE" },
-  { ciudad: "Cali", pais: "Colombia", codigo: "CLO" },
-  { ciudad: "Barranquilla", pais: "Colombia", codigo: "BAQ" },
-  { ciudad: "Cartagena", pais: "Colombia", codigo: "CTG" },
-  { ciudad: "Bucaramanga", pais: "Colombia", codigo: "BGA" },
-  { ciudad: "Pereira", pais: "Colombia", codigo: "PEI" },
-  { ciudad: "Manizales", pais: "Colombia", codigo: "MZL" },
-  { ciudad: "Santa Marta", pais: "Colombia", codigo: "SMR" },
-  { ciudad: "Cúcuta", pais: "Colombia", codigo: "CUC" },
-  { ciudad: "Ibagué", pais: "Colombia", codigo: "IBE" },
-  { ciudad: "Villavicencio", pais: "Colombia", codigo: "VVC" },
-  { ciudad: "Armenia", pais: "Colombia", codigo: "AXM" },
-  { ciudad: "Montería", pais: "Colombia", codigo: "MTR" },
-  { ciudad: "Neiva", pais: "Colombia", codigo: "NVA" },
-  { ciudad: "Pasto", pais: "Colombia", codigo: "PSO" },
-  { ciudad: "Sincelejo", pais: "Colombia", codigo: "CZU" },
-  { ciudad: "Riohacha", pais: "Colombia", codigo: "RCH" },
-  { ciudad: "Valledupar", pais: "Colombia", codigo: "VUP" },
-  { ciudad: "Popayán", pais: "Colombia", codigo: "PPN" },
-  { ciudad: "Tunja", pais: "Colombia", codigo: "TUN" },
-  { ciudad: "Florencia", pais: "Colombia", codigo: "FLA" },
-  { ciudad: "Yopal", pais: "Colombia", codigo: "EYP" },
-  { ciudad: "Mocoa", pais: "Colombia", codigo: "VGZ" },
-  { ciudad: "San Andrés", pais: "Colombia", codigo: "ADZ" },
-  { ciudad: "Mitú", pais: "Colombia", codigo: "MVP" },
-  { ciudad: "Puerto Carreño", pais: "Colombia", codigo: "PCR" },
-  { ciudad: "Inírida", pais: "Colombia", codigo: "LCR" },
-  { ciudad: "Quibdó", pais: "Colombia", codigo: "UIB" },
-  { ciudad: "Leticia", pais: "Colombia", codigo: "LET" },
-
-  { ciudad: "Madrid", pais: "Spain", codigo: "MAD" },
-  { ciudad: "Londres", pais: "United Kingdom", codigo: "LHR" },
-  { ciudad: "New York", pais: "United States", codigo: "JFK" },
-  { ciudad: "Buenos Aires", pais: "Argentina", codigo: "EZE" },
-  { ciudad: "Miami", pais: "United States", codigo: "MIA" }
-];
-
-
-  const ciudadesColombia = ciudades.filter(c => c.pais === "Colombia").map(c => c.ciudad);
-  const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
-  const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
-  
-  const hoy = new Date().toISOString().split("T")[0];
-  const unAñoDespues = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  // Ciudades seleccionadas (para almacenar el ID)
+  const [ciudadOrigenSeleccionada, setCiudadOrigenSeleccionada] = useState<Ciudad | null>(null);
+  const [ciudadDestinoSeleccionada, setCiudadDestinoSeleccionada] = useState<Ciudad | null>(null);
 
   const totalPasajeros = pasajeros.adultos + pasajeros.menores;
+
+  // Datos de validación para vuelos nacionales e internacionales
+  const capitalesNacionales = ["Arauca",
+                              "Armenia",
+                              "Barranquilla",
+                              "Bogotá",
+                              "Bucaramanga",
+                              "Cali",
+                              "Cartagena",
+                              "Cúcuta",
+                              "Florencia",
+                              "Ibagué",
+                              "Leticia",
+                              "Manizales",
+                              "Medellín",
+                              "Mitú",
+                              "Mocoa",
+                              "Montería",
+                              "Neiva",
+                              "Pasto",
+                              "Pereira",
+                              "Popayán",
+                              "Puerto Carreño",
+                              "Puerto Inírida",
+                              "Quibdó",
+                              "Riohacha",
+                              "San Andrés",
+                              "San José del Guaviare",
+                              "Santa Marta",
+                              "Sincelejo",
+                              "Tunja",
+                              "Valledupar",
+                              "Villavicencio",
+                              "Yopal"];
+  const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
+  const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+
+  // ================== CARGAR CIUDADES DESDE API ==================
+  useEffect(() => {
+    const cargarCiudades = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/citys');
+        setCiudades(response.data);
+        setCiudadesLoaded(true);
+      } catch (error) {
+        console.error('Error al cargar ciudades:', error);
+        setMensaje('Error al cargar las ciudades. Inténtalo de nuevo.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarCiudades();
+  }, []);
+
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Cerrar sugerencias de origen si se hace click fuera
+      if (origenRef.current && !origenRef.current.contains(event.target)) {
+        setSugerenciasOrigen([]);
+      }
+      
+      // Cerrar sugerencias de destino si se hace click fuera
+      if (destinoRef.current && !destinoRef.current.contains(event.target)) {
+        setSugerenciasDestino([]);
+      }
+    };
+
+    // Agregar event listener al documento
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup: remover event listener al desmontar el componente
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // ================== HELPERS ==================
   const normalize = (s: string) =>
@@ -219,8 +266,7 @@ export default function BuscadorVuelosModerno() {
     });
   };
 
-  // AGREGAR ESTA NUEVA FUNCIÓN
-  const limpiarErrorCampo = (campo) => {
+  const limpiarErrorCampo = (campo: string) => {
     if (camposInvalidos[campo]) {
       setCamposInvalidos(prev => ({
         ...prev,
@@ -229,70 +275,177 @@ export default function BuscadorVuelosModerno() {
     }
   };
 
-  // ================== FILTROS ==================
-const filtrarOrigen = (valor: string) => {
-    setOrigen(valor);
-    if (errors.origen) setErrors(prev => ({ ...prev, origen: false })); // Limpia el error
-    // AGREGAR ESTA LÍNEA
-    if (camposInvalidos.origen) limpiarErrorCampo('origen');
-    const q = normalize(valor);
-    setSugerenciasOrigen(q ? ciudades.filter((c) => normalize(c.ciudad).includes(q)) : []);
+  // Helper del segundo código
+  const getCodigoDesdeString = (valorCompleto: string) => {
+    const match = valorCompleto.match(/\(([^)]+)\)/);
+    return match ? match[1] : valorCompleto;
   };
 
-const filtrarDestino = (valor: string) => {
-  setDestino(valor);
-  if (errors.destino) setErrors(prev => ({ ...prev, destino: false }));
-  // AGREGAR ESTA LÍNEA
-  if (camposInvalidos.destino) limpiarErrorCampo('destino');
-  const q = normalize(valor);
-  let listaPermitida: typeof ciudades = [];
-
-  if (origen) {
-    const origenCiudad = limpiarCiudad(origen);
-
-    // Verificamos si el origen es una ciudad colombiana válida
-    const origenEsValido = ciudades.some(
-      (c) => c.ciudad === origenCiudad && c.pais === "Colombia"
+  // ================== FILTROS ==================
+  const filtrarOrigen = (valor: string) => {
+    setOrigen(valor);
+    if (errors.origen) setErrors(prev => ({ ...prev, origen: false }));
+    if (camposInvalidos.origen) limpiarErrorCampo('origen');
+    
+    const q = normalize(valor);
+    setSugerenciasOrigen(
+      q ? ciudades.filter((c) => normalize(c.nombre).includes(q) || normalize(c.codigo).includes(q)) : []
     );
+  };
 
-    if (origenEsValido) {
-      // Permitimos todos los destinos nacionales EXCEPTO el mismo origen
-      listaPermitida = ciudades.filter(
-        (c) => c.pais === "Colombia" && c.ciudad !== origenCiudad
-      );
+  const filtrarDestino = (valor: string) => {
+    setDestino(valor);
+    if (errors.destino) setErrors(prev => ({ ...prev, destino: false }));
+    if (camposInvalidos.destino) limpiarErrorCampo('destino');
+    
+    const q = normalize(valor);
+    let listaPermitida: Ciudad[] = [];
 
-      // Si ese origen es un hub internacional...
-      if (origenesInternacionales.includes(origenCiudad)) {
-        const destinosInternacionalesPermitidos = ciudades.filter((c) =>
-          destinosInternacionales.includes(c.ciudad)
+    if (ciudadOrigenSeleccionada) {
+      const origenNombre = ciudadOrigenSeleccionada.nombre;
+      
+      console.log("Ciudad origen seleccionada:", origenNombre); // Debug
+      
+      // Si el origen es una ciudad internacional, solo puede regresar a hubs internacionales
+      if (destinosInternacionales.includes(origenNombre)) {
+        listaPermitida = ciudades.filter(c => 
+          origenesInternacionales.includes(c.nombre)
         );
-        listaPermitida.push(...destinosInternacionalesPermitidos);
+        console.log("Es ciudad internacional, destinos permitidos:", listaPermitida.length); // Debug
+      }
+      // Si el origen es un hub internacional, puede ir a:
+      // 1. Cualquier capital nacional (excepto él mismo)
+      // 2. Cualquier destino internacional
+      else if (origenesInternacionales.includes(origenNombre)) {
+        // Capitales nacionales (excepto el origen)
+        const destinosNacionales = ciudades.filter(c => 
+          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
+        );
+        // Destinos internacionales
+        const destinosInternacionalesPermitidos = ciudades.filter(c => 
+          destinosInternacionales.includes(c.nombre)
+        );
+        listaPermitida = [...destinosNacionales, ...destinosInternacionalesPermitidos];
+        console.log("Es hub internacional, destinos permitidos:", listaPermitida.length); // Debug
+      } 
+      // Si el origen es una capital nacional (pero no hub internacional), 
+      // solo puede ir a otras capitales nacionales
+      else if (capitalesNacionales.includes(origenNombre)) {
+        listaPermitida = ciudades.filter(c => 
+          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
+        );
+        console.log("Es capital nacional, destinos permitidos:", listaPermitida.length); // Debug
+      }
+      // Si no es capital nacional ni destino internacional, mostrar mensaje pero permitir ver todas las ciudades para debug
+      else {
+        // Para debug, mostrar todas las ciudades disponibles
+        listaPermitida = ciudades.filter(c => c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad);
+        console.log("No es capital reconocida:", origenNombre, "ciudades disponibles:", ciudades.length); // Debug
+        console.log("Capitales disponibles en lista:", ciudades.filter(c => capitalesNacionales.includes(c.nombre)).map(c => c.nombre)); // Debug
+      }
+    } else {
+      // Si no hay origen seleccionado, mostrar todas las ciudades disponibles
+      listaPermitida = ciudades;
+    }
+
+    setSugerenciasDestino(
+      q.length > 0 ? listaPermitida.filter((c) => normalize(c.nombre).includes(q) || normalize(c.codigo).includes(q)) : []
+    );
+  };
+
+  // ================== VALIDACIÓN AGREGADA DEL SEGUNDO CÓDIGO ==================
+  const validarVuelo = () => {
+    setMensaje("");
+    const newErrors: { [key: string]: boolean } = {};
+
+    // 1. Revisar campos obligatorios
+    if (!origen) newErrors.origen = true;
+    if (!destino) newErrors.destino = true;
+    if (!ida) newErrors.ida = true;
+    if (modo === "ida_vuelta" && !vuelta) newErrors.vuelta = true;
+
+    // 2. Si hay errores, mostrarlos y detenerse
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setMensaje("Por favor, completa los campos marcados en rojo.");
+      return;
+    }
+
+    // 3. Si no hay errores, limpiar y proceder con validaciones de negocio
+    setErrors({});
+    const origenCiudad = limpiarCiudad(origen);
+    const destinoCiudad = limpiarCiudad(destino);
+    
+    // Validaciones de reglas de negocio
+    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
+    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
+    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
+    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
+    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
+    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
+
+    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
+    if (origenEsInternacional) {
+      if (!destinoEsHubInternacional) {
+        return setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
       }
     }
-  } else {
-    // Si no hay origen, mostramos todas las ciudades (sin restricción)
-    listaPermitida = ciudades;
-  }
+    // Validaciones para vuelos desde territorio nacional
+    else {
+      // Validación 1: El origen debe ser una capital principal
+      if (!origenEsCapitalNacional) {
+        return setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
+      }
 
-  // Aplicar filtro por lo que escribe el usuario
-  setSugerenciasDestino( q.length > 0 ? listaPermitida.filter((c) => normalize(c.ciudad).includes(q)) : []);
-};
+      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
+      if (destinoEsInternacional && !origenEsHubInternacional) {
+        return setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
+      }
 
-  // ================== EFFECTS ==================
-  const handleChange = (item) => {
-  if (modo === "solo_ida") {
-    const startDate = item;
-    onChange({ startDate, endDate: null });
-    setRange([{ startDate, endDate: null, key: "selection" }]);
-  } else {
-    const { startDate, endDate } = item.selection;
-    onChange({ startDate, endDate });
-    setRange([{ startDate, endDate, key: "selection" }]);
-  }
-};
+      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
+      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
+        return setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
+      }
+    }
 
-  // AGREGAR ESTA NUEVA FUNCIÓN
-  const validarYBuscarVuelo = () => {
+    // Validación 4: No puede ser el mismo origen y destino
+    if (origenCiudad === destinoCiudad) {
+      return setMensaje("El origen y destino no pueden ser la misma ciudad.");
+    }
+
+    // Si todo está válido, navegar a resultados
+    const searchParams = new URLSearchParams({
+      // Parámetros para la búsqueda (los IDs son cruciales)
+      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
+      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
+      departureDate: ida,
+      roundTrip: (modo === "ida_vuelta").toString(),
+      passengers: totalPasajeros.toString(),
+      
+      // Parámetros extra para mostrar en la UI de la página de resultados
+      origen: ciudadOrigenSeleccionada.nombre,
+      destino: ciudadDestinoSeleccionada.nombre,
+    });
+
+    // Añadimos la fecha de vuelta solo si existe
+    if (modo === "ida_vuelta" && vuelta) {
+      searchParams.append('returnDate', vuelta);
+    }
+
+    setTimeout(() => {
+      try {
+        navigate(`/buscar-vuelos?${searchParams.toString()}`);
+        setMensaje("✅ Búsqueda válida. Redirigiendo...");
+      } catch (error) {
+        console.error("Error al navegar:", error);
+        // Fallback a window.location
+        window.location.href = `/buscar-vuelos?${searchParams.toString()}`;
+      }
+    }, 0);
+  };
+
+  // ================== VALIDACIÓN Y BÚSQUEDA MODIFICADA ==================
+  const validarYBuscarVuelo = async () => {
     // Resetear errores previos
     setCamposInvalidos({
       origen: false,
@@ -305,13 +458,13 @@ const filtrarDestino = (valor: string) => {
     const errores = {};
 
     // Validar origen
-    if (!origen.trim()) {
+    if (!ciudadOrigenSeleccionada) {
       errores.origen = true;
       hayErrores = true;
     }
 
     // Validar destino
-    if (!destino.trim()) {
+    if (!ciudadDestinoSeleccionada) {
       errores.destino = true;
       hayErrores = true;
     }
@@ -331,66 +484,77 @@ const filtrarDestino = (valor: string) => {
     // Si hay errores, mostrarlos y no continuar
     if (hayErrores) {
       setCamposInvalidos(errores);
-      return;
-    }
-
-    // Si no hay errores, llamar a la función original de validación
-    validarVuelo();
-  };
-
-  // ================== VALIDACIÓN ==================
-  const validarVuelo = () => {
-    setMensaje("");
-    const newErrors: { [key: string]: boolean } = {};
-
-    // 1. Revisar campos obligatorios
-    if (!origen) newErrors.origen = true;
-    if (!destino) newErrors.destino = true;
-    if (!ida) newErrors.ida = true;
-    if (modo === "ida_vuelta" && !vuelta) newErrors.vuelta = true;
-
-    // 2. Si hay errores, mostrarlos y detenerse
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
       setMensaje("Por favor, completa los campos marcados en rojo.");
       return;
     }
 
-    // 3. Si no hay errores, limpiar y proceder con la lógica existente
-    setErrors({});
+    // Aplicar validaciones adicionales del segundo código
     const origenCiudad = limpiarCiudad(origen);
     const destinoCiudad = limpiarCiudad(destino);
-    const origenEsInt = origenesInternacionales.includes(origenCiudad);
-    const destinoEsInt = destinosInternacionales.includes(destinoCiudad);
+    
+    // Validaciones de reglas de negocio
+    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
+    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
+    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
+    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
+    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
+    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
 
-    if (destinoEsInt && !origenEsInt) {
-      return setMensaje("Solo puedes salir internacionalmente desde aeropuertos autorizados.");
+    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
+    if (origenEsInternacional) {
+      if (!destinoEsHubInternacional) {
+        setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
+        return;
+      }
+    }
+    // Validaciones para vuelos desde territorio nacional
+    else {
+      // Validación 1: El origen debe ser una capital principal
+      if (!origenEsCapitalNacional) {
+        setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
+        return;
+      }
+
+      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
+      if (destinoEsInternacional && !origenEsHubInternacional) {
+        setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
+        return;
+      }
+
+      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
+      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
+        setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
+        return;
+      }
     }
 
-    // Si todo está válido, navegar a resultados
+    // Validación 4: No puede ser el mismo origen y destino
+    if (origenCiudad === destinoCiudad) {
+      setMensaje("El origen y destino no pueden ser la misma ciudad.");
+      return;
+    }
+
     const searchParams = new URLSearchParams({
-      origen: origenCiudad,
-      destino: destinoCiudad,
-      fecha: ida,
-      ...(modo === "ida_vuelta" && vuelta && { fechaVuelta: vuelta }),
-      pasajeros: totalPasajeros.toString(),
-      adultos: pasajeros.adultos.toString(),
-      menores: pasajeros.menores.toString(),
-      modo
+      // Parámetros para la búsqueda (los IDs son cruciales)
+      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
+      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
+      departureDate: ida,
+      roundTrip: (modo === "ida_vuelta").toString(),
+      passengers: totalPasajeros.toString(),
+      
+      // Parámetros extra para mostrar en la UI de la página de resultados
+      origen: ciudadOrigenSeleccionada.nombre,
+      destino: ciudadDestinoSeleccionada.nombre,
     });
 
-    setTimeout(() => {
-      try {
-        navigate(`/buscar-vuelos?${searchParams.toString()}`);
-        setMensaje("✅ Búsqueda válida. Redirigiendo...");
-      } catch (error) {
-        console.error("Error al navegar:", error);
-        // Fallback a window.location
-        window.location.href = `/buscar-vuelos?${searchParams.toString()}`;
-      }
-    }, 0);
+    // Añadimos la fecha de vuelta solo si existe
+    if (modo === "ida_vuelta" && vuelta) {
+      searchParams.append('returnDate', vuelta);
+    }
+
+    // Navegamos a la página de resultados
+    navigate(`/buscar-vuelos?${searchParams.toString()}`);
   };
-  
 
   const formatDateToYYYYMMDD = (date) => {
     if (!date) return "";
@@ -432,141 +596,125 @@ const filtrarDestino = (valor: string) => {
             </button>
           </div>
 
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
-          {/* Origen */}
-          <div className="flex flex-col relative" ref={origenRef}>
-            <label className="text-sm text-gray-600 mb-2">Origen</label>
-            <div className={`flex items-center gap-3 border ${camposInvalidos.origen ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
-              <PlaneTakeoff className="w-5 h-5 text-[#0e254d]" />
-              <input
-                type="text"
-                placeholder="Bogotá"
-                value={origen}
-                onChange={(e) => {
-                  if (!origenBloqueado) {
-                    filtrarOrigen(e.target.value);
+          {/* Formulario */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
+            {/* Origen */}
+            <div className="flex flex-col relative" ref={origenRef}>
+              <label className="text-sm text-gray-600 mb-2">Origen</label>
+              <div className={`flex items-center gap-3 border ${camposInvalidos.origen ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
+                <PlaneTakeoff className="w-5 h-5 text-[#0e254d]" />
+                <input
+                  type="text"
+                  placeholder="Buscar ciudad de origen"
+                  value={origen}
+                  onChange={(e) => {
+                    if (!origenBloqueado) {
+                      filtrarOrigen(e.target.value);
+                      if (camposInvalidos.origen) limpiarErrorCampo('origen');
+                    }
+                  }}
+                  readOnly={origenBloqueado}
+                  onClick={() => {
+                    if (origenBloqueado) {
+                      setOrigen("");
+                      setCiudadOrigenSeleccionada(null);
+                      setOrigenBloqueado(false);
+                      setSugerenciasOrigen(ciudades);
+                    }
                     if (camposInvalidos.origen) limpiarErrorCampo('origen');
-                  }
-                }}
-                readOnly={origenBloqueado}
-                onClick={() => {
-                  if (origenBloqueado) {
-                    // Si está bloqueado y haces click → limpiar
-                    setOrigen("");
-                    setOrigenBloqueado(false);
-                    setSugerenciasOrigen(ciudades);
-                  }
-                  if (camposInvalidos.origen) limpiarErrorCampo('origen');
-                }}
-                className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${origenBloqueado ? "cursor-pointer" : ""}`}
-              />
-            </div>
-            {sugerenciasOrigen.length > 0 && (
-              <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                {sugerenciasOrigen.map((c, i) => (
-                  <li
-                    key={i}
-                    onClick={() => {
-                      setOrigen(`${c.ciudad} (${c.codigo})`);
-                      setOrigenBloqueado(true); 
-                      setSugerenciasOrigen([]);
-                    }}
-                    className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
-                  >
-                    <div>
-                      <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
-                      <span className="text-gray-500">({c.pais})</span>
-                    </div>
-                    <span className="font-sans text-gray-700">{c.codigo}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Destino */}
-          <div className="flex flex-col relative" ref={destinoRef}>
-            <label className="text-sm text-gray-600 mb-2">Destino</label>
-            <div className={`flex items-center gap-3 border ${camposInvalidos.destino ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
-              <PlaneLanding className="w-5 h-5 text-[#0e254d]" />
-              <input
-                type="text"
-                placeholder="Madrid"
-                value={destino}
-                onChange={(e) => {
-                  if (!destinoBloqueado) {
-                    filtrarDestino(e.target.value);
-                    if (camposInvalidos.destino) limpiarErrorCampo('destino');
-                  }
-                }}
-                readOnly={destinoBloqueado}
-                onClick={() => {
-                  if (destinoBloqueado) {
-                    setDestino("");
-                    setDestinoBloqueado(false);
-                    setSugerenciasDestino(ciudades);
-                  }
-                  if (camposInvalidos.destino) limpiarErrorCampo('destino');
-                }}
-                className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${
-                  destinoBloqueado ? "cursor-pointer" : ""
-                }`}
-              />
-            </div>
-            {sugerenciasDestino.length > 0 && (
-              <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
-                {sugerenciasDestino.map((c, i) => (
-                  <li
-                    key={i}
-                    onClick={() => {
-                      setDestino(`${c.ciudad} (${c.codigo})`);
-                      setDestinoBloqueado(true);
-                      setSugerenciasDestino([]);
-                    }}
-                    className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
-                  >
-                    <div>
-                      <span className="font-sans text-gray-900">{c.ciudad}</span>{" "}
-                      <span className="text-gray-500">({c.pais})</span>
-                    </div>
-                    <span className="font-sans text-gray-700">{c.codigo}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Fechas */}
-          <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-2">Fechas</label>
-            <div className="flex gap-2 overflow-hidden">
-              {/* Fecha Ida */}
-              <div 
-                className={`flex-1 border ${camposInvalidos.ida ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
-                onClick={() => {
-                  setMostrarCalendario(true);
-                  if (camposInvalidos.ida) limpiarErrorCampo('ida');
-                  if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
-                }}
-              >
-                <CalendarIcon />
-                <div className="min-w-0">
-                  <div className="text-xs text-gray-500">Ida</div>
-                  <div className="text-xs sm:text-sm font-sans text-gray-900 truncate">
-                    {ida ? new Date(`${ida}T00:00:00`).toLocaleDateString("es-ES", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric"
-                    }) : "Seleccionar"}
-                  </div>
-                </div>
+                  }}
+                  className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${origenBloqueado ? "cursor-pointer" : ""}`}
+                />
               </div>
+              {sugerenciasOrigen.length > 0 && !origenBloqueado && (
+                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {sugerenciasOrigen.map((c, i) => (
+                    <li
+                      key={i}
+                      onClick={() => {
+                        setOrigen(`${c.nombre} (${c.codigo})`);
+                        setCiudadOrigenSeleccionada(c);
+                        setOrigenBloqueado(true); 
+                        setSugerenciasOrigen([]);
+                        // Limpiar destino si es igual al origen
+                        if (ciudadDestinoSeleccionada?.id_ciudad === c.id_ciudad) {
+                          setDestino("");
+                          setCiudadDestinoSeleccionada(null);
+                          setDestinoBloqueado(false);
+                        }
+                      }}
+                      className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
+                    >
+                      <div>
+                        <span className="font-sans text-gray-900">{c.nombre}</span>
+                      </div>
+                      <span className="font-sans text-gray-700">{c.codigo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-              {/* Fecha Vuelta */}
-              {modo === "ida_vuelta" && (
+            {/* Destino */}
+            <div className="flex flex-col relative" ref={destinoRef}>
+              <label className="text-sm text-gray-600 mb-2">Destino</label>
+              <div className={`flex items-center gap-3 border ${camposInvalidos.destino ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-3 shadow-sm h-14`}>
+                <PlaneLanding className="w-5 h-5 text-[#0e254d]" />
+                <input
+                  type="text"
+                  placeholder="Buscar ciudad de destino"
+                  value={destino}
+                  onChange={(e) => {
+                    if (!destinoBloqueado) {
+                      filtrarDestino(e.target.value);
+                      if (camposInvalidos.destino) limpiarErrorCampo('destino');
+                    }
+                  }}
+                  readOnly={destinoBloqueado}
+                  onClick={() => {
+                    if (destinoBloqueado) {
+                      setDestino("");
+                      setCiudadDestinoSeleccionada(null);
+                      setDestinoBloqueado(false);
+                      setSugerenciasDestino(ciudades);
+                    }
+                    if (camposInvalidos.destino) limpiarErrorCampo('destino');
+                  }}
+                  className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${
+                    destinoBloqueado ? "cursor-pointer" : ""
+                  }`}
+                />
+              </div>
+              {sugerenciasDestino.length > 0 && !destinoBloqueado && (
+                <ul className="absolute z-50 top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {sugerenciasDestino.map((c, i) => (
+                    <li
+                      key={i}
+                      onClick={() => {
+                        setDestino(`${c.nombre} (${c.codigo})`);
+                        setCiudadDestinoSeleccionada(c);
+                        setDestinoBloqueado(true);
+                        setSugerenciasDestino([]);
+                      }}
+                      className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
+                    >
+                      <div>
+                        <span className="font-sans text-gray-900">{c.nombre}</span>
+                      </div>
+                      <span className="font-sans text-gray-700">{c.codigo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Fechas */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2">Fechas</label>
+              <div className="flex gap-2 overflow-hidden">
+                {/* Fecha Ida */}
                 <div 
-                  className={`flex-1 border ${camposInvalidos.vuelta ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
+                  className={`flex-1 border ${camposInvalidos.ida ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
                   onClick={() => {
                     setMostrarCalendario(true);
                     if (camposInvalidos.ida) limpiarErrorCampo('ida');
@@ -575,9 +723,9 @@ const filtrarDestino = (valor: string) => {
                 >
                   <CalendarIcon />
                   <div className="min-w-0">
-                    <div className="text-xs text-gray-500">Vuelta</div>
+                    <div className="text-xs text-gray-500">Ida</div>
                     <div className="text-xs sm:text-sm font-sans text-gray-900 truncate">
-                      {vuelta ? new Date(`${vuelta}T00:00:00`).toLocaleDateString("es-ES", {
+                      {ida ? new Date(`${ida}T00:00:00`).toLocaleDateString("es-ES", {
                         day: "2-digit",
                         month: "2-digit",
                         year: "numeric"
@@ -585,153 +733,188 @@ const filtrarDestino = (valor: string) => {
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-            
-            {/* Componente CalendarioRango */}
-            <CalendarioRango
-              modo={modo}
-              isOpen={mostrarCalendario}
-              onOpenChange={setMostrarCalendario}
-              fechaInicial={ida}
-              fechaFinal={vuelta}
-              onChange={({ startDate, endDate }) => {
-        
-                if (startDate) {
-                  setIda(formatDateToYYYYMMDD(startDate));
-                  if (camposInvalidos.ida) limpiarErrorCampo('ida');
-                }
-                if (endDate && modo === "ida_vuelta") {
-                  setVuelta(formatDateToYYYYMMDD(endDate));
-                  if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
-                } else {
-                  setVuelta("");
-                }
-              }}
-            />
-          </div>
 
-          {/* Pasajeros  */}
-          <div className="relative">
-            <label className="text-sm text-gray-600 mb-2">Pasajeros</label>
-            <div
-              onClick={() => setMostrarPasajeros(!mostrarPasajeros)}
-              className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14"
-            >
-              <UserIcon />
-              <span className="text-base font-sans text-gray-900">
-                {totalPasajeros}
-              </span>
-              <ChevronDownIcon
-                className={`transition-transform ${mostrarPasajeros ? "rotate-180" : ""}`}
+                {/* Fecha Vuelta */}
+                {modo === "ida_vuelta" && (
+                  <div 
+                    className={`flex-1 border ${camposInvalidos.vuelta ? 'border-red-500' : 'border-gray-300'} bg-white rounded-xl p-2 sm:p-3 cursor-pointer shadow-sm h-14 flex items-center gap-2 min-w-0`}
+                    onClick={() => {
+                      setMostrarCalendario(true);
+                      if (camposInvalidos.ida) limpiarErrorCampo('ida');
+                      if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
+                    }}
+                  >
+                    <CalendarIcon />
+                    <div className="min-w-0">
+                      <div className="text-xs text-gray-500">Vuelta</div>
+                      <div className="text-xs sm:text-sm font-sans text-gray-900 truncate">
+                        {vuelta ? new Date(`${vuelta}T00:00:00`).toLocaleDateString("es-ES", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric"
+                        }) : "Seleccionar"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Componente CalendarioRango */}
+              <CalendarioRango
+                modo={modo}
+                isOpen={mostrarCalendario}
+                onOpenChange={setMostrarCalendario}
+                fechaInicial={ida}
+                fechaFinal={vuelta}
+                onChange={({ startDate, endDate }) => {
+                  if (startDate) {
+                    setIda(formatDateToYYYYMMDD(startDate));
+                    if (camposInvalidos.ida) limpiarErrorCampo('ida');
+                  }
+                  if (endDate && modo === "ida_vuelta") {
+                    setVuelta(formatDateToYYYYMMDD(endDate));
+                    if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
+                  } else {
+                    setVuelta("");
+                  }
+                }}
               />
             </div>
-            {mostrarPasajeros && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 min-w-[200px]">
-                <div className="space-y-4">
-                  <div className="text-base font-sans text-gray-900">
-                    ¿Quiénes viajan?
-                  </div>
-                  {/* Adultos */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-sans text-gray-900">Adultos</div>
-                      <div className="text-xs text-gray-500">Mayores de 18 años</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cambiarPasajeros("adultos", "restar");
-                        }}
-                        disabled={pasajeros.adultos <= 1}
-                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                      >
-                        <MinusIcon />
-                      </button>
-                      <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
-                        {pasajeros.adultos}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cambiarPasajeros("adultos", "sumar");
-                        }}
-                        disabled={totalPasajeros >= 5}
-                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                      >
-                        <PlusIcon />
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Menores */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-sans text-gray-900">Menores</div>
-                      <div className="text-xs text-gray-500">De 0 a 17 años</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cambiarPasajeros("menores", "restar");
-                        }}
-                        disabled={pasajeros.menores <= 0}
-                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                      >
-                        <MinusIcon />
-                      </button>
-                      <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
-                        {pasajeros.menores}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cambiarPasajeros("menores", "sumar");
-                        }}
-                        disabled={totalPasajeros >= 5}
-                        className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
-                      >
-                        <PlusIcon />
-                      </button>
-                    </div>
-                  </div>
-
-                  {totalPasajeros >= 5 && (
-                    <div className="text-xs text-[#0e254d] bg-blue-50 p-2 rounded-lg text-center">
-                      Máximo 5 personas
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => setMostrarPasajeros(false)}
-                    className="w-full mt-2 py-2 bg-[#0e254d] text-white rounded-lg text-sm font-sans hover:bg-[#0a1a3a] transition-colors"
-                  >
-                    Confirmar
-                  </button>
-                </div>
+            {/* Pasajeros */}
+            <div className="relative">
+              <label className="text-sm text-gray-600 mb-2">Pasajeros</label>
+              <div
+                onClick={() => setMostrarPasajeros(!mostrarPasajeros)}
+                className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-14"
+              >
+                <UserIcon />
+                <span className="text-base font-sans text-gray-900">
+                  {totalPasajeros}
+                </span>
+                <ChevronDownIcon
+                  className={`transition-transform ${mostrarPasajeros ? "rotate-180" : ""}`}
+                />
               </div>
-            )}
+              {mostrarPasajeros && (
+                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 min-w-[200px]">
+                  <div className="space-y-4">
+                    <div className="text-base font-sans text-gray-900">
+                      ¿Quiénes viajan?
+                    </div>
+                    {/* Adultos */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-sans text-gray-900">Adultos</div>
+                        <div className="text-xs text-gray-500">Mayores de 18 años</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cambiarPasajeros("adultos", "restar");
+                          }}
+                          disabled={pasajeros.adultos <= 1}
+                          className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                        >
+                          <MinusIcon />
+                        </button>
+                        <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
+                          {pasajeros.adultos}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cambiarPasajeros("adultos", "sumar");
+                          }}
+                          disabled={totalPasajeros >= 5}
+                          className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                        >
+                          <PlusIcon />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Menores */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-sans text-gray-900">Menores</div>
+                        <div className="text-xs text-gray-500">De 0 a 17 años</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cambiarPasajeros("menores", "restar");
+                          }}
+                          disabled={pasajeros.menores <= 0}
+                          className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                        >
+                          <MinusIcon />
+                        </button>
+                        <span className="w-5 text-center font-sans text-[#0e254d] text-sm">
+                          {pasajeros.menores}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cambiarPasajeros("menores", "sumar");
+                          }}
+                          disabled={totalPasajeros >= 5}
+                          className="w-8 h-8 rounded-full border flex items-center justify-center disabled:opacity-40 hover:border-[#0e254d]"
+                        >
+                          <PlusIcon />
+                        </button>
+                      </div>
+                    </div>
+
+                    {totalPasajeros >= 5 && (
+                      <div className="text-xs text-[#0e254d] bg-blue-50 p-2 rounded-lg text-center">
+                        Máximo 5 personas
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setMostrarPasajeros(false)}
+                      className="w-full mt-2 py-2 bg-[#0e254d] text-white rounded-lg text-sm font-sans hover:bg-[#0a1a3a] transition-colors"
+                    >
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-end h-full">
+              <button
+                onClick={validarYBuscarVuelo}
+                disabled={loading || !ciudadesLoaded}
+                className="w-full h-14 flex items-center justify-center bg-[#0e254d] text-white font-sans rounded-xl shadow-lg hover:bg-[#0a1a3a] transition-colors text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Buscando..." : "Buscar"}
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-end h-full">
-            <button
-              onClick={validarYBuscarVuelo}
-              className="w-full h-14 flex items-center justify-center bg-[#0e254d] text-white font-sans rounded-xl shadow-lg hover:bg-[#0a1a3a] transition-colors text-base font-medium"
-            >
-              Buscar
-            </button>
-          </div>
-        </div>
-                  {/* Mensaje */}
+          {/* Mensaje */}
           {mensaje && (
-            <div className="mt-8 p-5 text-center font-sans text-base text-gray-800 bg-[#0e254d] rounded-xl border border-[#0e254d]">
+            <div className={`mt-8 p-5 text-center font-sans text-base text-white rounded-xl border ${
+              mensaje.includes("Error") 
+                ? "bg-red-500 border-red-600" 
+                : mensaje.includes("✅") 
+                  ? "bg-green-500 border-green-600"
+                  : "bg-[#0e254d] border-[#0e254d]"
+            }`}>
               {mensaje}
             </div>
           )}
-          
-          
+
+          {/* Loading indicator cuando se cargan las ciudades */}
+          {!ciudadesLoaded && (
+            <div className="mt-4 p-3 text-center text-gray-600 text-sm">
+              Cargando ciudades disponibles...
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,9 +1,43 @@
+// src/utils/flightUtils.js
+
 export const FlightUtils = {
+  // Ahora solo trabaja con propiedades consistentes: price, departureTimeUTC, etc.
+  filterFlights: (flights, filters) => {
+    return flights.filter(flight => {
+      // Filtro de precio
+      const finalPrice = FlightUtils.calculateFinalPrice(flight);
+      if (filters.precio.min > 0 && finalPrice < filters.precio.min) return false;
+      if (filters.precio.max > 0 && finalPrice > filters.precio.max) return false;
+
+      // Filtro de horario (usando getUTCHours para evitar errores de zona horaria)
+      if (filters.horaSalida.length > 0) {
+        const departureHour = new Date(flight.departureTimeUTC).getUTCHours();
+        const matchesHour = filters.horaSalida.some(slot => {
+          if (slot === 'manana') return departureHour >= 5 && departureHour < 12;
+          if (slot === 'tarde') return departureHour >= 12 && departureHour < 18;
+          if (slot === 'noche') return departureHour >= 18 || departureHour < 5;
+          return false;
+        });
+        if (!matchesHour) return false;
+      }
+      
+      // Filtro de promociones
+      if (filters.soloPromociones && !flight.promotion) {
+        return false;
+      }
+      
+      // Si pasa todos los filtros, se incluye
+      return true;
+    });
+  },
+
+  // Formatea la hora local para mostrar al usuario
   formatTime: (datetime) => {
     return new Date(datetime).toLocaleTimeString('es-CO', { 
       hour: '2-digit', 
       minute: '2-digit',
-      hour12: false 
+      hour12: true, // A menudo es más amigable para el usuario
+      timeZone: 'America/Bogota' // Especificar la zona horaria es más seguro
     });
   },
 
@@ -21,35 +55,36 @@ export const FlightUtils = {
     }).format(price);
   },
 
+  // El cálculo ahora es más simple y directo
   calculateFinalPrice: (flight) => {
-    if (flight.promocion && flight.promocion.cupoRestante > 0) {
-      return flight.precio_base * (1 - flight.promocion.descuento_pet);
+    if (flight.promotion) {
+      return flight.price * (1 - flight.promotion.discount);
     }
-    return flight.precio_base;
+    return flight.price;
   },
 
+  // El ordenamiento también se simplifica
   sortFlights: (flights, sortBy) => {
     return [...flights].sort((a, b) => {
-      if (sortBy === 'precio') {
-        const priceA = FlightUtils.calculateFinalPrice(a);
-        const priceB = FlightUtils.calculateFinalPrice(b);
-        return priceA - priceB;
+      switch (sortBy) {
+        case 'precio':
+          return FlightUtils.calculateFinalPrice(a) - FlightUtils.calculateFinalPrice(b);
+        case 'duracion':
+          return a.durationMinutes - b.durationMinutes;
+        case 'salida':
+          return new Date(a.departureTimeUTC) - new Date(b.departureTimeUTC);
+        default:
+          return 0;
       }
-      if (sortBy === 'duracion') {
-        return a.duracion_minutos - b.duracion_minutos;
-      }
-      if (sortBy === 'salida') {
-        return new Date(a.salida_programada) - new Date(b.salida_programada);
-      }
-      return 0;
     });
   },
 
+  // Esta función no cambia, ¡ya estaba perfecta!
   getActiveFiltersCount: (filters) => {
     let count = 0;
     if (filters.precio.min > 0 || filters.precio.max > 0) count++;
-    if (filters.horaSalida.length > 0) count += filters.horaSalida.length;
-    if (filters.clase.length > 0) count += filters.clase.length;
+    if (filters.horaSalida.length > 0) count++;
+    if (filters.clase.length > 0) count++;
     if (filters.soloPromociones) count++;
     return count;
   }

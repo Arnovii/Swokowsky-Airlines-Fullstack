@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Eye, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NewsService } from '../services/newsService';
+import { Link } from 'react-router-dom';  
 
 const FeaturedNews = () => {
   const [news, setNews] = useState([]);
@@ -15,10 +16,25 @@ const FeaturedNews = () => {
   const fetchFeaturedNews = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await NewsService.getFeaturedNews(6);
-      setNews(response.articles || []);
+
+      // Adaptación para manejar diferentes estructuras de respuesta
+      let newsData = [];
+      if (Array.isArray(response)) {
+        newsData = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        newsData = response.data;
+      } else if (response.articles && Array.isArray(response.articles)) {
+        newsData = response.articles;
+      } else if (response.noticias && Array.isArray(response.noticias)) {
+        newsData = response.noticias;
+      }
+
+      setNews(newsData);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error al cargar noticias');
+      console.error('Error fetching featured news:', err);
     } finally {
       setLoading(false);
     }
@@ -33,6 +49,7 @@ const FeaturedNews = () => {
   };
 
   const formatViews = (views) => {
+    if (!views) return '0';
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
     if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
     return views.toString();
@@ -44,6 +61,26 @@ const FeaturedNews = () => {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + Math.ceil(news.length / 3)) % Math.ceil(news.length / 3));
+  };
+
+  // Función para obtener la imagen de la noticia
+  const getImageUrl = (article) => {
+    return article.imageUrl || article.url_imagen || article.image || '/default-news-image.jpg';
+  };
+
+  // Función para obtener el título
+  const getTitle = (article) => {
+    return article.title || article.titulo || 'Sin título';
+  };
+
+  // Función para obtener la descripción
+  const getExcerpt = (article) => {
+    return article.excerpt || article.descripcion_corta || article.description || '';
+  };
+
+  // Función para obtener la fecha de publicación
+  const getPublishedDate = (article) => {
+    return article.publishedAt || article.fecha_publicacion || article.createdAt || new Date().toISOString();
   };
 
   if (loading) {
@@ -95,11 +132,20 @@ const FeaturedNews = () => {
   }
 
   if (!news || news.length === 0) {
-    return null;
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8">
+            <h3 className="text-xl font-bold text-yellow-700 mb-2">No hay noticias disponibles</h3>
+            <p className="text-yellow-600">No se encontraron noticias destacadas en este momento.</p>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+    <section  className="py-16 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
@@ -116,22 +162,27 @@ const FeaturedNews = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
             {news.slice(currentSlide * 3, (currentSlide * 3) + 6).map((article) => (
               <article
-                key={article.id}
+                key={article.id || article.id_noticia}
                 className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
               >
                 {/* Imagen */}
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={article.imageUrl}
-                    alt={article.title}
+                    src={getImageUrl(article)}
+                    alt={getTitle(article)}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.src = '/default-news-image.jpg';
+                    }}
                   />
                   <div className="absolute top-4 left-4">
                     <span
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg"
-                      style={{ backgroundColor: article.category.color }}
+                      style={{
+                        backgroundColor: article.category?.color || article.categoria?.color || '#3B82F6'
+                      }}
                     >
-                      {article.category.name}
+                      {article.category?.name || article.categoria?.nombre || 'General'}
                     </span>
                   </div>
                   {article.featured && (
@@ -146,11 +197,11 @@ const FeaturedNews = () => {
                 {/* Contenido */}
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-[#081225] mb-3 line-clamp-2 group-hover:text-[#0e254d] transition-colors">
-                    {article.title}
+                    {getTitle(article)}
                   </h3>
-                  
+
                   <p className="text-gray-600 mb-4 line-clamp-3">
-                    {article.excerpt}
+                    {getExcerpt(article)}
                   </p>
 
                   {/* Meta información */}
@@ -158,23 +209,23 @@ const FeaturedNews = () => {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center gap-1">
                         <Calendar size={14} />
-                        <span>{formatDate(article.publishedAt)}</span>
+                        <span>{formatDate(getPublishedDate(article))}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock size={14} />
-                        <span>{article.readTime}</span>
+                        <span>{article.readTime || '2 min'}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Eye size={14} />
-                      <span>{formatViews(article.views)}</span>
+                      <span>{formatViews(article.views || 0)}</span>
                     </div>
                   </div>
 
                   {/* Autor */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {article.author.avatar ? (
+                      {article.author?.avatar ? (
                         <img
                           src={article.author.avatar}
                           alt={article.author.name}
@@ -183,22 +234,22 @@ const FeaturedNews = () => {
                       ) : (
                         <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-gray-600">
-                            {article.author.name.charAt(0)}
+                            {(article.author?.name || 'Admin').charAt(0)}
                           </span>
                         </div>
                       )}
                       <span className="text-sm font-medium text-gray-700">
-                        {article.author.name}
+                        {article.author?.name || 'Swokowsky Airlines'}
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => window.location.href = `/news/${article.slug}`}
+                    <Link
+                      to={`/noticias/vuelo/${article.id || article.id_noticia}`}
                       className="inline-flex items-center gap-1 text-[#0e254d] hover:text-[#081225] font-medium transition-colors group"
                     >
                       <span>Leer más</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </article>
@@ -214,15 +265,14 @@ const FeaturedNews = () => {
               >
                 <ChevronLeft size={20} />
               </button>
-              
+
               <div className="flex gap-2">
                 {Array.from({ length: Math.ceil(news.length / 6) }, (_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-3 h-3 rounded-full transition-all ${
-                      currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
+                    className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
                   />
                 ))}
               </div>

@@ -23,10 +23,10 @@ export class AuthService {
         try {
             //verifications
             const userByEmail = await this.userService.findUserByEmail(data.correo)
-            if (userByEmail) throw new BadRequestException("Este correo ya se ha utilizado")
+            if (userByEmail) throw new BadRequestException("Ya existe un usuario con ese correo.")
 
             const userByUsername = await this.userService.findUserByUsername(data.username)
-            if (userByUsername) throw new BadRequestException("Este username ya se ha utilizado")
+            if (userByUsername) throw new BadRequestException("Ya existe un usuario con ese username.")
 
             //hashing password
             data.password_bash = await bcryptjs.hash(data.password_bash, 10)
@@ -44,8 +44,20 @@ export class AuthService {
 
             return { message: `Se ha creado el usuario ${userCreated.username} con correo ${userCreated.correo}` };
 
-
-        } catch (error) { return new BadRequestException(`El usuario no se ha podido registrar. ${error}`) }
+        } catch (error: any) {
+            if (error instanceof BadRequestException) throw error;
+            // Prisma error: unique constraint
+            if (error.code === 'P2002' && error.meta?.target?.includes('dni')) {
+                throw new BadRequestException('Ya existe un usuario con ese DNI.');
+            }
+            if (error.code === 'P2002' && error.meta?.target?.includes('correo')) {
+                throw new BadRequestException('Ya existe un usuario con ese correo.');
+            }
+            if (error.code === 'P2002' && error.meta?.target?.includes('username')) {
+                throw new BadRequestException('Ya existe un usuario con ese username.');
+            }
+            throw new BadRequestException('El usuario no se ha podido registrar. Por favor, intente nuevamente.');
+        }
     }
 
     async login(data: LoginDto) {
@@ -99,7 +111,7 @@ export class AuthService {
 
         // 2. Construir enlace dinámicamente desde FRONTEND_URL
         const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-        const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+        const resetLink = `${frontendUrl}reset-password?token=${token}`;
 
         // 3. Enviar correo usando tu servicio de mail
         await this.mailService.sendResetPasswordEmail(user.correo, {
@@ -107,7 +119,10 @@ export class AuthService {
             resetLink,
         });
 
-        return { message: 'Se ha enviado un correo con instrucciones para recuperar tu contraseña.' };
+        return {
+            message: 'Se ha enviado un correo con instrucciones para recuperar tu contraseña.',
+            token
+        };
     }
 
     async resetPassword(token: string, newPassword: string) {
@@ -122,11 +137,14 @@ export class AuthService {
 
             const hashedPassword = await bcryptjs.hash(newPassword, 10);
 
+            const isSamePassword = await bcryptjs.compare(newPassword, user.password_bash);
+            if (isSamePassword) throw new BadRequestException('no puedes usar tu contraseña actual');
+
             await this.userService.updateUser(user.id_usuario, { password_bash: hashedPassword });
 
             return { message: 'Contraseña actualizada correctamente.' };
         } catch (error) {
-            throw new UnauthorizedException('Token inválido o expirado.');
+            throw error;
         }
     }
 
