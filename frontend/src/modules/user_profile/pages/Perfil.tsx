@@ -331,6 +331,20 @@ export default function Perfil() {
           </p>
         </div>
 
+        {/* Botón Panel Administrador - solo visible para admins */}
+      {profile.tipo_usuario === "admin" && (
+        <div className="mt-6 flex justify-center pb-4">
+        <button
+        type="button"
+        onClick={() => navigate("/panelAdministrador")}
+        className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
+        >
+      Ir al Panel Administrador
+        </button>
+      </div>
+      )}
+
+
         {/* Navegación por pestañas */}
         <div className="flex justify-center mb-8 bg-gray-50 rounded-lg p-2">
           {[
