@@ -1,28 +1,8 @@
-
-import { useState, useEffect, useRef } from "react";
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
-import { useNavigate } from 'react-router-dom';
-import api from '@/api/axios'; // Importar la instancia de axios
+import { useFlightSearch } from "@/modules/home/hooks/useFlightSearch";
 
-// Tipos para las respuestas de la API
-interface Ciudad {
-  id_ciudad: number;
-  id_paisFK: number;
-  id_gmtFK: number;
-  nombre: string;
-  codigo: string;
-}
-
-interface FlightSearchRequest {
-  originCityId: number;
-  destinationCityId: number;
-  departureDate: string;
-  roundTrip: boolean;
-  returnDate?: string;
-  passengers: number;
-}
-
+// ================== ICONOS SVG ==================
 const PlaneDepartureIcon = () => (
   <svg
     className="w-6 h-6 text-[#0e254d]"
@@ -41,7 +21,7 @@ const PlaneDepartureIcon = () => (
   </svg>
 );
 
-const ChevronDownIcon = ({ className = "" }) => (
+const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
   <svg
     className={`w-5 h-5 text-gray-400 ${className}`}
     aria-hidden="true"
@@ -129,442 +109,42 @@ const PlusIcon = () => (
   </svg>
 );
 
-export default function BuscadorVuelosModerno() {
-  const navigate = useNavigate();
-  const [modo, setModo] = useState("ida_vuelta");
-  const [origen, setOrigen] = useState("");
-  const [destino, setDestino] = useState("");
-  const [ida, setIda] = useState("");
-  const [vuelta, setVuelta] = useState("");
-  const [pasajeros, setPasajeros] = useState({ adultos: 1, menores: 0 });
-  const [mostrarPasajeros, setMostrarPasajeros] = useState(false);
-  const [mensaje, setMensaje] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // Estados para ciudades desde API
-  const [ciudades, setCiudades] = useState<Ciudad[]>([]);
-  const [ciudadesLoaded, setCiudadesLoaded] = useState(false);
-
-  const [errors, setErrors] = useState<{ [key: string]: boolean }>({});
-  const [camposInvalidos, setCamposInvalidos] = useState({
-    origen: false,
-    destino: false,
-    ida: false,
-    vuelta: false
-  });
-
-  const [sugerenciasOrigen, setSugerenciasOrigen] = useState<Ciudad[]>([]);
-  const [sugerenciasDestino, setSugerenciasDestino] = useState<Ciudad[]>([]);
-  const origenRef = useRef(null);
-  const destinoRef = useRef(null);
-  const [mostrarCalendario, setMostrarCalendario] = useState(false);
-  const [origenBloqueado, setOrigenBloqueado] = useState(false);
-  const [destinoBloqueado, setDestinoBloqueado] = useState(false);
-  
-  // Ciudades seleccionadas (para almacenar el ID)
-  const [ciudadOrigenSeleccionada, setCiudadOrigenSeleccionada] = useState<Ciudad | null>(null);
-  const [ciudadDestinoSeleccionada, setCiudadDestinoSeleccionada] = useState<Ciudad | null>(null);
-
-  const totalPasajeros = pasajeros.adultos + pasajeros.menores;
-
-  // Datos de validación para vuelos nacionales e internacionales
-  const capitalesNacionales = ["Arauca",
-                              "Armenia",
-                              "Barranquilla",
-                              "Bogotá",
-                              "Bucaramanga",
-                              "Cali",
-                              "Cartagena",
-                              "Cúcuta",
-                              "Florencia",
-                              "Ibagué",
-                              "Leticia",
-                              "Manizales",
-                              "Medellín",
-                              "Mitú",
-                              "Mocoa",
-                              "Montería",
-                              "Neiva",
-                              "Pasto",
-                              "Pereira",
-                              "Popayán",
-                              "Puerto Carreño",
-                              "Puerto Inírida",
-                              "Quibdó",
-                              "Riohacha",
-                              "San Andrés",
-                              "San José del Guaviare",
-                              "Santa Marta",
-                              "Sincelejo",
-                              "Tunja",
-                              "Valledupar",
-                              "Villavicencio",
-                              "Yopal"];
-  const origenesInternacionales = ["Pereira", "Bogotá", "Medellín", "Cali", "Cartagena"];
-  const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
-
-  // ================== CARGAR CIUDADES DESDE API ==================
-  useEffect(() => {
-    const cargarCiudades = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/citys');
-        setCiudades(response.data);
-        setCiudadesLoaded(true);
-      } catch (error) {
-        console.error('Error al cargar ciudades:', error);
-        setMensaje('Error al cargar las ciudades. Inténtalo de nuevo.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarCiudades();
-  }, []);
-
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Cerrar sugerencias de origen si se hace click fuera
-      if (origenRef.current && !origenRef.current.contains(event.target)) {
-        setSugerenciasOrigen([]);
-      }
-      
-      // Cerrar sugerencias de destino si se hace click fuera
-      if (destinoRef.current && !destinoRef.current.contains(event.target)) {
-        setSugerenciasDestino([]);
-      }
-    };
-
-    // Agregar event listener al documento
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    // Cleanup: remover event listener al desmontar el componente
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // ================== HELPERS ==================
-  const normalize = (s: string) =>
-    s?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() || "";
-
-  const limpiarCiudad = (valor: string) => valor.split("(")[0].trim();
-
-  const cambiarPasajeros = (tipo: "adultos" | "menores", operacion: "sumar" | "restar") => {
-    setPasajeros(prev => {
-      let nuevoValor = operacion === "sumar" ? prev[tipo] + 1 : prev[tipo] - 1;
-      nuevoValor = Math.max(0, nuevoValor);
-
-      const nuevosPasajeros = { ...prev, [tipo]: nuevoValor };
-      const total = nuevosPasajeros.adultos + nuevosPasajeros.menores;
-
-      if (total > 5) return prev;
-      if (nuevosPasajeros.adultos === 0) return { ...prev, adultos: 1 };
-
-      return nuevosPasajeros;
-    });
-  };
-
-  const limpiarErrorCampo = (campo: string) => {
-    if (camposInvalidos[campo]) {
-      setCamposInvalidos(prev => ({
-        ...prev,
-        [campo]: false
-      }));
-    }
-  };
-
-  // Helper del segundo código
-  const getCodigoDesdeString = (valorCompleto: string) => {
-    const match = valorCompleto.match(/\(([^)]+)\)/);
-    return match ? match[1] : valorCompleto;
-  };
-
-  // ================== FILTROS ==================
-  const filtrarOrigen = (valor: string) => {
-    setOrigen(valor);
-    if (errors.origen) setErrors(prev => ({ ...prev, origen: false }));
-    if (camposInvalidos.origen) limpiarErrorCampo('origen');
-    
-    const q = normalize(valor);
-    setSugerenciasOrigen(
-      q ? ciudades.filter((c) => normalize(c.nombre).includes(q) || normalize(c.codigo).includes(q)) : []
-    );
-  };
-
-  const filtrarDestino = (valor: string) => {
-    setDestino(valor);
-    if (errors.destino) setErrors(prev => ({ ...prev, destino: false }));
-    if (camposInvalidos.destino) limpiarErrorCampo('destino');
-    
-    const q = normalize(valor);
-    let listaPermitida: Ciudad[] = [];
-
-    if (ciudadOrigenSeleccionada) {
-      const origenNombre = ciudadOrigenSeleccionada.nombre;
-      
-      console.log("Ciudad origen seleccionada:", origenNombre); // Debug
-      
-      // Si el origen es una ciudad internacional, solo puede regresar a hubs internacionales
-      if (destinosInternacionales.includes(origenNombre)) {
-        listaPermitida = ciudades.filter(c => 
-          origenesInternacionales.includes(c.nombre)
-        );
-        console.log("Es ciudad internacional, destinos permitidos:", listaPermitida.length); // Debug
-      }
-      // Si el origen es un hub internacional, puede ir a:
-      // 1. Cualquier capital nacional (excepto él mismo)
-      // 2. Cualquier destino internacional
-      else if (origenesInternacionales.includes(origenNombre)) {
-        // Capitales nacionales (excepto el origen)
-        const destinosNacionales = ciudades.filter(c => 
-          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
-        );
-        // Destinos internacionales
-        const destinosInternacionalesPermitidos = ciudades.filter(c => 
-          destinosInternacionales.includes(c.nombre)
-        );
-        listaPermitida = [...destinosNacionales, ...destinosInternacionalesPermitidos];
-        console.log("Es hub internacional, destinos permitidos:", listaPermitida.length); // Debug
-      } 
-      // Si el origen es una capital nacional (pero no hub internacional), 
-      // solo puede ir a otras capitales nacionales
-      else if (capitalesNacionales.includes(origenNombre)) {
-        listaPermitida = ciudades.filter(c => 
-          capitalesNacionales.includes(c.nombre) && c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad
-        );
-        console.log("Es capital nacional, destinos permitidos:", listaPermitida.length); // Debug
-      }
-      // Si no es capital nacional ni destino internacional, mostrar mensaje pero permitir ver todas las ciudades para debug
-      else {
-        // Para debug, mostrar todas las ciudades disponibles
-        listaPermitida = ciudades.filter(c => c.id_ciudad !== ciudadOrigenSeleccionada.id_ciudad);
-        console.log("No es capital reconocida:", origenNombre, "ciudades disponibles:", ciudades.length); // Debug
-        console.log("Capitales disponibles en lista:", ciudades.filter(c => capitalesNacionales.includes(c.nombre)).map(c => c.nombre)); // Debug
-      }
-    } else {
-      // Si no hay origen seleccionado, mostrar todas las ciudades disponibles
-      listaPermitida = ciudades;
-    }
-
-    setSugerenciasDestino(
-      q.length > 0 ? listaPermitida.filter((c) => normalize(c.nombre).includes(q) || normalize(c.codigo).includes(q)) : []
-    );
-  };
-
-  // ================== VALIDACIÓN AGREGADA DEL SEGUNDO CÓDIGO ==================
-  const validarVuelo = () => {
-    setMensaje("");
-    const newErrors: { [key: string]: boolean } = {};
-
-    // 1. Revisar campos obligatorios
-    if (!origen) newErrors.origen = true;
-    if (!destino) newErrors.destino = true;
-    if (!ida) newErrors.ida = true;
-    if (modo === "ida_vuelta" && !vuelta) newErrors.vuelta = true;
-
-    // 2. Si hay errores, mostrarlos y detenerse
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setMensaje("Por favor, completa los campos marcados en rojo.");
-      return;
-    }
-
-    // 3. Si no hay errores, limpiar y proceder con validaciones de negocio
-    setErrors({});
-    const origenCiudad = limpiarCiudad(origen);
-    const destinoCiudad = limpiarCiudad(destino);
-    
-    // Validaciones de reglas de negocio
-    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
-    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
-    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
-    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
-    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
-    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
-
-    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
-    if (origenEsInternacional) {
-      if (!destinoEsHubInternacional) {
-        return setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
-      }
-    }
-    // Validaciones para vuelos desde territorio nacional
-    else {
-      // Validación 1: El origen debe ser una capital principal
-      if (!origenEsCapitalNacional) {
-        return setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
-      }
-
-      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
-      if (destinoEsInternacional && !origenEsHubInternacional) {
-        return setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
-      }
-
-      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
-      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
-        return setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
-      }
-    }
-
-    // Validación 4: No puede ser el mismo origen y destino
-    if (origenCiudad === destinoCiudad) {
-      return setMensaje("El origen y destino no pueden ser la misma ciudad.");
-    }
-
-    // Si todo está válido, navegar a resultados
-    const searchParams = new URLSearchParams({
-      // Parámetros para la búsqueda (los IDs son cruciales)
-      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
-      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
-      departureDate: ida,
-      roundTrip: (modo === "ida_vuelta").toString(),
-      passengers: totalPasajeros.toString(),
-      
-      // Parámetros extra para mostrar en la UI de la página de resultados
-      origen: ciudadOrigenSeleccionada.nombre,
-      destino: ciudadDestinoSeleccionada.nombre,
-    });
-
-    // Añadimos la fecha de vuelta solo si existe
-    if (modo === "ida_vuelta" && vuelta) {
-      searchParams.append('returnDate', vuelta);
-    }
-
-    setTimeout(() => {
-      try {
-        navigate(`/buscar-vuelos?${searchParams.toString()}`);
-        setMensaje("✅ Búsqueda válida. Redirigiendo...");
-      } catch (error) {
-        console.error("Error al navegar:", error);
-        // Fallback a window.location
-        window.location.href = `/buscar-vuelos?${searchParams.toString()}`;
-      }
-    }, 0);
-  };
-
-  // ================== VALIDACIÓN Y BÚSQUEDA MODIFICADA ==================
-  const validarYBuscarVuelo = async () => {
-    // Resetear errores previos
-    setCamposInvalidos({
-      origen: false,
-      destino: false,
-      ida: false,
-      vuelta: false
-    });
-
-    let hayErrores = false;
-    const errores = {};
-
-    // Validar origen
-    if (!ciudadOrigenSeleccionada) {
-      errores.origen = true;
-      hayErrores = true;
-    }
-
-    // Validar destino
-    if (!ciudadDestinoSeleccionada) {
-      errores.destino = true;
-      hayErrores = true;
-    }
-
-    // Validar fecha de ida
-    if (!ida) {
-      errores.ida = true;
-      hayErrores = true;
-    }
-
-    // Validar fecha de vuelta solo si es ida y vuelta
-    if (modo === "ida_vuelta" && !vuelta) {
-      errores.vuelta = true;
-      hayErrores = true;
-    }
-
-    // Si hay errores, mostrarlos y no continuar
-    if (hayErrores) {
-      setCamposInvalidos(errores);
-      setMensaje("Por favor, completa los campos marcados en rojo.");
-      return;
-    }
-
-    // Aplicar validaciones adicionales del segundo código
-    const origenCiudad = limpiarCiudad(origen);
-    const destinoCiudad = limpiarCiudad(destino);
-    
-    // Validaciones de reglas de negocio
-    const origenEsCapitalNacional = capitalesNacionales.includes(origenCiudad);
-    const origenEsHubInternacional = origenesInternacionales.includes(origenCiudad);
-    const origenEsInternacional = destinosInternacionales.includes(origenCiudad);
-    const destinoEsCapitalNacional = capitalesNacionales.includes(destinoCiudad);
-    const destinoEsInternacional = destinosInternacionales.includes(destinoCiudad);
-    const destinoEsHubInternacional = origenesInternacionales.includes(destinoCiudad);
-
-    // Validación para vuelos desde ciudades internacionales (vuelos de regreso)
-    if (origenEsInternacional) {
-      if (!destinoEsHubInternacional) {
-        setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
-        return;
-      }
-    }
-    // Validaciones para vuelos desde territorio nacional
-    else {
-      // Validación 1: El origen debe ser una capital principal
-      if (!origenEsCapitalNacional) {
-        setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
-        return;
-      }
-
-      // Validación 2: Para destinos internacionales, el origen debe ser un hub autorizado
-      if (destinoEsInternacional && !origenEsHubInternacional) {
-        setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
-        return;
-      }
-
-      // Validación 3: Para destinos nacionales, debe ser hacia otra capital
-      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
-        setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
-        return;
-      }
-    }
-
-    // Validación 4: No puede ser el mismo origen y destino
-    if (origenCiudad === destinoCiudad) {
-      setMensaje("El origen y destino no pueden ser la misma ciudad.");
-      return;
-    }
-
-    const searchParams = new URLSearchParams({
-      // Parámetros para la búsqueda (los IDs son cruciales)
-      originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
-      destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
-      departureDate: ida,
-      roundTrip: (modo === "ida_vuelta").toString(),
-      passengers: totalPasajeros.toString(),
-      
-      // Parámetros extra para mostrar en la UI de la página de resultados
-      origen: ciudadOrigenSeleccionada.nombre,
-      destino: ciudadDestinoSeleccionada.nombre,
-    });
-
-    // Añadimos la fecha de vuelta solo si existe
-    if (modo === "ida_vuelta" && vuelta) {
-      searchParams.append('returnDate', vuelta);
-    }
-
-    // Navegamos a la página de resultados
-    navigate(`/buscar-vuelos?${searchParams.toString()}`);
-  };
-
-  const formatDateToYYYYMMDD = (date) => {
-    if (!date) return "";
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const monthPadded = String(month).padStart(2, '0');
-    const dayPadded = String(day).padStart(2, '0');
-    return `${year}-${monthPadded}-${dayPadded}`;
-  };
+// ================== COMPONENTE PRINCIPAL ==================
+export default function FilterSearchBar() {
+  const {
+    modo,
+    origen,
+    destino,
+    ida,
+    vuelta,
+    pasajeros,
+    mensaje,
+    loading,
+    ciudadesLoaded,
+    camposInvalidos,
+    sugerenciasOrigen,
+    sugerenciasDestino,
+    mostrarCalendario,
+    mostrarPasajeros,
+    origenBloqueado,
+    destinoBloqueado,
+    totalPasajeros,
+    origenRef,
+    destinoRef,
+    setModo,
+    setMostrarCalendario,
+    setMostrarPasajeros,
+    filtrarOrigen,
+    filtrarDestino,
+    seleccionarOrigen,
+    seleccionarDestino,
+    resetearOrigen,
+    resetearDestino,
+    cambiarPasajeros,
+    actualizarFechas,
+    validarYBuscarVuelo,
+    limpiarErrorCampo,
+  } = useFlightSearch();
 
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
@@ -610,18 +190,13 @@ export default function BuscadorVuelosModerno() {
                   onChange={(e) => {
                     if (!origenBloqueado) {
                       filtrarOrigen(e.target.value);
-                      if (camposInvalidos.origen) limpiarErrorCampo('origen');
                     }
                   }}
                   readOnly={origenBloqueado}
                   onClick={() => {
                     if (origenBloqueado) {
-                      setOrigen("");
-                      setCiudadOrigenSeleccionada(null);
-                      setOrigenBloqueado(false);
-                      setSugerenciasOrigen(ciudades);
+                      resetearOrigen();
                     }
-                    if (camposInvalidos.origen) limpiarErrorCampo('origen');
                   }}
                   className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${origenBloqueado ? "cursor-pointer" : ""}`}
                 />
@@ -631,18 +206,7 @@ export default function BuscadorVuelosModerno() {
                   {sugerenciasOrigen.map((c, i) => (
                     <li
                       key={i}
-                      onClick={() => {
-                        setOrigen(`${c.nombre} (${c.codigo})`);
-                        setCiudadOrigenSeleccionada(c);
-                        setOrigenBloqueado(true); 
-                        setSugerenciasOrigen([]);
-                        // Limpiar destino si es igual al origen
-                        if (ciudadDestinoSeleccionada?.id_ciudad === c.id_ciudad) {
-                          setDestino("");
-                          setCiudadDestinoSeleccionada(null);
-                          setDestinoBloqueado(false);
-                        }
-                      }}
+                      onClick={() => seleccionarOrigen(c)}
                       className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
                     >
                       <div>
@@ -667,18 +231,13 @@ export default function BuscadorVuelosModerno() {
                   onChange={(e) => {
                     if (!destinoBloqueado) {
                       filtrarDestino(e.target.value);
-                      if (camposInvalidos.destino) limpiarErrorCampo('destino');
                     }
                   }}
                   readOnly={destinoBloqueado}
                   onClick={() => {
                     if (destinoBloqueado) {
-                      setDestino("");
-                      setCiudadDestinoSeleccionada(null);
-                      setDestinoBloqueado(false);
-                      setSugerenciasDestino(ciudades);
+                      resetearDestino();
                     }
-                    if (camposInvalidos.destino) limpiarErrorCampo('destino');
                   }}
                   className={`w-full bg-transparent outline-none text-base font-sans text-gray-900 ${
                     destinoBloqueado ? "cursor-pointer" : ""
@@ -690,12 +249,7 @@ export default function BuscadorVuelosModerno() {
                   {sugerenciasDestino.map((c, i) => (
                     <li
                       key={i}
-                      onClick={() => {
-                        setDestino(`${c.nombre} (${c.codigo})`);
-                        setCiudadDestinoSeleccionada(c);
-                        setDestinoBloqueado(true);
-                        setSugerenciasDestino([]);
-                      }}
+                      onClick={() => seleccionarDestino(c)}
                       className="flex justify-between p-3 cursor-pointer hover:bg-gray-100 text-sm"
                     >
                       <div>
@@ -766,18 +320,7 @@ export default function BuscadorVuelosModerno() {
                 onOpenChange={setMostrarCalendario}
                 fechaInicial={ida}
                 fechaFinal={vuelta}
-                onChange={({ startDate, endDate }) => {
-                  if (startDate) {
-                    setIda(formatDateToYYYYMMDD(startDate));
-                    if (camposInvalidos.ida) limpiarErrorCampo('ida');
-                  }
-                  if (endDate && modo === "ida_vuelta") {
-                    setVuelta(formatDateToYYYYMMDD(endDate));
-                    if (camposInvalidos.vuelta) limpiarErrorCampo('vuelta');
-                  } else {
-                    setVuelta("");
-                  }
-                }}
+                onChange={actualizarFechas}
               />
             </div>
 
@@ -885,6 +428,7 @@ export default function BuscadorVuelosModerno() {
               )}
             </div>
 
+            {/* Botón Buscar */}
             <div className="flex items-end h-full">
               <button
                 onClick={validarYBuscarVuelo}
