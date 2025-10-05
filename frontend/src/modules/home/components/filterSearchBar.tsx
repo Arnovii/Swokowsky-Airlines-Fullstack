@@ -216,29 +216,28 @@ export default function FilterSearchBar() {
             {/* Filtro de Precio */}
             <div className="flex flex-col">
               <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-                <DollarIcon />
                 Rango de precio
               </label>
               <div className="flex gap-2">
-                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-3 shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">Mínimo</div>
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Mínimo</div>
                   <input
                     type="text"
                     placeholder="0"
                     value={formatearPrecio(precioMin)}
                     onChange={(e) => handlePrecioChange(setPrecioMin, e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
                   />
                 </div>
                 <div className="flex items-center text-gray-400">-</div>
-                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-3 shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">Máximo</div>
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Máximo</div>
                   <input
                     type="text"
                     placeholder="Sin límite"
                     value={formatearPrecio(precioMax)}
                     onChange={(e) => handlePrecioChange(setPrecioMax, e.target.value)}
-                    className="w-full bg-transparent outline-none text-base font-sans text-gray-900"
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
                   />
                 </div>
               </div>
@@ -247,7 +246,6 @@ export default function FilterSearchBar() {
             {/* Filtro de Horario */}
             <div className="flex flex-col relative">
               <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-                <ClockIcon />
                 Horario preferido
               </label>
               <div
