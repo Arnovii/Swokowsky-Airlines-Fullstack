@@ -1,6 +1,5 @@
-// src/pages/FlightSearchResults.jsx
 import React, { useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import { useFlightSearch } from '../hooks/useFlightSearch';
 import { FlightCard } from '../components/FlightCard';
@@ -8,6 +7,7 @@ import { LoadingState, ErrorState, NoFlightsFound } from '../components/EmptySta
 
 export function FlightSearchResults() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const searchCriteria = useMemo(() => ({
     originCityId: parseInt(searchParams.get('originId'), 10) || null,
@@ -33,6 +33,11 @@ export function FlightSearchResults() {
   const outboundFlights = results?.outbound || [];
   const inboundFlights = results?.inbound || [];
 
+  // Navegación a detalles de vuelo
+  const handleSelectFlight = (flight) => {
+    navigate(`/detalle-vuelo/${flight.id}`);
+  };
+
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800">
@@ -57,6 +62,7 @@ export function FlightSearchResults() {
                 <FlightCard
                   key={flight.id ?? `${flight.origen?.codigo_iata}-${flight.destino?.codigo_iata}-${flight.fecha_salida_programada}`}
                   flight={flight}
+                  onSelectFlight={handleSelectFlight}
                 />
               ))}
             </div>
@@ -65,13 +71,29 @@ export function FlightSearchResults() {
           <NoFlightsFound />
         )}
 
+        {/* Vuelos de Regreso */}
+        {inboundFlights.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-gray-700 mb-4">Vuelos de Regreso</h2>
+            <div className="space-y-4">
+              {inboundFlights.map((flight) => (
+                <FlightCard
+                  key={flight.id ?? `${flight.origen?.codigo_iata}-${flight.destino?.codigo_iata}-${flight.fecha_salida_programada}`}
+                  flight={flight}
+                  onSelectFlight={handleSelectFlight}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Vuelos de Vuelta */}
         {results?.type === 'roundtrip' && inboundFlights.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold text-gray-700 mb-4">Vuelos de Vuelta</h2>
             <div className="space-y-4">
               {inboundFlights.map((flight) => (
-                <FlightCard key={flight.id} flight={flight} />
+                <FlightCard key={flight.id} flight={flight} onSelectFlight={handleSelectFlight} />
               ))}
             </div>
           </section>

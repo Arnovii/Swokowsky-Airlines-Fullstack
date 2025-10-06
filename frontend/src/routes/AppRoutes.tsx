@@ -8,6 +8,7 @@ import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword"
 import NotFound from "../modules/error/pages/NotFound"
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
+import FlightDetailsPage from "../modules/flightsearch/pages/FlightDetailsPage";
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
 import DetalleVuelo from "../modules/news/pages/detallevuelo"
@@ -33,6 +34,7 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
+    <Route path="/detalle-vuelo/:id" element={<FlightDetailsPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
