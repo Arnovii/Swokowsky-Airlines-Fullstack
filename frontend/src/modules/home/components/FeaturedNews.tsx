@@ -1,13 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Eye, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NewsService } from '../services/newsService';
-import { Link } from 'react-router-dom';  
+import { Link } from 'react-router-dom';
 
-const FeaturedNews = () => {
-  const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
+interface NewsArticle {
+  id?: number | string;
+  id_noticia?: number | string;
+  imageUrl?: string;
+  url_imagen?: string;
+  image?: string;
+  title?: string;
+  titulo?: string;
+  excerpt?: string;
+  descripcion_corta?: string;
+  description?: string;
+  publishedAt?: string;
+  fecha_publicacion?: string;
+  createdAt?: string;
+  category?: { name?: string; color?: string };
+  categoria?: { nombre?: string; color?: string };
+  featured?: boolean;
+  author?: { name?: string; avatar?: string };
+  views?: number;
+  readTime?: string;
+}
+
+const FeaturedNews: React.FC = () => {
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
 
   useEffect(() => {
     fetchFeaturedNews();
@@ -20,7 +42,7 @@ const FeaturedNews = () => {
       const response = await NewsService.getFeaturedNews(6);
 
       // Adaptación para manejar diferentes estructuras de respuesta
-      let newsData = [];
+      let newsData: NewsArticle[] = [];
       if (Array.isArray(response)) {
         newsData = response;
       } else if (response.data && Array.isArray(response.data)) {
@@ -32,7 +54,7 @@ const FeaturedNews = () => {
       }
 
       setNews(newsData);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'Error al cargar noticias');
       console.error('Error fetching featured news:', err);
     } finally {
@@ -40,7 +62,8 @@ const FeaturedNews = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'long',
@@ -48,7 +71,7 @@ const FeaturedNews = () => {
     });
   };
 
-  const formatViews = (views) => {
+  const formatViews = (views?: number) => {
     if (!views) return '0';
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
     if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
@@ -64,22 +87,22 @@ const FeaturedNews = () => {
   };
 
   // Función para obtener la imagen de la noticia
-  const getImageUrl = (article) => {
+  const getImageUrl = (article: NewsArticle) => {
     return article.imageUrl || article.url_imagen || article.image || '/default-news-image.jpg';
   };
 
   // Función para obtener el título
-  const getTitle = (article) => {
+  const getTitle = (article: NewsArticle) => {
     return article.title || article.titulo || 'Sin título';
   };
 
   // Función para obtener la descripción
-  const getExcerpt = (article) => {
+  const getExcerpt = (article: NewsArticle) => {
     return article.excerpt || article.descripcion_corta || article.description || '';
   };
 
   // Función para obtener la fecha de publicación
-  const getPublishedDate = (article) => {
+  const getPublishedDate = (article: NewsArticle) => {
     return article.publishedAt || article.fecha_publicacion || article.createdAt || new Date().toISOString();
   };
 

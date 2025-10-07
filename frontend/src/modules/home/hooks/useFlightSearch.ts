@@ -30,6 +30,13 @@ export const useFlightSearch = () => {
   const [mensaje, setMensaje] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Estados de filtros adicionales
+  const [precioMin, setPrecioMin] = useState("");
+  const [precioMax, setPrecioMax] = useState("");
+  const [horarioIda, setHorarioIda] = useState<string[]>([]);
+  const [horarioVuelta, setHorarioVuelta] = useState<string[]>([]);
+  const [mostrarHorarios, setMostrarHorarios] = useState(false);
+
   // Estados de ciudades
   const [ciudades, setCiudades] = useState<Ciudad[]>([]);
   const [ciudadesLoaded, setCiudadesLoaded] = useState(false);
@@ -114,6 +121,44 @@ export const useFlightSearch = () => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // ================== FILTROS DE PRECIO ==================
+  const formatearPrecio = (valor: string) => {
+    const numero = valor.replace(/\D/g, '');
+    return numero ? Number(numero).toLocaleString('es-CO') : '';
+  };
+
+  const handlePrecioChange = (setter: (value: string) => void, valor: string) => {
+    const numero = valor.replace(/\D/g, '');
+    setter(numero);
+  };
+
+  const limpiarFiltrosPrecio = () => {
+    setPrecioMin("");
+    setPrecioMax("");
+  };
+
+  // ================== FILTROS DE HORARIO ==================
+  const toggleHorario = (tipo: "ida" | "vuelta", franjaId: string) => {
+    if (tipo === "ida") {
+      setHorarioIda(prev => 
+        prev.includes(franjaId) 
+          ? prev.filter(h => h !== franjaId)
+          : [...prev, franjaId]
+      );
+    } else {
+      setHorarioVuelta(prev => 
+        prev.includes(franjaId) 
+          ? prev.filter(h => h !== franjaId)
+          : [...prev, franjaId]
+      );
+    }
+  };
+
+  const limpiarFiltrosHorario = () => {
+    setHorarioIda([]);
+    setHorarioVuelta([]);
   };
 
   // ================== FILTROS ==================
@@ -278,6 +323,12 @@ export const useFlightSearch = () => {
       return;
     }
 
+    // Validación de precios
+    if (precioMin && precioMax && Number(precioMin) > Number(precioMax)) {
+      setMensaje("El precio mínimo no puede ser mayor que el máximo.");
+      return;
+    }
+
     const origenCiudad = limpiarCiudad(origen);
     const destinoCiudad = limpiarCiudad(destino);
 
@@ -329,6 +380,22 @@ export const useFlightSearch = () => {
       searchParams.append('returnDate', vuelta);
     }
 
+    // Agregar filtros de precio si están definidos
+    if (precioMin) {
+      searchParams.append('precioMin', precioMin);
+    }
+    if (precioMax) {
+      searchParams.append('precioMax', precioMax);
+    }
+
+    // Agregar filtros de horario si están seleccionados
+    if (horarioIda.length > 0) {
+      searchParams.append('horarioIda', horarioIda.join(','));
+    }
+    if (modo === "ida_vuelta" && horarioVuelta.length > 0) {
+      searchParams.append('horarioVuelta', horarioVuelta.join(','));
+    }
+
     navigate(`/buscar-vuelos?${searchParams.toString()}`);
   };
 
@@ -355,6 +422,13 @@ export const useFlightSearch = () => {
     ciudadDestinoSeleccionada,
     totalPasajeros,
     
+    // Estados de filtros adicionales
+    precioMin,
+    precioMax,
+    horarioIda,
+    horarioVuelta,
+    mostrarHorarios,
+    
     // Refs
     origenRef,
     destinoRef,
@@ -363,6 +437,11 @@ export const useFlightSearch = () => {
     setModo,
     setMostrarCalendario,
     setMostrarPasajeros,
+    setPrecioMin,
+    setPrecioMax,
+    setHorarioIda,
+    setHorarioVuelta,
+    setMostrarHorarios,
     
     // Funciones
     filtrarOrigen,
@@ -375,5 +454,10 @@ export const useFlightSearch = () => {
     actualizarFechas,
     validarYBuscarVuelo,
     limpiarErrorCampo,
+    formatearPrecio,
+    handlePrecioChange,
+    toggleHorario,
+    limpiarFiltrosHorario,
+    limpiarFiltrosPrecio,
   };
 };

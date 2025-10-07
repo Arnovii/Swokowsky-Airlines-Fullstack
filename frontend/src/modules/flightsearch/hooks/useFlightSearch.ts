@@ -1,8 +1,20 @@
-// src/hooks/useFlightSearch.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FlightService } from '../services/flightService';
 
-const generateFlightId = (flight = {}, idx = 0) => {
+export interface FlightSearchResult {
+  id: string | number;
+  id_vuelo?: number;
+  [key: string]: any;
+}
+
+export interface FlightSearchNormalized {
+  type: 'oneway' | 'roundtrip';
+  outbound: FlightSearchResult[];
+  inbound: FlightSearchResult[];
+  metadata: Record<string, any>;
+}
+
+const generateFlightId = (flight: any = {}, idx: number = 0): string => {
   const from = flight.origen?.codigo_iata || flight.origen?.ciudad || 'FROM';
   const to = flight.destino?.codigo_iata || flight.destino?.ciudad || 'TO';
   const date = flight.fecha_salida_programada || flight.fecha_salida || 'DATE';
@@ -10,19 +22,19 @@ const generateFlightId = (flight = {}, idx = 0) => {
   return `${from}-${to}-${date}-${time}-${idx}`;
 };
 
-const normalizeApiResponse = (data = {}) => {
+const normalizeApiResponse = (data: any = {}): FlightSearchNormalized => {
   // Si la API viene con axios (data.data) ya fue extraído en el hook, aquí asumimos data "puro"
   if (!data) return { type: 'oneway', outbound: [], inbound: [], metadata: {} };
 
   if (data.type === 'roundtrip') {
     const outbound = Array.isArray(data.outbound) ? data.outbound : [];
     const inbound = Array.isArray(data.inbound) ? data.inbound : [];
-    return {
-      type: 'roundtrip',
-      outbound: outbound.map((f, i) => ({ id: f.id ?? generateFlightId(f, i), ...f })),
-      inbound: inbound.map((f, i) => ({ id: f.id ?? generateFlightId(f, i), ...f })),
-      metadata: data.metadata ?? {},
-    };
+      return {
+        type: 'roundtrip',
+        outbound: outbound.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
+        inbound: inbound.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
+        metadata: data.metadata ?? {},
+      };
   }
 
   // Caso común oneway: API usa `results`
@@ -30,7 +42,7 @@ const normalizeApiResponse = (data = {}) => {
     const arr = Array.isArray(data.results) ? data.results : (data.outbound || []);
     return {
       type: 'oneway',
-      outbound: arr.map((f, i) => ({ id: f.id ?? generateFlightId(f, i), ...f })),
+      outbound: arr.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
       inbound: [],
       metadata: data.metadata ?? {},
     };
@@ -40,26 +52,39 @@ const normalizeApiResponse = (data = {}) => {
   return { type: 'oneway', outbound: [], inbound: [], metadata: {} };
 };
 
-export const useFlightSearch = (searchCriteria, options = {}) => {
+interface UseFlightSearchOptions {
+  skip?: boolean;
+}
+
+export const useFlightSearch = (
+  searchCriteria: Record<string, any>,
+  options: UseFlightSearchOptions = {}
+): {
+  results: FlightSearchNormalized;
+  loading: boolean;
+  error: string | null;
+  metadata: Record<string, any>;
+  refetch: () => void;
+} => {
   const { skip = false } = options;
 
-  const [results, setResults] = useState({
+  const [results, setResults] = useState<FlightSearchNormalized>({
     type: 'oneway',
     outbound: [],
     inbound: [],
     metadata: {}
   });
-  const [loading, setLoading] = useState(!skip);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState<boolean>(!skip);
+  const [error, setError] = useState<string | null>(null);
 
-  const abortControllerRef = useRef(null);
-  const latestCriteriaRef = useRef(searchCriteria);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const latestCriteriaRef = useRef<Record<string, any>>(searchCriteria);
 
   useEffect(() => {
     latestCriteriaRef.current = searchCriteria;
   }, [searchCriteria]);
 
-  const fetchFlightsNow = useCallback(async (criteria) => {
+  const fetchFlightsNow = useCallback(async (criteria: Record<string, any>) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
     const { signal } = abortControllerRef.current;
