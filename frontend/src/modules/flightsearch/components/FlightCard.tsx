@@ -2,7 +2,38 @@ import React from 'react';
 import { Plane, Globe } from 'lucide-react';
 import { FlightUtils } from '../utils/flightUtils';
 
-const PromoBadge = ({ promotion }) => {
+// Tipos para la promoción y vuelo
+interface Promotion {
+  name: string;
+  discount: number;
+  remainingSeats: number;
+}
+
+interface Flight {
+  departureTimeUTC: string;
+  arrivalTimeUTC: string;
+  durationMinutes: number;
+  origin?: {
+    codigo_iata?: string;
+    ciudad?: string;
+  };
+  destination?: {
+    codigo_iata?: string;
+    ciudad?: string;
+  };
+  aircraftModel?: string;
+  availableClasses?: string[];
+  isInternational?: boolean;
+  price: number;
+  promotion?: Promotion;
+  // Puedes agregar más campos según tu modelo
+}
+
+interface PromoBadgeProps {
+  promotion?: Promotion;
+}
+
+const PromoBadge: React.FC<PromoBadgeProps> = ({ promotion }) => {
   if (!promotion) return null;
   if (promotion.remainingSeats <= 0) {
     return (
@@ -18,7 +49,12 @@ const PromoBadge = ({ promotion }) => {
   );
 };
 
-export const FlightCard = ({ flight, onSelectFlight }) => {
+interface FlightCardProps {
+  flight: Flight;
+  onSelectFlight: (flight: Flight) => void;
+}
+
+export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight }) => {
   const finalPrice = FlightUtils.calculateFinalPrice(flight);
 
   return (
@@ -35,7 +71,6 @@ export const FlightCard = ({ flight, onSelectFlight }) => {
               <div className="text-sm font-bold text-gray-600 font-sans">{flight.origin?.codigo_iata}</div>
               <div className="text-xs text-gray-500 font-sans">{flight.origin?.ciudad}</div>
             </div>
-            
             <div className="flex-1 flex items-center gap-3">
               <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
               <div className="text-center bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-3 shadow-sm">
@@ -46,7 +81,6 @@ export const FlightCard = ({ flight, onSelectFlight }) => {
               </div>
               <div className="flex-1 h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
             </div>
-            
             <div className="text-center">
               <div className="text-3xl font-bold text-[#081225] flex items-center gap-2 font-sans">
                 {FlightUtils.formatTime(flight.arrivalTimeUTC)}
@@ -56,27 +90,22 @@ export const FlightCard = ({ flight, onSelectFlight }) => {
               <div className="text-xs text-gray-500 font-sans">{flight.destination?.ciudad}</div>
             </div>
           </div>
-          
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span className="font-semibold font-sans">{flight.aircraftModel}</span>
             </div>
-            
-            {/* ===== AQUÍ ESTÁ LA LÍNEA CORREGIDA ===== */}
             <span className="capitalize font-semibold font-sans text-gray-700">
               {
                 (flight.availableClasses && flight.availableClasses.length > 0)
                   ? flight.availableClasses.join(', ').replace('_', ' ')
-                  : 'Clase no especificada' // Texto alternativo si no hay clases
+                  : 'Clase no especificada'
               }
             </span>
           </div>
         </div>
-
         {/* Sección de Precio y Selección (sin cambios) */}
         <div className="flex flex-col lg:items-end gap-3 lg:w-64">
-          {/* ... (resto del componente sin cambios) ... */}
           <div className="flex flex-col items-start lg:items-end">
             {flight.promotion && (
               <span className="text-sm text-gray-500 line-through font-sans">

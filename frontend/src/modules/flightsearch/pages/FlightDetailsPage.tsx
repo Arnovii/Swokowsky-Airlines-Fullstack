@@ -1,70 +1,123 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import type { Flight } from '../types/Flight';
+import { useSearchParams, useParams } from 'react-router-dom';
 import FlightInfo from '../components/FlightInfo';
 import ClassSelector from '../components/ClassSelector';
-import PassengerCountSelector from '../components/PassengerCountSelector';
-import PassengerForm from '../components/PassengerForm';
+import PassengerFormModern from '../components/PassengerForm';
 import type { PassengerFormData } from '../components/PassengerForm';
+import BookingHolderForm from '../components/BookingHolderForm';
 import ReservationSummary from '../components/ReservationSummary';
 import { useCart } from '../../../context/CartContext';
-import type { CartTicket } from '../../../context/types';
 import { reserveTickets, buyTickets } from '../services/ticketService';
-
-// Página de detalles de vuelo para reservar/comprar tickets
-// Modular: usará componentes separados para formulario de pasajeros, selección de clase, resumen, etc.
-
-const mockFlight = {
-  id: '1',
-  aircraftModel: 'Airbus A320',
-  origin: { codigo_iata: 'BOG', ciudad: 'Bogotá' },
-  destination: { codigo_iata: 'MDE', ciudad: 'Medellín' },
-  departureTimeUTC: '2025-10-10T08:00:00Z',
-  arrivalTimeUTC: '2025-10-10T09:00:00Z',
-  durationMinutes: 60,
-  availableClasses: ['economica', 'primera_clase'],
-  price: 200,
-};
+import { FlightService } from '../services/flightService';
 
 const FlightDetailsPage = () => {
-  const { id } = useParams();
-  // TODO: fetch flight by id, usar mock por ahora
-  const flight = mockFlight;
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const [flight, setFlight] = useState<Flight | null>(null);
+  const [loadingFlight, setLoadingFlight] = useState(true);
+  const [errorFlight, setErrorFlight] = useState<string | null>(null);
 
-  const [selectedClass, setSelectedClass] = useState(flight.availableClasses[0]);
-  const [passengerCount, setPassengerCount] = useState(1);
-  const [passengers, setPassengers] = useState<PassengerFormData[]>([
-    { name: '', lastName: '', dni: '', age: 0 },
-  ]);
+  useEffect(() => {
+    // Leer parámetros de búsqueda desde la URL con nombres correctos
+    const originCityId = parseInt(searchParams.get('originCityId') || '0', 10);
+    const destinationCityId = parseInt(searchParams.get('destinationCityId') || '0', 10);
+    const departureDate = searchParams.get('departureDate') || '';
+    const returnDate = searchParams.get('returnDate') || '';
+    const roundTrip = searchParams.get('roundTrip') === 'true';
+    const passengers = parseInt(searchParams.get('passengers') || '1', 10);
+
+    // Validar parámetros requeridos
+    if (!originCityId || !destinationCityId || !departureDate || passengers < 1 || passengers > 5) {
+      setErrorFlight('Faltan parámetros requeridos para buscar el vuelo. Verifica origen, destino, fecha y número de pasajeros.');
+      setLoadingFlight(false);
+      return;
+    }
+
+    const searchCriteria = {
+      originCityId,
+      destinationCityId,
+      departureDate,
+      roundTrip,
+      returnDate,
+      passengers,
+    };
+
+    setLoadingFlight(true);
+    setErrorFlight(null);
+    FlightService.searchFlights(searchCriteria)
+      .then((res: { outbound?: Flight[]; inbound?: Flight[] }) => {
+        let found: Flight | null = null;
+        // Buscar solo por idVuelo numérico
+        if (res.outbound) {
+          found = res.outbound.find((f: Flight) => String(f.idVuelo) === String(id)) || null;
+        }
+        if (!found && res.inbound) {
+          found = res.inbound.find((f: Flight) => String(f.idVuelo) === String(id)) || null;
+        }
+        // Si no se encuentra, mostrar el primer vuelo disponible
+        if (!found) {
+          found = (res.outbound && res.outbound.length > 0) ? res.outbound[0] : (res.inbound && res.inbound.length > 0 ? res.inbound[0] : null);
+        }
+        setFlight(found);
+      })
+      .catch((err: Error) => {
+        setErrorFlight('Error al cargar vuelo: ' + (err?.message || ''));
+      })
+      .finally(() => setLoadingFlight(false));
+  }, [id, searchParams]);
+
+  // Obtener número de pasajeros desde query param
+  const passengerCount = parseInt(searchParams.get('passengers') || '1', 10);
+
+  // Estado para los datos de cada pasajero
+  const [passengerData, setPassengerData] = useState<PassengerFormData[]>(
+    Array.from({ length: passengerCount }, () => ({
+      gender: '',
+      name: '',
+      lastName: '',
+      birthDay: '',
+      birthMonth: '',
+      birthYear: '',
+      nationality: '',
+      document: '',
+      program: '',
+      age: 0,
+      dni: '',
+    }))
+  );
+
+  // Handler para actualizar datos de cada pasajero
+  const handlePassengerChange = (idx: number, field: string, value: string) => {
+    setPassengerData(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  };
+
+  // Validaciones
+  const hasDuplicateDocs = new Set(passengerData.map(p => p.document)).size < passengerData.length;
+  const minors = passengerData.filter(p => {
+    const year = parseInt(p.birthYear || '0', 10);
+    return year && (2025 - year) < 18;
+  });
+  const adults = passengerData.filter(p => {
+    const year = parseInt(p.birthYear || '0', 10);
+    return year && (2025 - year) >= 18;
+  });
+  const minorsNeedAdults = minors.length > 0 && adults.length === 0;
+
+  const [selectedClass, setSelectedClass] = useState(flight?.availableClasses?.[0] ?? 'economica');
   const [loading, setLoading] = useState(false);
 
   // Carrito global
   const { addToCart } = useCart();
 
-  // Actualizar formularios de pasajeros según cantidad
-  React.useEffect(() => {
-    setPassengers((prev) => {
-      if (passengerCount > prev.length) {
-        return [
-          ...prev,
-          ...Array(passengerCount - prev.length).fill({ name: '', lastName: '', dni: '', age: 0 }),
-        ];
-      } else {
-        return prev.slice(0, passengerCount);
-      }
-    });
-  }, [passengerCount]);
-
-  // Validaciones y handlers
-  const handlePassengerChange = (idx: number, data: PassengerFormData) => {
-    setPassengers((prev) => prev.map((p, i) => (i === idx ? data : p)));
-  };
 
   const handleReserve = async () => {
+    if (!flight) return;
     setLoading(true);
     const tickets = await reserveTickets(
-      flight.id,
+      flight.idVuelo,
       selectedClass as 'economica' | 'primera_clase',
-      passengers
+      passengerData
     );
     tickets.forEach(addToCart);
     setLoading(false);
@@ -72,16 +125,24 @@ const FlightDetailsPage = () => {
   };
 
   const handleBuy = async () => {
+    if (!flight) return;
     setLoading(true);
     const tickets = await buyTickets(
-      flight.id,
+      flight.idVuelo,
       selectedClass as 'economica' | 'primera_clase',
-      passengers
+      passengerData
     );
     tickets.forEach(addToCart);
     setLoading(false);
     alert('Compra simulada. Tickets agregados al carrito.');
   };
+
+  if (loadingFlight) {
+    return <div className="max-w-4xl mx-auto py-8 px-4 text-center">Cargando vuelo...</div>;
+  }
+  if (errorFlight || !flight) {
+    return <div className="max-w-4xl mx-auto py-8 px-4 text-center text-red-600">{errorFlight || 'Vuelo no encontrado.'}</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -89,26 +150,32 @@ const FlightDetailsPage = () => {
       <div className="flex flex-col gap-6 md:gap-8">
         <FlightInfo flight={flight} />
         <ClassSelector
-          availableClasses={flight.availableClasses}
+          availableClasses={flight.availableClasses ?? []}
           selectedClass={selectedClass}
           onSelectClass={setSelectedClass}
         />
-        <PassengerCountSelector count={passengerCount} setCount={setPassengerCount} max={5} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {passengers.map((data, idx) => (
-            <PassengerForm
+        <div className="flex flex-col gap-6">
+          {Array.from({ length: passengerCount }).map((_, idx) => (
+            <PassengerFormModern
               key={idx}
-              index={idx}
-              data={data}
-              onChange={(d) => handlePassengerChange(idx, d)}
+              index={idx + 1}
+              data={passengerData[idx]}
+              onChange={(field, value) => handlePassengerChange(idx, field, value)}
             />
           ))}
         </div>
+        {hasDuplicateDocs && (
+          <div className="text-red-600 font-bold font-sans mb-4">No puede haber dos pasajeros con el mismo documento.</div>
+        )}
+        {minorsNeedAdults && (
+          <div className="text-yellow-600 font-bold font-sans mb-4">Todo menor de edad debe tener al menos un acompañante adulto.</div>
+        )}
+        <BookingHolderForm />
         <ReservationSummary
           flight={flight}
           selectedClass={selectedClass}
-          passengers={passengers}
-          pricePerPerson={flight.price}
+          passengers={passengerData}
+          pricePerPerson={flight.price ?? 0}
           onReserve={handleReserve}
           onBuy={handleBuy}
           loading={loading}

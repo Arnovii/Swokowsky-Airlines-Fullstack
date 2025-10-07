@@ -31,7 +31,7 @@ const ReservationSummary: React.FC<ReservationSummaryProps> = ({
       <div className="flex gap-4 mt-6">
         <button
           type="button"
-          className="px-6 py-3 rounded-lg bg-yellow-500 text-white font-bold shadow hover:bg-yellow-600"
+          className="px-6 py-3 rounded-xl font-sans font-bold bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 group text-[#081225]"
           onClick={onReserve}
           disabled={loading}
         >
@@ -39,7 +39,7 @@ const ReservationSummary: React.FC<ReservationSummaryProps> = ({
         </button>
         <button
           type="button"
-          className="px-6 py-3 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700"
+          className="px-6 py-3 rounded-xl font-sans font-bold bg-[#081225] text-white border border-cyan-400/20 hover:bg-[#081225]/90 transition-all duration-300 group"
           onClick={onBuy}
           disabled={loading}
         >

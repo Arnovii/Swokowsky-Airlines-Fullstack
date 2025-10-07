@@ -4,17 +4,18 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useFlightSearch } from '../hooks/useFlightSearch';
 import { FlightCard } from '../components/FlightCard';
 import { LoadingState, ErrorState, NoFlightsFound } from '../components/EmptyStates';
+import type { Flight } from '../types/Flight';
 
 export function FlightSearchResults() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const searchCriteria = useMemo(() => ({
-    originCityId: parseInt(searchParams.get('originId'), 10) || null,
-    destinationCityId: parseInt(searchParams.get('destinationId'), 10) || null,
+    originCityId: parseInt(searchParams.get('originId') || '0', 10) || null,
+    destinationCityId: parseInt(searchParams.get('destinationId') || '0', 10) || null,
     departureDate: searchParams.get('departureDate') || '',
     returnDate: searchParams.get('returnDate') || null,
-    passengers: parseInt(searchParams.get('passengers'), 10) || 1,
+    passengers: parseInt(searchParams.get('passengers') || '1', 10),
     roundTrip: searchParams.get('roundTrip') === 'true',
   }), [searchParams]);
 
@@ -30,12 +31,22 @@ export function FlightSearchResults() {
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
 
-  const outboundFlights = results?.outbound || [];
-  const inboundFlights = results?.inbound || [];
+  const outboundFlights: Flight[] = results?.outbound || [];
+  const inboundFlights: Flight[] = results?.inbound || [];
 
   // Navegación a detalles de vuelo
-  const handleSelectFlight = (flight) => {
-    navigate(`/detalle-vuelo/${flight.id}`);
+  const handleSelectFlight = (flight: Flight) => {
+    console.log('flight seleccionado:', flight);
+    const flightId = flight.idVuelo;
+    const params = new URLSearchParams({
+      originCityId: searchParams.get('originId') || '',
+      destinationCityId: searchParams.get('destinationId') || '',
+      departureDate: searchParams.get('departureDate') || '',
+      returnDate: searchParams.get('returnDate') || '',
+      roundTrip: searchParams.get('roundTrip') || '',
+      passengers: searchParams.get('passengers') || ''
+    });
+    navigate(`/detalle-vuelo/${flightId}?${params.toString()}`);
   };
 
   return (
@@ -60,7 +71,7 @@ export function FlightSearchResults() {
             <div className="space-y-4">
               {outboundFlights.map((flight) => (
                 <FlightCard
-                  key={flight.id ?? `${flight.origen?.codigo_iata}-${flight.destino?.codigo_iata}-${flight.fecha_salida_programada}`}
+                  key={flight.idVuelo}
                   flight={flight}
                   onSelectFlight={handleSelectFlight}
                 />
@@ -78,7 +89,7 @@ export function FlightSearchResults() {
             <div className="space-y-4">
               {inboundFlights.map((flight) => (
                 <FlightCard
-                  key={flight.id ?? `${flight.origen?.codigo_iata}-${flight.destino?.codigo_iata}-${flight.fecha_salida_programada}`}
+                  key={flight.idVuelo}
                   flight={flight}
                   onSelectFlight={handleSelectFlight}
                 />
@@ -93,7 +104,7 @@ export function FlightSearchResults() {
             <h2 className="text-2xl font-bold text-gray-700 mb-4">Vuelos de Vuelta</h2>
             <div className="space-y-4">
               {inboundFlights.map((flight) => (
-                <FlightCard key={flight.id} flight={flight} onSelectFlight={handleSelectFlight} />
+                <FlightCard key={flight.idVuelo} flight={flight} onSelectFlight={handleSelectFlight} />
               ))}
             </div>
           </section>

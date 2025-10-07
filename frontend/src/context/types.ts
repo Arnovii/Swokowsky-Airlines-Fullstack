@@ -10,7 +10,7 @@ export interface Passenger {
 
 export interface CartTicket {
   id: string; // id temporal o del backend
-  flightId: string;
+  flightId: number;
   classType: 'economica' | 'primera_clase';
   seatNumber?: string;
   passenger: Passenger;
