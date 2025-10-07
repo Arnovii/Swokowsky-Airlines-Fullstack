@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import type { Article } from '../services/newsService';
-// CORRECCIÓN: El nombre de la función importada ahora es el correcto.
 import { getAllArticles, getFeaturedArticles } from '../services/newsService';
 
 export function useNews() {
