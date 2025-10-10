@@ -21,10 +21,11 @@ async function main() {
   // GMTs
   await prisma.gmt.createMany({
     data: [
-      { id_gmt: 1, name: "GMT-5", offset: -5 }, // Colombia, Estados Unidos (Costa Este: NY, Miami)
-      { id_gmt: 2, name: "GMT+1", offset: 1 },  // España
-      { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido
-      { id_gmt: 4, name: "GMT-3", offset: -3 },  // Argentina
+      { id_gmt: 1, name: "GMT-5", offset: -5 }, // Colombia (COT)
+      { id_gmt: 2, name: "GMT+1", offset: 1 },  // España (CET / invierno)
+      { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido (GMT / invierno)
+      { id_gmt: 4, name: "GMT-3", offset: -3 }, // Argentina (ART)
+      { id_gmt: 5, name: "GMT-4", offset: -4 }, // Estados Unidos - Este (EDT, p.ej. durante DST)
       // GMT-6 (México) eliminado intencionalmente
     ],
     skipDuplicates: true,
@@ -65,11 +66,11 @@ async function main() {
       { id_ciudad: 30, id_paisFK: 1, id_gmtFK: 1, nombre: "Leticia", codigo: "LET" },
 
       // --- Ciudades Internacionales ---
-      { id_ciudad: 31, id_paisFK: 2, id_gmtFK: 2, nombre: "Madrid", codigo: "MAD" }, // España, GMT+1
-      { id_ciudad: 32, id_paisFK: 3, id_gmtFK: 3, nombre: "Londres", codigo: "LHR" }, // Reino Unido, GMT+0
-      { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 1, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-5
+      { id_ciudad: 31, id_paisFK: 2, id_gmtFK: 2, nombre: "Madrid", codigo: "MAD" }, // España, GMT+1 (CET en invierno)
+      { id_ciudad: 32, id_paisFK: 3, id_gmtFK: 3, nombre: "Londres", codigo: "LHR" }, // Reino Unido, GMT+0 (invierno)
+      { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 5, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-4 (EDT — DST)
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
-      { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 1, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-5
+      { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 5, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-4 (EDT — DST)
       // Ciudad de México (id_ciudad: 36) eliminada intencionalmente
     ],
     skipDuplicates: true,
@@ -254,19 +255,19 @@ async function main() {
   await prisma.tarifa.createMany({
     data: [
       // vuelos 1..5,7
-      { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 480000 },     
-      { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 1400000 },  
-      { id_tarifa: 3, id_vueloFK: 2, clase: "economica", precio_base: 1800000 },    
-      { id_tarifa: 4, id_vueloFK: 2, clase: "primera_clase", precio_base: 6000000 },  
-      { id_tarifa: 5, id_vueloFK: 3, clase: "economica", precio_base: 320000 },     
-      { id_tarifa: 6, id_vueloFK: 3, clase: "primera_clase", precio_base: 880000 },   
-      { id_tarifa: 7, id_vueloFK: 4, clase: "economica", precio_base: 600000 },     
-      { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 1600000 },  
-      { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 2000000 },    
-      { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 6800000 }, 
+      { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 480000 },
+      { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 1400000 },
+      { id_tarifa: 3, id_vueloFK: 2, clase: "economica", precio_base: 1800000 },
+      { id_tarifa: 4, id_vueloFK: 2, clase: "primera_clase", precio_base: 6000000 },
+      { id_tarifa: 5, id_vueloFK: 3, clase: "economica", precio_base: 320000 },
+      { id_tarifa: 6, id_vueloFK: 3, clase: "primera_clase", precio_base: 880000 },
+      { id_tarifa: 7, id_vueloFK: 4, clase: "economica", precio_base: 600000 },
+      { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 1600000 },
+      { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 2000000 },
+      { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 6800000 },
       // tarifas para vuelo 6 y 8 (Ciudad de México) eliminadas intencionalmente
-      { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 360000 },     
-      { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 1200000 },  
+      { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 360000 },
+      { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 1200000 },
     ],
     skipDuplicates: true,
   });
@@ -412,7 +413,7 @@ async function main() {
   });
 
   // Asientos (creamos asientos "representativos" — no todos, pero suficientes para tickets de prueba)
-  const asientoData: asiento[]  = [];
+  const asientoData: asiento[] = [];
 
   // aeronave 1: asientos 1..30
   for (let i = 1; i <= 30; i++) {
