@@ -26,8 +26,8 @@ export interface Noticia {
   estado: string;
   salida_programada_utc: string;
   llegada_programada_utc: string;
-  salida_local_origen: string;
-  llegada_local_destino: string;
+  hora_salida_local_ciudad_destino: string;
+  hora_llegada_local_ciudad_destino: string;
   salida_colombia: string;
   llegada_colombia: string;
   origen: {
@@ -40,16 +40,53 @@ export interface Noticia {
   };
 }
 
-function formatDateTime(dateString: string) {
-  if (!dateString) return { fecha: '-', hora: '-' }
-  const date = new Date(dateString)
-  return {
-    // fecha completa para Colombia
-    fecha: format(date, 'dd/MM/yyyy', { locale: es }),
-    // hora con AM/PM en español
-    hora: format(date, 'hh:mm a', { locale: es })
+type FechaHora = { fecha: string; hora: string }
+
+const ISO_REGEX =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+\-]\d{2}:\d{2})?$/
+
+function pad(n: number) { return String(n).padStart(2, '0') }
+
+/**
+ * Convierte una ISO 8601 a { fecha: 'dd/MM/yyyy', hora: 'hh:mm AM/PM' } sin aplicar conversiones de zona.
+ * - Si prefieres 24h, pasa { use24Hour: true }.
+ * - Si prefieres 'a. m.'/'p. m.' en lugar de 'AM'/'PM', pasa { spanishAmPm: true }.
+ */
+function formatIsoToReadable(
+  iso?: string | null,
+  opts?: { use24Hour?: boolean; spanishAmPm?: boolean }
+): FechaHora {
+  if (!iso) return { fecha: '-', hora: '-' }
+
+  const m = iso.match(ISO_REGEX)
+  if (!m) {
+    // Fallback sencillo: quitar zona si existe y separar T
+    const raw = (iso || '').replace(/(Z|[+\-]\d{2}:\d{2})\s*$/, '')
+    const parts = raw.split('T')
+    if (parts.length === 2) {
+      const [datePart, timePartRaw] = parts
+      const timePart = (timePartRaw.match(/^(\d{2}:\d{2})/) || [])[0] || '-'
+      const dateMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      const fecha = dateMatch ? `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}` : datePart
+      return { fecha, hora: timePart }
+    }
+    return { fecha: iso, hora: '-' }
   }
+
+  const [, year, month, day, hrStr, min] = m
+  const hourNum = Number(hrStr)
+
+  const fecha = `${day}/${month}/${year}`
+
+  if (opts?.use24Hour) {
+    return { fecha, hora: `${pad(hourNum)}:${min}` }
+  }
+
+  const ampm = hourNum >= 12 ? (opts?.spanishAmPm ? 'p. m.' : 'PM') : (opts?.spanishAmPm ? 'a. m.' : 'AM')
+  const hour12 = hourNum % 12 === 0 ? 12 : hourNum % 12
+  return { fecha, hora: `${pad(hour12)}:${min} ${ampm}` }
 }
+
 
 function formatearPesos(valor: number) {
   return new Intl.NumberFormat('es-CO', {
@@ -89,15 +126,15 @@ export default function DetalleVuelo() {
   if (!vuelo) return <p className="text-center mt-10">Vuelo no encontrado</p>;
 
   // Helper para detectar Colombia (case-insensitive y tolerant)
-  const isColombia = (pais?: string | null) => {
-    if (!pais) return false;
+  const isColombia = (pais: string) => {
+    if (!pais) return false; //cadena vacía ("")
     const s = String(pais).toLowerCase();
     return s === 'colombia' || s === 'co' || s.includes('col');
   };
 
   // Determinamos si el vuelo es nacional (origen y destino en Colombia)
-  const origenPaisRaw = vuelo.origen?.pais ?? '';
-  const destinoPaisRaw = vuelo.destino?.pais ?? '';
+  const origenPaisRaw = vuelo.origen.pais;
+  const destinoPaisRaw = vuelo.destino.pais;
   const esNacional = isColombia(origenPaisRaw) && isColombia(destinoPaisRaw);
 
   return (
@@ -157,6 +194,7 @@ export default function DetalleVuelo() {
 
             {/* Datos del vuelo */}
             <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Horarios */}
               <Card
                 title="Horarios"
                 icon={<Calendar className="w-5 h-5 text-[#0e254d]" />}
@@ -168,32 +206,33 @@ export default function DetalleVuelo() {
                   if (!esNacional) {
                     horarios.push(
                       {
-                        label: 'Salida Local Origen',
-                        value: vuelo.salida_local_origen,
-                        pais: vuelo.destino?.pais,
+                        label: 'Hora Salida Local',
+                        value: vuelo.hora_salida_local_ciudad_destino,
+                        pais: vuelo.destino.pais,
                         tipo: 'local'
                       },
                       {
-                        label: 'Llegada Local Destino',
-                        value: vuelo.llegada_local_destino,
-                        pais: vuelo.destino?.pais,
+                        label: 'Hora Llegada Local',
+                        value: vuelo.hora_llegada_local_ciudad_destino,
+                        pais: vuelo.destino.pais,
                         tipo: 'local'
                       }
                     );
                   }
 
                   horarios.push(
-                    { label: 'Salida Colombia', value: vuelo.salida_programada_utc, tipo: 'colombia' },
-                    { label: 'Llegada Colombia', value: vuelo.llegada_programada_utc, tipo: 'colombia' }
+                    { label: 'Hora Salida Colombia', value: vuelo.salida_colombia, tipo: 'colombia' },
+                    { label: 'Hora Llegada Colombia', value: vuelo.llegada_colombia, tipo: 'colombia' }
                   );
 
                   return horarios.map(({ label, value, pais, tipo }) => {
-                    const { fecha, hora } = formatDateTime(value)
+                    const { fecha, hora } = formatIsoToReadable(value)
                     return (
                       <div key={label} className="mb-3">
                         <p className="text-sm font-semibold text-gray-700">
                           {label}
-                          {label === 'Llegada Local Destino' && pais ? ` (${pais})` : ''}
+                          {label === 'Hora Salida Local' && pais ? ` (${pais})` : ''}
+                          {label === 'Hora Llegada Local' && pais ? ` (${pais})` : ''}
                         </p>
 
                         {tipo === 'colombia' ? (
@@ -210,6 +249,7 @@ export default function DetalleVuelo() {
                 })()}
               </Card>
 
+              {/* Detalles del avión */}
               <Card
                 title="Detalles del Avión"
                 icon={<Plane className="w-5 h-5 text-[#0e254d]" />}

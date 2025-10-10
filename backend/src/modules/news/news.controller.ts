@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { NewsService } from './news.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
+import { CreateNewsDto } from './dto/create-news.dto';
 
 
 @ApiTags('Noticias')
@@ -22,5 +23,10 @@ export class NewsController {
     return this.newsService.getNewByIDClean(id);
   }
 
+  @Post()
+  @ApiOperation({ summary: 'Crear una noticia' })
+  createNew(@Body() data: CreateNewsDto) {
+    return this.newsService.createNew(data);
+  }
 
 }

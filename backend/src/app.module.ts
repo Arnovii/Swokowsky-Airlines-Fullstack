@@ -10,6 +10,8 @@ import { MailModule } from './mail/mail.module';
 import { NewsModule } from './modules/news/news.module';
 import { FlightsModule } from './modules/flights/flights.module';
 import { CitysModule } from './modules/citys/citys.module';
+import { AirplanesModule } from './modules/airplanes/airplanes.module';
+import { AirportsModule } from './modules/airports/airports.module';
 
 
 
@@ -25,7 +27,9 @@ import { CitysModule } from './modules/citys/citys.module';
     ProfileModule,
     MailModule,
     NewsModule,
-    CitysModule],
+    CitysModule,
+    AirplanesModule,
+    AirportsModule],
   controllers: [AppController],
   providers: [AppService],
 })
