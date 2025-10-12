@@ -12,6 +12,7 @@ import { FlightsModule } from './modules/flights/flights.module';
 import { CitysModule } from './modules/citys/citys.module';
 import { AirplanesModule } from './modules/airplanes/airplanes.module';
 import { AirportsModule } from './modules/airports/airports.module';
+import { CardsModule } from './modules/cards/cards.module';
 
 
 
@@ -29,7 +30,8 @@ import { AirportsModule } from './modules/airports/airports.module';
     NewsModule,
     CitysModule,
     AirplanesModule,
-    AirportsModule],
+    AirportsModule,
+    CardsModule],
   controllers: [AppController],
   providers: [AppService],
 })
