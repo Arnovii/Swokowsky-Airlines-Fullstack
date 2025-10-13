@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 
 interface Aeropuerto{
@@ -32,6 +32,7 @@ export const AdminPanel: React.FC = () => {
   const [vuelos, setVuelos] = useState<Vuelo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // --- Cargar datos desde el backend ---
   useEffect(() => {
@@ -53,8 +54,8 @@ export const AdminPanel: React.FC = () => {
     });
   }, [busqueda, filtroEstado, vuelos]);
 
-  const handleAccion = (codigo: number) => {
-    alert(`Acción en vuelo ${codigo}`);
+  const handleEditarVuelo = (id: number) => {
+    navigate(`/panelAdministrador/editar-vuelo/${id}`);
   };
 
   if (loading) return <p className="p-6">Cargando vuelos...</p>;
@@ -94,8 +95,9 @@ export const AdminPanel: React.FC = () => {
               <option value="Cancelado">Cancelado</option>
             </select>
 
+            {/* Declarar navigate en el componente */}
             <button
-              onClick={() => alert("Crear Nuevo Vuelo")}
+              onClick={() => navigate("/panelAdministrador/crear-vuelo")}
               className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
             >
               <span>➕</span>
@@ -166,7 +168,7 @@ export const AdminPanel: React.FC = () => {
                 <td className="py-4 px-6">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => handleAccion(vuelo.id_vuelo)}
+                      onClick={() => handleEditarVuelo(vuelo.id_vuelo)}
                       className="min-w-[130px] text-center px-4 py-2 rounded-lg bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white font-medium hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
                     >
                       <span>✏️</span>

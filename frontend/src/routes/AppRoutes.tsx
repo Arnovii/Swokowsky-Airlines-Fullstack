@@ -15,6 +15,8 @@ import DetalleVuelo from "../modules/news/pages/detallevuelo"
 import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
 import PrivateRoute from "./PrivateRoute"
 import AdminRoute from "./AdminRoute"
+import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
+import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 
 
 export default function AppRoutes() {
@@ -44,6 +46,20 @@ export default function AppRoutes() {
               <PanelAdministrador />
             </AdminRoute>
           } />
+        <Route path="/panelAdministrador/crear-vuelo"
+          element={
+            <AdminRoute>
+              <CrearVueloPage />
+            </AdminRoute>
+          }
+        />
+        <Route path="/panelAdministrador/editar-vuelo/:id"
+          element={
+            <AdminRoute>
+              <EditarVueloPage />
+            </AdminRoute>
+          }
+        />
       </Route>
 
       {/* Página 404 */}
