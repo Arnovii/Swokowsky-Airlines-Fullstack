@@ -7,6 +7,7 @@ import { useEditarVuelo } from "../hooks/useEditarVuelo";
 const EditarVueloPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const {
     vuelo,
     form,
@@ -16,16 +17,20 @@ const EditarVueloPage: React.FC = () => {
     llegadaDate,
     setLlegadaDate,
     error,
-    setError,
     loading,
     handleTarifaChange,
     handleChange,
     handleSubmit,
     puedeEditar,
-    cuposDisponibles,
   } = useEditarVuelo(id);
 
-  // Autocompletar campos al cargar el vuelo publicado
+
+
+  // Todos los hooks deben ir antes de cualquier return condicional
+  const [errores, setErrores] = useState<{ [key: string]: string }>({});
+  const [showConfirm, setShowConfirm] = useState(false);
+
+
   useEffect(() => {
     if (vuelo && !form) {
       setForm(vuelo);
@@ -33,11 +38,6 @@ const EditarVueloPage: React.FC = () => {
       setLlegadaDate(vuelo.llegada_programada_utc ? new Date(vuelo.llegada_programada_utc) : null);
     }
   }, [vuelo, form, setForm, setSalidaDate, setLlegadaDate]);
-
-  const [errores, setErrores] = useState<{ [key: string]: string }>({});
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [anunciarPromo, setAnunciarPromo] = useState(false);
 
   useEffect(() => {
     if (showConfirm) {
@@ -48,6 +48,17 @@ const EditarVueloPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [showConfirm, navigate]);
+
+  // Render condicional para loading, error y datos faltantes
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-lg">Cargando datos del vuelo...</p></div>;
+  }
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-lg text-red-600">Error: {error}</p></div>;
+  }
+  if (!form) {
+    return <div className="min-h-screen flex items-center justify-center"><p className="text-lg">No se encontró información del vuelo.</p></div>;
+  }
 
   // Validación personalizada
   const validarCampos = () => {
@@ -111,7 +122,7 @@ const EditarVueloPage: React.FC = () => {
   const handleSubmitPersonalizado = (e: React.FormEvent) => {
     e.preventDefault();
     if (validarCampos()) {
-      handleSubmit(e, anunciarPromo, navigate, setShowConfirm, setSuccess);
+  handleSubmit(e, true, navigate, setShowConfirm, () => {}); // La promoción siempre se anuncia
     }
   };
 
@@ -375,10 +386,6 @@ const EditarVueloPage: React.FC = () => {
                 </>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-4 mt-8">
-            <label className="font-semibold">¿Anunciar promoción en noticias?</label>
-            <input type="checkbox" checked={anunciarPromo} onChange={e => setAnunciarPromo(e.target.checked)} />
           </div>
           <div className="flex justify-end gap-4 mt-8">
             <button type="button" onClick={() => navigate("/admin")} className="px-6 py-3 bg-gradient-to-r from-[#eaf6ff] to-[#39A5D8] text-[#0F6899] rounded-xl font-bold shadow hover:scale-105 hover:bg-[#39A5D8]/80 transition-all duration-300 border-2 border-[#39A5D8]">Cancelar</button>

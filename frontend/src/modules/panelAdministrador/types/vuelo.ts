@@ -12,5 +12,14 @@ export interface CrearVueloPayload {
   id_promocionFK?: number | null;
   estado: "Programado" | "En vuelo" | "Cancelado";
   tarifa: Tarifa[];
-  // Puedes agregar otros campos usados en el formulario
+  titulo?: string;
+  descripcion_corta?: string;
+  descripcion_larga?: string;
+  url_imagen?: string;
+  promocion?: boolean;
+  promo_nombre?: string;
+  promo_descripcion?: string;
+  descuento?: string | number;
+  promocion_inicio?: string;
+  promocion_fin?: string;
 }
