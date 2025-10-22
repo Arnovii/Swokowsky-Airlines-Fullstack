@@ -13,6 +13,8 @@ import { CitysModule } from './modules/citys/citys.module';
 import { AirplanesModule } from './modules/airplanes/airplanes.module';
 import { AirportsModule } from './modules/airports/airports.module';
 import { CardsModule } from './modules/cards/cards.module';
+import { WalletModule } from './modules/wallet/wallet.module';
+
 
 
 
@@ -31,7 +33,8 @@ import { CardsModule } from './modules/cards/cards.module';
     CitysModule,
     AirplanesModule,
     AirportsModule,
-    CardsModule],
+    CardsModule,
+    WalletModule],
   controllers: [AppController],
   providers: [AppService],
 })
