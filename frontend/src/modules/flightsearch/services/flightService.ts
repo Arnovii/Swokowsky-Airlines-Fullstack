@@ -1,19 +1,39 @@
-// src/services/flightService.js
 import api from '@/api/axios';
 
-function normalizeFlightData(flight) {
+export interface NormalizedFlight {
+  id: number | null;
+  price: number;
+  priceFirstClass: number;
+  departureTimeUTC: string;
+  arrivalTimeUTC: string;
+  durationMinutes: number;
+  availableSeats: number;
+  origin: any;
+  destination: any;
+  aircraftModel: string;
+  isInternational: boolean;
+  availableClasses: string[];
+  promotion: {
+    name: string;
+    discount: number;
+    remainingSeats: number;
+  } | null;
+}
+
+function normalizeFlightData(flight: any): NormalizedFlight {
+  console.log('[normalizeFlightData] vuelo recibido:', flight); // Depuración de id_vuelo
   const departureDate = new Date(`${flight.fecha_salida_programada}T${flight.hora_salida_utc}:00Z`);
   const arrivalDate = new Date(`${flight.fecha_llegada_programada}T${flight.hora_llegada_utc}:00Z`);
 
   let durationInMinutes = 0;
-  if (!isNaN(departureDate) && !isNaN(arrivalDate)) {
+  if (!isNaN(departureDate.getTime()) && !isNaN(arrivalDate.getTime())) {
     durationInMinutes = (arrivalDate.getTime() - departureDate.getTime()) / (1000 * 60);
   }
 
   const isInternational = (flight.origen?.pais || '') !== (flight.destino?.pais || '');
 
   return {
-    id: flight.id_vuelo || `${flight.origen?.codigo_iata}-${flight.hora_salida_utc}`,
+    id: typeof flight.id_vuelo === 'number' ? flight.id_vuelo : null,
     price: flight.precio_economica || flight.precio_base || 0,
     priceFirstClass: flight.precio_primera_clase || 0,
     departureTimeUTC: `${flight.fecha_salida_programada || ''}T${flight.hora_salida_utc || ''}:00Z`,
@@ -33,17 +53,26 @@ function normalizeFlightData(flight) {
   };
 }
 
+export interface FlightSearchResponse {
+  type: 'oneway' | 'roundtrip';
+  outbound: NormalizedFlight[];
+  inbound: NormalizedFlight[];
+  metadata: Record<string, any>;
+}
+
 export class FlightService {
-  static async searchFlights(searchCriteria, options = {}) {
+  static async searchFlights(searchCriteria: Record<string, any>, options: { signal?: AbortSignal } = {}): Promise<FlightSearchResponse> {
     try {
+      console.log('[FlightService] searchCriteria enviado:', searchCriteria); // <-- Verifica los datos enviados
       const response = await api.post('/flights/search', searchCriteria, {
         signal: options.signal,
       });
 
       const data = response.data;
+      console.log('[FlightService] Respuesta cruda backend:', data); // <-- Verifica id_vuelo aquí
 
-      let outboundFlights = [];
-      let inboundFlights = [];
+      let outboundFlights: NormalizedFlight[] = [];
+      let inboundFlights: NormalizedFlight[] = [];
 
       if (data.type === 'roundtrip') {
         outboundFlights = (data.outbound || []).map(normalizeFlightData);
@@ -59,7 +88,7 @@ export class FlightService {
         metadata: data.metadata || {},
       };
 
-    } catch (error) {
+    } catch (error: any) {
       if (error.name === 'CanceledError') {
         console.log('Request canceled');
         return { type: 'oneway', outbound: [], inbound: [], metadata: {} };

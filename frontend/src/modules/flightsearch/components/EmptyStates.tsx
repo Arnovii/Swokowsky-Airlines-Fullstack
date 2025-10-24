@@ -1,19 +1,25 @@
 import React from 'react';
 import { Search, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Importa useNavigate
+import { useNavigate } from 'react-router-dom';
 
+// Tipos para las props
+interface NoFlightsFoundProps {
+  onClearFilters?: () => void;
+}
 
+interface ErrorStateProps {
+  error?: string;
+  onRetry: () => void;
+}
 
-
-export const NoFlightsFound = ({ onClearFilters }) => {
-  const navigate = useNavigate(); // Usamos useNavigate para la navegación
+export const NoFlightsFound: React.FC<NoFlightsFoundProps> = ({ onClearFilters }) => {
+  const navigate = useNavigate();
 
   const handleClearFilters = () => {
-    // Aquí podrías ejecutar onClearFilters si es necesario
-
-    
-    // Luego redirigir a la página de inicio
-    navigate('/'); // Asumiendo que la página de inicio es la ruta "/"
+    if (onClearFilters) {
+      onClearFilters();
+    }
+    navigate('/');
   };
 
   return (
@@ -29,8 +35,8 @@ export const NoFlightsFound = ({ onClearFilters }) => {
         </p>
       </div>
       <button
-        onClick={handleClearFilters} // Cambiar la función onClick
-                className="px-8 py-3 bg-gradient-to-r from-[#081225] to-[#1a2332] text-white rounded-xl hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg cursor-pointer" 
+        onClick={handleClearFilters}
+        className="px-8 py-3 bg-gradient-to-r from-[#081225] to-[#1a2332] text-white rounded-xl hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-bold font-sans shadow-md hover:shadow-lg cursor-pointer"
       >
         🔄 Volver a la página de inicio
       </button>
@@ -38,7 +44,7 @@ export const NoFlightsFound = ({ onClearFilters }) => {
   );
 };
 
-export const ErrorState = ({ error, onRetry }) => (
+export const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => (
   <div className="bg-white rounded-2xl p-12 text-center border border-red-200">
     <div className="mb-6">
       <AlertTriangle size={64} className="text-red-400 mx-auto mb-4" />
@@ -58,7 +64,7 @@ export const ErrorState = ({ error, onRetry }) => (
   </div>
 );
 
-export const LoadingState = () => (
+export const LoadingState: React.FC = () => (
   <div className="space-y-4">
     {[1, 2, 3].map(i => (
       <div key={i} className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 animate-pulse border border-white/20 shadow-lg">
