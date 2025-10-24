@@ -648,7 +648,7 @@ const FlightDetailsPage = () => {
             flight={flight}
             selectedClass={selectedClass}
             passengers={passengerData}
-            pricePerPerson={flight.price ?? 0}
+            pricePerPerson={selectedClass === 'primera_clase' ? (flight.priceFirstClass ?? flight.precioPrimeraClase ?? 450000) : (flight.price ?? flight.precioEconomica ?? 250000)}
             onReserve={handleReserve}
             onBuy={handleBuy}
             loading={loading}

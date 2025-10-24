@@ -28,8 +28,11 @@ const ReservationSummary: React.FC<ReservationSummaryProps> = ({
       <div className="mb-2">Vuelo: <span className="font-semibold">{flight?.origin?.codigo_iata} → {flight?.destination?.codigo_iata}</span></div>
       <div className="mb-2">Clase: <span className="font-semibold">{selectedClass === 'economica' ? 'Económica' : 'Primera Clase'}</span></div>
       <div className="mb-2">Pasajeros: <span className="font-semibold">{passengers.length}</span></div>
-      <div className="mb-2">Precio por persona: <span className="font-semibold">${pricePerPerson.toFixed(2)}</span></div>
-      <div className="mb-2">Total: <span className="font-bold text-[#0F6899] text-xl">${(pricePerPerson * passengers.length).toFixed(2)}</span></div>
+      <div className="mb-2">Precio por persona: <span className="font-semibold">COP ${pricePerPerson.toLocaleString('es-CO')}</span></div>
+      <div className="mb-4 p-4 bg-gradient-to-r from-[#0F6899]/10 to-[#39A5D8]/10 rounded-xl border border-[#39A5D8]/20">
+        <div className="text-2xl font-bold text-[#081225]">Total: COP ${(pricePerPerson * passengers.length).toLocaleString('es-CO')}</div>
+        <div className="text-sm text-gray-600 mt-1">({passengers.length} pasajero{passengers.length !== 1 ? 's' : ''})</div>
+      </div>
       <div className="flex gap-4 mt-6">
         <button
           type="button"
