@@ -9,12 +9,15 @@ import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
 import FlightDetailsPage from "../modules/flightsearch/pages/FlightDetailsPage";
-import News from "../modules/news/pages/News";
-import DetalleOferta from "../modules/news/pages/detalleoferta";
-import DetalleVuelo from "../modules/news/pages/detallevuelo";
-import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador";
-import PrivateRoute from "./PrivateRoute";
-import AdminRoute from "./AdminRoute";
+
+import News from "../modules/news/pages/News"
+import DetalleOferta from "../modules/news/pages/detalleoferta"
+import DetalleVuelo from "../modules/news/pages/detallevuelo"
+import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
+import PrivateRoute from "./PrivateRoute"
+import AdminRoute from "./AdminRoute"
+import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
+import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/home/pages/Carrito";
 
 export default function AppRoutes() {
@@ -58,6 +61,19 @@ export default function AppRoutes() {
           element={
             <AdminRoute>
               <PanelAdministrador />
+            </AdminRoute>
+          } />
+        <Route path="/panelAdministrador/crear-vuelo"
+          element={
+            <AdminRoute>
+              <CrearVueloPage />
+            </AdminRoute>
+          }
+        />
+        <Route path="/panelAdministrador/editar-vuelo/:id"
+          element={
+            <AdminRoute>
+              <EditarVueloPage />
             </AdminRoute>
           }
         />

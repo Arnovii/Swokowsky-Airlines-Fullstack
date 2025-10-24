@@ -9,6 +9,7 @@ interface ReservationSummaryProps {
   onReserve: () => void;
   onBuy: () => void;
   loading?: boolean;
+  disabled?: boolean;
 }
 
 const ReservationSummary: React.FC<ReservationSummaryProps> = ({
@@ -19,6 +20,7 @@ const ReservationSummary: React.FC<ReservationSummaryProps> = ({
   onReserve,
   onBuy,
   loading,
+  disabled = false,
 }) => {
   return (
     <div className="p-6 rounded-xl bg-gray-50 border mt-6">
@@ -26,24 +28,35 @@ const ReservationSummary: React.FC<ReservationSummaryProps> = ({
       <div className="mb-2">Vuelo: <span className="font-semibold">{flight?.origin?.codigo_iata} → {flight?.destination?.codigo_iata}</span></div>
       <div className="mb-2">Clase: <span className="font-semibold">{selectedClass === 'economica' ? 'Económica' : 'Primera Clase'}</span></div>
       <div className="mb-2">Pasajeros: <span className="font-semibold">{passengers.length}</span></div>
-      <div className="mb-2">Precio por persona: <span className="font-semibold">${pricePerPerson.toFixed(2)}</span></div>
-      <div className="mb-2">Total: <span className="font-bold text-blue-600">${(pricePerPerson * passengers.length).toFixed(2)}</span></div>
+      <div className="mb-2">Precio por persona: <span className="font-semibold">COP ${pricePerPerson.toLocaleString('es-CO')}</span></div>
+      <div className="mb-4 p-4 bg-gradient-to-r from-[#0F6899]/10 to-[#39A5D8]/10 rounded-xl border border-[#39A5D8]/20">
+        <div className="text-2xl font-bold text-[#081225]">Total: COP ${(pricePerPerson * passengers.length).toLocaleString('es-CO')}</div>
+        <div className="text-sm text-gray-600 mt-1">({passengers.length} pasajero{passengers.length !== 1 ? 's' : ''})</div>
+      </div>
       <div className="flex gap-4 mt-6">
         <button
           type="button"
-          className="px-6 py-3 rounded-xl font-sans font-bold bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 group text-[#081225]"
+          className={`px-6 py-3 rounded-xl font-sans font-bold transition-all duration-300 shadow-lg ${
+            disabled || loading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-300'
+              : 'bg-gradient-to-r from-[#39A5D8] to-[#0F6899] text-white border border-[#39A5D8]/50 hover:from-[#0F6899] hover:to-[#39A5D8] hover:border-[#39A5D8] hover:shadow-xl transform hover:scale-105'
+          }`}
           onClick={onReserve}
-          disabled={loading}
+          disabled={disabled || loading}
         >
-          Reservar (24h sin pagar)
+          {loading ? 'Reservando...' : 'Reservar (24h sin pagar)'}
         </button>
         <button
           type="button"
-          className="px-6 py-3 rounded-xl font-sans font-bold bg-[#081225] text-white border border-cyan-400/20 hover:bg-[#081225]/90 transition-all duration-300 group"
+          className={`px-6 py-3 rounded-xl font-sans font-bold transition-all duration-300 shadow-lg ${
+            disabled || loading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-300'
+              : 'bg-gradient-to-r from-[#081225] via-[#123361] to-[#081225] text-white border border-[#39A5D8]/50 hover:from-[#123361] hover:via-[#081225] hover:to-[#123361] hover:border-[#39A5D8] hover:shadow-xl transform hover:scale-105'
+          }`}
           onClick={onBuy}
-          disabled={loading}
+          disabled={disabled || loading}
         >
-          Comprar ahora
+          {loading ? 'Comprando...' : 'Comprar ahora'}
         </button>
       </div>
     </div>

@@ -15,7 +15,11 @@ const ClassSelector: React.FC<ClassSelectorProps> = ({ availableClasses, selecte
           <button
             key={clase}
             type="button"
-            className={`px-4 py-2 rounded-lg font-bold border ${selectedClass === clase ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border-blue-600'}`}
+            className={`px-6 py-3 rounded-xl font-bold border-2 transition-all duration-300 transform hover:scale-105 ${
+              selectedClass === clase 
+                ? 'bg-gradient-to-r from-[#0F6899] to-[#39A5D8] text-white border-[#39A5D8] shadow-lg' 
+                : 'bg-white text-[#0F6899] border-[#39A5D8] hover:bg-gradient-to-r hover:from-[#39A5D8]/10 hover:to-[#0F6899]/10'
+            }`}
             onClick={() => onSelectClass(clase)}
           >
             {clase === 'economica' ? 'Económica' : 'Primera Clase'}
