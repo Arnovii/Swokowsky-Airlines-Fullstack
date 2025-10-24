@@ -51,13 +51,22 @@ export class MailService {
   }
 
   async sendWelcomeEmail(to: string, data: { name: string; username?: string }) {
-    console.log("Correo de bienvenida enviado (?")
     return this.sendMail({
       to,
       subject: 'Bienvenido a Swokowsky Airlines',
       template: 'welcome',
       context: data,
     });
+  }
+
+  async sedNewNotificationEmail(to:string, data: {}){
+    return this.sendMail({
+      to,
+      subject:'Tenemos novedades para ti',
+      template: 'new-notification',
+      context: data
+    })
+
   }
 
   async sendResetPasswordEmail(to: string, data: { name: string; resetLink: string }) {
