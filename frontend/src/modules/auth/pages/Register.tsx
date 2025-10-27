@@ -411,7 +411,7 @@ export default function Register() {
           </div>
           {/* Fecha de nacimiento */}
           <div>
-            <label className="block text-sm font-medium">Fecha de nacimiento</label>
+            <label className="block text-sm font-medium">Fecha de Nacimiento</label>
             <input
               type="date"
               name="fecha_nacimiento"
@@ -423,7 +423,7 @@ export default function Register() {
           </div>
           {/* Nacionalidad */}
           <div>
-            <label className="block text-sm font-medium">Nacionalidad</label>
+            <label className="block text-sm font-medium">Lugar de Nacimiento</label>
             <select
               name="nacionalidad"
               value={form.nacionalidad}
@@ -469,7 +469,7 @@ export default function Register() {
           </div>
           {/* Username */}
           <div>
-            <label className="block text-sm font-medium">Username</label>
+            <label className="block text-sm font-medium">Nombre de Usuario</label>
             <input
               type="text"
               name="username"
@@ -503,7 +503,7 @@ export default function Register() {
 
           {/* Confirmar Contraseña */}
           <div>
-            <label className="block text-sm font-medium">Confirmar contraseña</label>
+            <label className="block text-sm font-medium">Confirmar Contraseña</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
