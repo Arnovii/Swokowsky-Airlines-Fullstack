@@ -10,8 +10,6 @@ datasource db {
 model aeronave {
   id_aeronave           Int                     @id @default(autoincrement())
   modelo                String                  @db.VarChar(100)
-  capacidad             Int
-  asiento               asiento[]
   vuelo                 vuelo[]
   configuracion_asientos configuracion_asientos[]
 }
@@ -28,16 +26,6 @@ model aeropuerto {
   @@index([id_ciudadFK], map: "id_ciudadFK")
 }
 
-model asiento {
-  id_asiento    Int            @id @default(autoincrement())
-  id_aeronaveFK Int
-  numero        String         @db.VarChar(100)
-  clases        asiento_clases
-  aeronave      aeronave       @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "asiento_ibfk_1")
-  ticket        ticket[]
-
-  @@index([id_aeronaveFK], map: "id_aeronaveFK")
-}
 
 model configuracion_asientos {
   id_configuracion Int            @id @default(autoincrement())
@@ -135,24 +123,23 @@ model tarjeta {
 
   @@index([id_usuarioFK], map: "id_usuarioFK")
 }
-
+//El ticket sólo se crea en el checkout (después de pago)
 model ticket {
   id_ticket    Int           @id @default(autoincrement())
   id_usuarioFK Int
   id_vueloFK   Int
-  id_asientoFK Int
+  asiento_numero String       @db.VarChar(100) // obligatorio: asignado en checkout
+  asiento_clase  asiento_clases               // obligatorio: clase seleccionada
   precio       Float         @db.Float
   estado       ticket_estado
-  creado_en    DateTime      @db.DateTime(0)
+  creado_en      DateTime      @db.DateTime(0) @default(now())
   pago         pago[]
   pasajero     pasajero[]
   usuario      usuario       @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
   vuelo        vuelo         @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
-  asiento      asiento       @relation(fields: [id_asientoFK], references: [id_asiento], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_3")
 
-  @@index([id_asientoFK], map: "id_asientoFK")
-  @@index([id_usuarioFK], map: "id_usuarioFK")
-  @@index([id_vueloFK], map: "id_vueloFK")
+  @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx") // recomendado para tus consultas de ocupación
+  @@index([estado, creado_en], map: "ticket_estado_creado_en_idx") // opcional, útil para reportes
 }
 
 model usuario {
@@ -174,6 +161,7 @@ model usuario {
   must_change_password  Boolean              @default(false)
   tarjeta               tarjeta[]
   ticket                ticket[]
+  carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
 model vuelo {
@@ -191,6 +179,7 @@ model vuelo {
   estado                                               vuelo_estado @default(Programado)
   ticket                                               ticket[]
   tarifa                                               tarifa[]
+  carrito_item                                         carrito_item[]
   aeronave                                             aeronave     @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_1")
   aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto  aeropuerto   @relation("vuelo_id_aeropuerto_origenFKToaeropuerto", fields: [id_aeropuerto_origenFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_2")
   aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto aeropuerto   @relation("vuelo_id_aeropuerto_destinoFKToaeropuerto", fields: [id_aeropuerto_destinoFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_3")
@@ -222,6 +211,43 @@ model gmt {
   ciudad ciudad[]
 }
 
+model constantes {
+  id_constante  Int     @id @default(autoincrement())
+  clave         String  @unique @db.VarChar(255)  // ejemplo: "validez_item_carrito"
+  valor         String  @db.VarChar(255)          // guardamos "24h" o "24" (horas) o formato ISO; la app interpreta
+  descripcion   String? @db.VarChar(512)
+  creado_en     DateTime @db.DateTime(0) @default(now())
+}
+
+model carrito {
+  id_carrito   Int      @id @default(autoincrement())
+  id_usuarioFK Int      @unique            // UNIQUE -> 1 carrito por usuario
+  creado_en    DateTime @db.DateTime(0) @default(now())
+
+  usuario      usuario  @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  items        carrito_item[]
+
+  @@index([id_usuarioFK], map: "carrito_id_usuario_idx")
+}
+
+model carrito_item {
+  id_item_carrito   Int             @id @default(autoincrement())
+  id_carritoFK      Int
+  id_vueloFK        Int
+  cantidad_de_tickets Int
+  fecha_limite      DateTime        @db.DateTime(0) // = creado_en + validez_item_carrito (24h) — la app la calcula al crear
+  clase             asiento_clases
+  creado_en         DateTime        @db.DateTime(0) @default(now())
+
+  carrito           carrito         @relation(fields: [id_carritoFK], references: [id_carrito], onDelete: Cascade, onUpdate: NoAction)
+  vuelo             vuelo           @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_carritoFK], map: "id_carritoFK")
+  @@index([id_vueloFK], map: "id_vueloFK")
+  @@index([fecha_limite], map: "carrito_item_fecha_limite_idx")
+}
+
+
 enum usuario_tipo_usuario {
   root
   admin
@@ -240,9 +266,7 @@ enum pago_estado {
 }
 
 enum ticket_estado {
-  reservado
   pagado
-  checkin
   usado
   cancelado
 }

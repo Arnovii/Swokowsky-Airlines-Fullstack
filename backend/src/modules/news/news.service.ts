@@ -5,11 +5,15 @@ import { noticia } from '@prisma/client';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { DateTime } from 'luxon';
 import { promocion as PromocionModel } from '@prisma/client';
+import { MailService } from '../../mail/mail.service';
 
 
 @Injectable()
 export class NewsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) { }
 
 
 
@@ -178,7 +182,7 @@ export class NewsService {
       let hora_salida_local_ciudad_destino = formatLocal(vuelo.salida_programada_utc, destinoCiudadGmt);
       let hora_llegada_local_ciudad_destino = formatLocal(vuelo.llegada_programada_utc, destinoCiudadGmt);
       //Si existe diferencia horaria entre el local y el destino
-      
+
 
 
 
@@ -230,7 +234,7 @@ export class NewsService {
         descripcion_larga: noticia.descripcion_larga,
         url_imagen: noticia.url_imagen,
         modelo_aeronave: vuelo?.aeronave?.modelo ?? null,
-        capacidad_aeronave: vuelo?.aeronave?.capacidad ?? null,
+        capacidad_aeronave: (asientos_economica != null && asientos_primera_clase != null) ? asientos_economica + asientos_primera_clase : 0,
         asientos_economica,
         asientos_primera_clase,
         precio_economica,
@@ -428,13 +432,106 @@ export class NewsService {
     const precioEconomica = precio_economica;
     const precioPrimera = precio_primera_clase;
 
+    // 6)Enviamos correo
+
+    // Helper: formatear moneda (ajusta locale/currency si lo deseas)
+    const CURRENCY_LOCALE = process.env.CURRENCY_LOCALE ?? 'es-CO'; // ejemplo 'es-CO'
+    const CURRENCY_CODE = process.env.CURRENCY_CODE ?? 'COP'; // ejemplo 'COP'
+    const formatterCurrency = new Intl.NumberFormat(CURRENCY_LOCALE, {
+      style: 'currency',
+      currency: CURRENCY_CODE,
+      maximumFractionDigits: 0, // sin decimales si manejas pesos
+    });
+
+    // Helper: formatea fecha/hora legible
+    function formatDateTimeISOtoReadable(isoOrDate: string | Date | null | undefined, zone = 'America/Bogota') {
+      if (!isoOrDate) return '';
+      const dt = typeof isoOrDate === 'string' ? DateTime.fromISO(isoOrDate, { zone: 'utc' }).setZone(zone) : DateTime.fromJSDate(new Date(isoOrDate)).setZone(zone);
+      if (!dt.isValid) return String(isoOrDate);
+      // Ejemplo: "mié, 5 nov 2025 · 09:00"
+      return dt.toLocaleString(DateTime.DATETIME_MED); // p. ej. "Nov 5, 2025, 9:00 AM" (según locale)
+    }
+
+    // Si salida_colombia y llegada_colombia ya eran strings ISO en zona Colombia, convertimos con zone America/Bogota
+    const salidaColombiaReadable = salida_colombia
+      ? DateTime.fromISO(salida_colombia, { zone: 'America/Bogota' }).toLocaleString(DateTime.DATETIME_MED)
+      : (vuelo.salida_programada_utc ? DateTime.fromJSDate(new Date(vuelo.salida_programada_utc)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED) : '');
+
+    const llegadaColombiaReadable = llegada_colombia
+      ? DateTime.fromISO(llegada_colombia, { zone: 'America/Bogota' }).toLocaleString(DateTime.DATETIME_MED)
+      : (vuelo.llegada_programada_utc ? DateTime.fromJSDate(new Date(vuelo.llegada_programada_utc)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED) : '');
+
+    // Formatear precios (ejemplo COP sin decimales)
+    const precioEconomicaFormatted = precioEconomica != null ? formatterCurrency.format(Number(precioEconomica)) : '';
+    const precioPrimeraFormatted = precioPrimera != null ? formatterCurrency.format(Number(precioPrimera)) : '';
+
+    // Formatear promoción fechas (si existe)
+    let promocionFormatted: {nombre:string; descripcion:string; descuento:number; fecha_inicio:string; fecha_fin:string; periodo_lectura:string;}| null = null;
+    if (vuelo?.promocion) {
+      try {
+        const p = vuelo.promocion;
+        const inicio = DateTime.fromJSDate(new Date(p.fecha_inicio)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED);
+        const fin = DateTime.fromJSDate(new Date(p.fecha_fin)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED);
+        promocionFormatted = {
+          nombre: p.nombre,
+          descripcion: p.descripcion,
+          descuento: (typeof p.descuento === 'number') ? (p.descuento*100): 0,
+          fecha_inicio: inicio,
+          fecha_fin: fin,
+          periodo_lectura: `${inicio} → ${fin}`, // campo amigable para mostrar directo
+        };
+      } catch (err) {
+        // por si vienen en un formato raro
+        promocionFormatted = {
+          nombre: vuelo.promocion.nombre,
+          descripcion: vuelo.promocion.descripcion,
+          descuento: vuelo.promocion.descuento*100,
+          fecha_inicio: String(vuelo.promocion.fecha_inicio),
+          fecha_fin: String(vuelo.promocion.fecha_fin),
+          periodo_lectura: `${String(vuelo.promocion.fecha_inicio)} → ${String(vuelo.promocion.fecha_fin)}`,
+        };
+      }
+    }
+
+    // Construimos el contexto final que vamos a enviar al template (todo ya legible y formateado)
+    const emailContext = {
+      titulo: created.titulo,
+      descripcion_corta: created.descripcion_corta,
+      descripcion_larga: created.descripcion_larga,
+      precio_economica: precioEconomicaFormatted,
+      precio_primera: precioPrimeraFormatted,
+      fecha_hora_salida: salidaColombiaReadable,
+      fecha_hora_llegada: llegadaColombiaReadable,
+      bannerImageUrl: created.url_imagen,
+      estado: vuelo?.estado ?? 'Programado',
+      promocion: promocionFormatted, // puede ser null
+      frontendUrl: process.env.FRONTEND_URL,
+      newsId: created.id_noticia,
+    };
+
+    // obtener lista de correos suscritos
+    const subscribers = await this.prisma.usuario.findMany({
+      where: { suscrito_noticias: true },
+      select: { correo: true },
+    });
+    const emails = subscribers.map(s => s.correo);
+
+    try {
+      // Fire-and-forget (recomendado para endpoints HTTP)
+      this.mailService.sendBulkNotifications(emails, emailContext, { concurrency: 10, delayBetweenChunksMs: 200, awaitAll: false });
+    } catch (e) {
+      console.log(`Error al momento de enviar notificación de noticia para los usuarios ${e}`)
+    }
+
+
+
     return {
       titulo: created.titulo,
       descripcion_corta: created.descripcion_corta,
       descripcion_larga: created.descripcion_larga,
       url_imagen: created.url_imagen,
       modelo_aeronave: aeronave.modelo,
-      capacidad_aeronave: aeronave.capacidad,
+      capacidad_aeronave: (asientos_economica != null && asientos_primera_clase != null) ? asientos_economica + asientos_primera_clase : 0,
       asientos_economica,
       asientos_primera_clase,
       precio_economica: precioEconomica,
@@ -442,7 +539,7 @@ export class NewsService {
       promocion: vuelo.promocion ? {
         nombre: vuelo.promocion.nombre,
         descripcion: vuelo.promocion.descripcion,
-        descuento: vuelo.promocion.descuento ?? vuelo.promocion.descuento ?? null,
+        descuento: vuelo.promocion.descuento ?? null,
         fecha_inicio: vuelo.promocion.fecha_inicio.toISOString(),
         fecha_fin: vuelo.promocion.fecha_fin.toISOString(),
       } : null,
