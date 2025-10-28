@@ -16,7 +16,7 @@ export class AirplanesController {
   @Get()
   @ApiOperation({ summary: 'Listar aeronaves con configuración de asientos' })
   findAll() {
-    return this.airplanesService.findAll();
+    return this.airplanesService.findAllAirplanes();
   }
 
 }
