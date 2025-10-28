@@ -1,28 +1,13 @@
 // src/utils/flightUtils.ts
 
+// Importa los tipos desde el archivo principal
+import type { Flight } from '../types/Flight';
+
+// Re-exporta Promotion para compatibilidad
 export interface Promotion {
   name: string;
   discount: number;
   remainingSeats: number;
-}
-
-export interface Flight {
-  departureTimeUTC: string;
-  arrivalTimeUTC: string;
-  durationMinutes: number;
-  origin?: {
-    codigo_iata?: string;
-    ciudad?: string;
-  };
-  destination?: {
-    codigo_iata?: string;
-    ciudad?: string;
-  };
-  aircraftModel?: string;
-  availableClasses?: string[];
-  isInternational?: boolean;
-  price: number;
-  promotion?: Promotion;
 }
 
 export interface FlightFilters {
@@ -84,10 +69,18 @@ export const FlightUtils = {
   },
 
   calculateFinalPrice: (flight: Flight): number => {
-    if (flight.promotion) {
-      return flight.price * (1 - flight.promotion.discount);
+    // Verifica que la promoción exista Y tenga asientos disponibles
+    if (flight.promotion && flight.promotion.remainingSeats > 0) {
+      const discount = flight.promotion.discount;
+      const finalPrice = flight.price * (1 - discount);
+      console.log('🎯 Aplicando promoción:', {
+        precioOriginal: flight.price,
+        descuento: discount,
+        precioFinal: Math.round(finalPrice)
+      });
+      return Math.round(finalPrice);
     }
-    return flight.price;
+    return Math.round(flight.price);
   },
 
   sortFlights: (flights: Flight[], sortBy: SortBy): Flight[] => {

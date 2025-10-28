@@ -5,6 +5,7 @@ import { useFlightSearch } from '../hooks/useFlightSearch';
 import { FlightCard } from '../components/FlightCard';
 import { LoadingState, ErrorState, NoFlightsFound } from '../components/EmptyStates';
 import type { Flight } from '../types/Flight';
+import { toCardFlight } from '../types/Flight';
 
 export function FlightSearchResults() {
   const [searchParams] = useSearchParams();
@@ -31,13 +32,18 @@ export function FlightSearchResults() {
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={refetch} />;
 
-  const outboundFlights: Flight[] = results?.outbound || [];
-  const inboundFlights: Flight[] = results?.inbound || [];
+  // Normaliza todos los vuelos para asegurar que idVuelo siempre sea el id del backend
+  const outboundFlights: Flight[] = (results?.outbound || []).map(toCardFlight);
+  const inboundFlights: Flight[] = (results?.inbound || []).map(toCardFlight);
 
   // Navegación a detalles de vuelo
   const handleSelectFlight = (flight: Flight) => {
-    console.log('flight seleccionado:', flight);
+    // Usa siempre el id del backend (id_vuelo) como idVuelo
     const flightId = flight.idVuelo;
+    if (!flightId || typeof flightId !== 'number') {
+      alert('Error: El vuelo seleccionado no tiene un ID válido del backend.');
+      return;
+    }
     const params = new URLSearchParams({
       originCityId: searchParams.get('originId') || '',
       destinationCityId: searchParams.get('destinationId') || '',

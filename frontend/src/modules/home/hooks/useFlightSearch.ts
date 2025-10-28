@@ -367,6 +367,7 @@ export const useFlightSearch = () => {
     }
 
     const searchParams = new URLSearchParams({
+
       originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
       destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
       departureDate: ida,

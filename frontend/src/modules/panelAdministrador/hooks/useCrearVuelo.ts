@@ -145,7 +145,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       promocion: form.promocion ? {
         nombre: form.promo_nombre || "",
         descripcion: form.promo_descripcion || "",
-        descuento: form.descuento || 0,
+        descuento: form.descuento ? Number(form.descuento) / 100 : 0,
         fecha_inicio: form.promocion_inicio || "",
         fecha_fin: form.promocion_fin || ""
       } : undefined,
@@ -161,7 +161,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       setSuccess("Vuelo creado exitosamente.");
       setTimeout(() => {
         setShowConfirm(false);
-        navigate("/admin");
+        navigate("/panelAdministrador");
       }, 2000);
     } catch {
       setError("Error al crear vuelo");
