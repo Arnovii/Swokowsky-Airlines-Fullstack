@@ -374,7 +374,7 @@ async function main() {
       },
       {
         id_usuario: 5,
-        tipo_usuario: "cliente",
+        tipo_usuario: "root",
         dni: 90000005,
         nombre: "Luisa",
         apellido: "Rodríguez",
@@ -384,7 +384,7 @@ async function main() {
         genero: "F",
         correo: "luisa.r@example.com",
         username: "luisar",
-        password_bash: "luisa_pass_hashed",
+        password_bash: "23456789",
         img_url: "",
         suscrito_noticias: true,
         creado_en: new Date(),

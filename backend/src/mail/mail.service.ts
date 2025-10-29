@@ -65,6 +65,16 @@ export class MailService {
     });
   }
 
+  async sendAdminWelcomeEmail(to: string, data: { name: string; resetLink: string }) {
+    return this.sendMail({
+      to,
+      subject: 'Activación de cuenta - Swokowsky Airlines',
+      template: 'admin-welcome',
+      context: data,
+    });
+  }
+
+
   async sendResetPasswordEmail(to: string, data: { name: string; resetLink: string }) {
     return this.sendMail({
       to,

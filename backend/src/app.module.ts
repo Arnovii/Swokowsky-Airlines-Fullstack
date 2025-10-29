@@ -14,6 +14,7 @@ import { AirplanesModule } from './modules/airplanes/airplanes.module';
 import { AirportsModule } from './modules/airports/airports.module';
 import { CardsModule } from './modules/cards/cards.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { RootModule } from './modules/root/root.module';
 
 
 
@@ -34,7 +35,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
     AirplanesModule,
     AirportsModule,
     CardsModule,
-    WalletModule],
+    WalletModule,
+    RootModule,],
   controllers: [AppController],
   providers: [AppService],
 })
