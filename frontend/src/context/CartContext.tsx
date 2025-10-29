@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useAuth } from '../context/AuthContext'; // Importar el hook de auth
 import cartService from '../modules/carrito/service/cartService';
 import type { AddCartItemDto, CartItem } from '../modules/carrito/service/cartService';
+
 interface CartProviderProps {
   children: ReactNode;
 }
@@ -25,30 +27,52 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }: CartProviderProps) => {
+  const { user, isAuthenticated } = useAuth(); // Usar el contexto de autenticación
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cargar carrito al montar
+  // Cargar carrito cuando el usuario está autenticado
   useEffect(() => {
-    refreshCart();
+    if (isAuthenticated && user) {
+      refreshCart();
+    } else {
+      // Si no hay usuario, limpiar el carrito
+      setCart([]);
+    }
     // eslint-disable-next-line
-  }, []);
+  }, [user?.id_usuario, isAuthenticated]); // Recargar cuando cambia el usuario
 
   const refreshCart = async () => {
+    if (!isAuthenticated || !user) {
+      setCart([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await cartService.getCart();
-      setCart(data.items);
+      setCart(data.items || []);
+    } catch (error) {
+      console.error('Error al cargar el carrito:', error);
+      setCart([]);
     } finally {
       setLoading(false);
     }
   };
 
   const addToCart = async (item: AddCartItemDto) => {
+    if (!isAuthenticated || !user) {
+      alert('Debes iniciar sesión para agregar productos al carrito');
+      return;
+    }
+
     setLoading(true);
     try {
       await cartService.addItem(item);
       await refreshCart();
+    } catch (error) {
+      console.error('Error al agregar item:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -59,6 +83,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     try {
       await cartService.removeItem(itemId);
       await refreshCart();
+    } catch (error) {
+      console.error('Error al eliminar item:', error);
     } finally {
       setLoading(false);
     }
@@ -67,19 +93,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const clearCart = async () => {
     setLoading(true);
     try {
-      // Eliminar todos los items uno a uno
       await Promise.all(cart.map((item) => cartService.removeItem(item.id_item_carrito)));
       await refreshCart();
+    } catch (error) {
+      console.error('Error al limpiar carrito:', error);
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, refreshCart, loading }}>
-
       {children}
     </CartContext.Provider>
   );
-}
+};

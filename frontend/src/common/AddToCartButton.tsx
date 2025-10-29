@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-toastify'; // Asegúrate de tener react-toastify instalado
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 interface AddToCartButtonProps {
