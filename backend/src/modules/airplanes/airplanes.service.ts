@@ -8,7 +8,7 @@ export class AirplanesService {
   constructor(private prisma: PrismaService) { }
 
   /** Lista todas las aeronaves con su configuracion_asientos (economica / primera_clase) */
-  async findAll() {
+  async findAllAirplanes() {
     // Traemos la aeronave y su configuracion_asientos
     const aeronaves = await this.prisma.aeronave.findMany({
       include: { configuracion_asientos: true },
@@ -17,17 +17,18 @@ export class AirplanesService {
 
     // Mapear a formato simple
     return aeronaves.map(a => {
-      const conf = a.configuracion_asientos || [];
-      const economica = conf.find(c => c.clase === 'economica')?.cantidad ?? null;
-      const primera = conf.find(c => c.clase === 'primera_clase')?.cantidad ?? null;
+      // Crear un objeto para almacenar las cantidades por clase
+      const config = a.configuracion_asientos.reduce((acc, c) => {
+        if (c.clase === 'economica') acc.economica = c.cantidad;
+        if (c.clase === 'primera_clase') acc.primera_clase = c.cantidad;
+        return acc;
+      }, { economica: 0, primera_clase: 0 });
+
       return {
         id_aeronave: a.id_aeronave,
         modelo: a.modelo,
-        capacidad: a.capacidad,
-        configuracion_asientos: {
-          economica,
-          primera_clase: primera,
-        }
+        capacidad: config.economica + config.primera_clase,
+        configuracion_asientos: config,
       };
     });
   }
