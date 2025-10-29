@@ -161,7 +161,18 @@ model usuario {
   must_change_password  Boolean              @default(false)
   tarjeta               tarjeta[]
   ticket                ticket[]
+  transacciones         transaccion[]
+  saldo                 Float                @default(0.0)
   carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
+}
+
+model transaccion {
+  id_transaccion Int           @id @default(autoincrement())
+  usuario_id     Int
+  monto          Float
+  tipo           String         // 'recarga' o 'pago'
+  fecha          DateTime       @default(now())
+  usuario        usuario        @relation(fields: [usuario_id], references: [id_usuario])
 }
 
 model vuelo {
