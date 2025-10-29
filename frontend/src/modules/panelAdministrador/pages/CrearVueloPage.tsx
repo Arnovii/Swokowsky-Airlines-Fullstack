@@ -373,7 +373,7 @@ export const CrearVueloPage: React.FC = () => {
         }
         
         .react-datepicker__header {
-          background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #081225 100%);
           border: none;
           border-radius: 14px 14px 0 0;
           padding: 16px;
@@ -428,6 +428,10 @@ export const CrearVueloPage: React.FC = () => {
         
         input[type="time"]::-webkit-calendar-picker-indicator {
           cursor: pointer;
+          display: none;
+        }
+        .react-datepicker__time-list-header {
+          color: #fff;
         }
       `}</style>
       
@@ -435,12 +439,12 @@ export const CrearVueloPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl mb-4 shadow-xl">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-3xl mb-4 shadow-xl">
               <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </div>
-            <h1 className="text-5xl font-black text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
               Crear Nuevo Vuelo
             </h1>
             <p className="text-lg text-gray-600">Completa la información para registrar un nuevo vuelo en el sistema</p>
@@ -451,18 +455,18 @@ export const CrearVueloPage: React.FC = () => {
             <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
               {/* Sección: Información Básica */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  Información Básica
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Información Básica</span>
                 </h2>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-sm font-bold  mb-2">
                       Título de la noticia
                     </label>
                     <input
@@ -510,11 +514,11 @@ export const CrearVueloPage: React.FC = () => {
 
               {/* Sección: Detalles del Vuelo */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <PlaneIcon />
                   </div>
-                  Detalles del Vuelo
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Detalles del Vuelo</span>
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -537,7 +541,13 @@ export const CrearVueloPage: React.FC = () => {
                         ))}
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#select-blue-gradient)">
+                          <defs>
+                            <linearGradient id="select-blue-gradient" x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor="#123361" />
+                              <stop offset="100%" stopColor="#1180B8" />
+                            </linearGradient>
+                          </defs>
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
@@ -657,18 +667,18 @@ export const CrearVueloPage: React.FC = () => {
 
               {/* Sección: Fechas y Horarios */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <CalendarIcon />
                   </div>
-                  Fechas y Horarios
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Fechas y Horarios</span>
                 </h2>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Salida */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-[#1180B8] to-[#0a1836] rounded-xl flex items-center justify-center shadow-md">
                         <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                         </svg>
@@ -677,7 +687,7 @@ export const CrearVueloPage: React.FC = () => {
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha</label>
+                        <label className="block text-sm font-semibold text-white mb-2">Fecha</label>
                         <div className="relative">
                           <DatePicker
                             selected={salidaDate}
@@ -707,7 +717,7 @@ export const CrearVueloPage: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Hora</label>
+                        <label className="block text-sm font-semibold text-white mb-2">Hora</label>
                         <div className="relative">
                           <input
                             type="time"
@@ -732,9 +742,9 @@ export const CrearVueloPage: React.FC = () => {
                   </div>
 
                   {/* Llegada */}
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border-2 border-emerald-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <div className="w-8 h-8 bg-emerald-500 rounded-xl flex items-center justify-center shadow-md">
+                  <div className="bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-[#1180B8] to-[#0a1836] rounded-xl flex items-center justify-center shadow-md">
                         <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                         </svg>
@@ -743,7 +753,7 @@ export const CrearVueloPage: React.FC = () => {
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Fecha</label>
+                        <label className="block text-sm font-semibold text-white mb-2">Fecha</label>
                         <div className="relative">
                           <DatePicker
                             selected={llegadaDate}
@@ -760,20 +770,20 @@ export const CrearVueloPage: React.FC = () => {
                             dateFormat="dd/MM/yyyy"
                             minDate={salidaDate || new Date()}
                             maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className="w-full px-4 py-3 pl-11 bg-white border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none font-semibold text-gray-900"
+                            className="w-full px-4 py-3 pl-11 bg-white border-2 border-[#123361] rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900"
                             placeholderText="Seleccionar"
                             popperClassName="modern-datepicker"
                             showMonthDropdown
                             showYearDropdown
                             dropdownMode="select"
                           />
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1180B8] pointer-events-none">
                             <CalendarIcon />
                           </div>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Hora</label>
+                        <label className="block text-sm font-semibold text-white mb-2">Hora</label>
                         <div className="relative">
                           <input
                             type="time"
@@ -786,9 +796,9 @@ export const CrearVueloPage: React.FC = () => {
                                 setLlegadaDate(newDate);
                               }
                             }}
-                            className="w-full px-4 py-3 pl-11 bg-white border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all duration-200 outline-none font-semibold text-gray-900"
+                            className="w-full px-4 py-3 pl-11 bg-white border-2 border-[#123361] rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900"
                           />
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1180B8] pointer-events-none">
                             <ClockIcon />
                           </div>
                         </div>
@@ -801,11 +811,11 @@ export const CrearVueloPage: React.FC = () => {
 
               {/* Sección: Imagen */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <ImageIcon />
                   </div>
-                  Imagen del Vuelo
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Imagen del Vuelo</span>
                 </h2>
                 
                 <div>
@@ -822,9 +832,9 @@ export const CrearVueloPage: React.FC = () => {
                   />
                   {errores.url_imagen && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.url_imagen}</p>}
                   {form.url_imagen && (
-                    <div className="mt-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200">
-                      <p className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="mt-6 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
+                      <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
@@ -845,31 +855,31 @@ export const CrearVueloPage: React.FC = () => {
 
               {/* Sección: Tarifas */}
               <div className="mb-10">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  Tarifas
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Tarifas</span>
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Tarifa Económica */}
-                  <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-cyan-100 rounded-2xl p-6 border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361] shadow-lg hover:shadow-xl transition-all duration-300">
                     <div className="flex items-center gap-3 mb-5">
-                      <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center shadow-md">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#1180B8] to-[#0a1836] rounded-2xl flex items-center justify-center shadow-md">
                         <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-gray-900">Económica</h3>
-                        <p className="text-sm font-medium text-gray-600">Tarifa estándar</p>
+                        <h3 className="text-xl font-black text-white">Económica</h3>
+                        <p className="text-sm font-medium text-cyan-100">Tarifa estándar</p>
                       </div>
                     </div>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-blue-600">$</div>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-brand-cyan">$</div>
                       <input
                         type="text"
                         placeholder="0"
@@ -878,28 +888,28 @@ export const CrearVueloPage: React.FC = () => {
                           const raw = e.target.value.replace(/[^0-9]/g, "");
                           handleTarifaChange("economica", Number(raw));
                         }}
-                        className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_economica ? 'border-rose-500' : 'border-blue-300'} rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 outline-none text-3xl font-black text-gray-900 placeholder:text-gray-300`}
+                        className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_economica ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none text-3xl font-black text-gray-900 placeholder:text-gray-300`}
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500 bg-blue-100 px-3 py-1 rounded-lg">COP</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-brand-cyan bg-brand-darkblue/30 px-3 py-1 rounded-lg">COP</span>
                     </div>
                     {errores.tarifa_economica && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.tarifa_economica}</p>}
                   </div>
 
                   {/* Tarifa Primera Clase */}
-                  <div className="bg-gradient-to-br from-purple-50 via-purple-100 to-pink-100 rounded-2xl p-6 border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div className="bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361] shadow-lg hover:shadow-xl transition-all duration-300">
                     <div className="flex items-center gap-3 mb-5">
-                      <div className="w-12 h-12 bg-purple-500 rounded-2xl flex items-center justify-center shadow-md">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#1180B8] to-[#0a1836] rounded-2xl flex items-center justify-center shadow-md">
                         <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-gray-900">Primera Clase</h3>
-                        <p className="text-sm font-medium text-gray-600">Tarifa premium</p>
+                        <h3 className="text-xl font-black text-white">Primera Clase</h3>
+                        <p className="text-sm font-medium text-cyan-100">Tarifa premium</p>
                       </div>
                     </div>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-purple-600">$</div>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-brand-cyan">$</div>
                       <input
                         type="text"
                         placeholder="0"
@@ -908,9 +918,9 @@ export const CrearVueloPage: React.FC = () => {
                           const raw = e.target.value.replace(/[^0-9]/g, "");
                           handleTarifaChange("primera_clase", Number(raw));
                         }}
-                        className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_premium ? 'border-rose-500' : 'border-purple-300'} rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 outline-none text-3xl font-black text-gray-900 placeholder:text-gray-300`}
+                        className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_premium ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none text-3xl font-black text-gray-900 placeholder:text-gray-300`}
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500 bg-purple-100 px-3 py-1 rounded-lg">COP</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-brand-cyan bg-brand-darkblue/30 px-3 py-1 rounded-lg">COP</span>
                     </div>
                     {errores.tarifa_premium && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.tarifa_premium}</p>}
                   </div>
@@ -919,16 +929,16 @@ export const CrearVueloPage: React.FC = () => {
 
               {/* Sección: Promoción */}
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
                     <TagIcon />
                   </div>
-                  Promoción
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Promoción</span>
                 </h2>
 
-                <div className="bg-gradient-to-br from-rose-50 via-pink-50 to-orange-50 rounded-2xl p-6 border-2 border-rose-200">
+                <div className="bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
                   <div className="mb-6">
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                    <label className="block text-sm font-bold text-white mb-2">
                       ¿Vuelo en promoción?
                     </label>
                     <div className="relative">
@@ -936,7 +946,7 @@ export const CrearVueloPage: React.FC = () => {
                         name="promocion"
                         value={form.promocion ? "si" : "no"}
                         onChange={e => setForm((f: typeof form) => ({ ...f, promocion: e.target.value === "si" }))}
-                        className="w-full px-4 py-3.5 bg-white border-2 border-rose-200 rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none appearance-none text-gray-900 font-bold"
+                        className="w-full px-4 py-3.5 bg-white border-2 border-brand-cyan rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none appearance-none text-gray-900 font-bold"
                       >
                         <option value="no">No</option>
                         <option value="si">Sí</option>
@@ -953,20 +963,20 @@ export const CrearVueloPage: React.FC = () => {
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-white mb-2">
                             Nombre de la promoción
                           </label>
                           <input
                             type="text"
                             value={form.promo_nombre || ""}
                             onChange={e => setForm((f: typeof form) => ({ ...f, promo_nombre: e.target.value }))}
-                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promo_nombre ? 'border-rose-500' : 'border-rose-200'} rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none text-gray-900 font-semibold placeholder:text-gray-400`}
+                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promo_nombre ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none text-gray-900 font-semibold placeholder:text-gray-400`}
                             placeholder="Ej: Black November"
                           />
                           {errores.promo_nombre && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promo_nombre}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-white mb-2">
                             Descuento (%)
                           </label>
                           <div className="relative">
@@ -979,24 +989,24 @@ export const CrearVueloPage: React.FC = () => {
                                 const val = e.target.value.replace(/[^0-9]/g, "");
                                 setForm((f: typeof form) => ({ ...f, descuento: val }));
                               }}
-                              className={`w-full px-4 py-3.5 pr-12 bg-white border-2 ${errores.descuento ? 'border-rose-500' : 'border-rose-200'} rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none text-gray-900 font-bold placeholder:text-gray-400`}
+                              className={`w-full px-4 py-3.5 pr-12 bg-white border-2 ${errores.descuento ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none text-gray-900 font-bold placeholder:text-gray-400`}
                               placeholder="20"
                             />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-rose-500">%</span>
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-brand-cyan">%</span>
                           </div>
                           {errores.descuento && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.descuento}</p>}
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                        <label className="block text-sm font-bold text-white mb-2">
                           Descripción de la promoción
                         </label>
                         <textarea
                           value={form.promo_descripcion || ""}
                           onChange={e => setForm((f: typeof form) => ({ ...f, promo_descripcion: e.target.value }))}
                           rows={3}
-                          className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promo_descripcion ? 'border-rose-500' : 'border-rose-200'} rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none resize-none text-gray-900 font-medium placeholder:text-gray-400`}
+                          className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promo_descripcion ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none resize-none text-gray-900 font-medium placeholder:text-gray-400`}
                           placeholder="Describe los detalles de la promoción..."
                         />
                         {errores.promo_descripcion && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promo_descripcion}</p>}
@@ -1004,7 +1014,7 @@ export const CrearVueloPage: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-white mb-2">
                             Inicio de promoción
                           </label>
                           <DatePicker
@@ -1016,14 +1026,14 @@ export const CrearVueloPage: React.FC = () => {
                             dateFormat="dd/MM/yyyy HH:mm"
                             minDate={new Date()}
                             maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_inicio ? 'border-rose-500' : 'border-rose-200'} rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none font-semibold text-gray-900`}
+                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_inicio ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900`}
                             placeholderText="Selecciona fecha y hora"
                             popperClassName="modern-datepicker"
                           />
                           {errores.promocion_inicio && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promocion_inicio}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">
+                          <label className="block text-sm font-bold text-white mb-2">
                             Fin de promoción
                           </label>
                           <DatePicker
@@ -1035,7 +1045,7 @@ export const CrearVueloPage: React.FC = () => {
                             dateFormat="dd/MM/yyyy HH:mm"
                             minDate={form.promocion_inicio ? new Date(form.promocion_inicio) : new Date()}
                             maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_fin ? 'border-rose-500' : 'border-rose-200'} rounded-xl focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all duration-200 outline-none font-semibold text-gray-900`}
+                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_fin ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900`}
                             placeholderText="Selecciona fecha y hora"
                             popperClassName="modern-datepicker"
                           />
@@ -1074,23 +1084,12 @@ export const CrearVueloPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                className="px-8 py-4 bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] rounded-xl font-bold shadow-lg hover:shadow-xl border-2 border-[#123361] hover:border-[#0a1836] transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Creando vuelo...
-                  </>
+                  <span className="bg-white bg-clip-text text-transparent">Creando vuelo...</span>
                 ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Crear Vuelo
-                  </>
+                  <span className="bg-white bg-clip-text text-transparent">Crear Vuelo</span>
                 )}
               </button>
             </div>
