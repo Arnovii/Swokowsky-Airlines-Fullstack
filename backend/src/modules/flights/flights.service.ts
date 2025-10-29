@@ -250,6 +250,7 @@ export class FlightsService {
       const salidaColombia = toColombiaTime(v.salida_programada_utc);
       const llegadaColombia = toColombiaTime(v.llegada_programada_utc);
       return {
+        id_vuelo: v.id_vuelo,
         estado: v.estado,
         modelo_aeronave: v.aeronave?.modelo ?? null,
         capacidad_aeronave: v.aeronave?.capacidad ?? null,

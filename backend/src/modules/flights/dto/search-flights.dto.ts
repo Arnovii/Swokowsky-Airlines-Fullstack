@@ -8,7 +8,7 @@ export class SearchFlightsDto {
     @IsInt()
     originCityId: number;
 
-    @ApiProperty({ example: '3', description: 'Es el ID que tenga una ciudad (destino) en la base de datos' })
+    @ApiProperty({ example: '31', description: 'Es el ID que tenga una ciudad (destino) en la base de datos' })
     @Type(() => Number)
     @IsInt()
     destinationCityId: number;
