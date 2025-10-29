@@ -1,11 +1,17 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { CartTicket } from './types';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import cartService from '../modules/carrito/service/cartService';
+import type { AddCartItemDto, CartItem } from '../modules/carrito/service/cartService';
+interface CartProviderProps {
+  children: ReactNode;
+}
 
 interface CartContextType {
-  cart: CartTicket[];
-  addToCart: (ticket: CartTicket) => void;
-  removeFromCart: (ticketId: string) => void;
-  clearCart: () => void;
+  cart: CartItem[];
+  addToCart: (item: AddCartItemDto) => Promise<void>;
+  removeFromCart: (itemId: number) => Promise<void>;
+  clearCart: () => Promise<void>;
+  refreshCart: () => Promise<void>;
+  loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -18,26 +24,62 @@ export const useCart = () => {
   return context;
 };
 
-interface CartProviderProps {
-  children: ReactNode;
-}
-
 export const CartProvider = ({ children }: CartProviderProps) => {
-  const [cart, setCart] = useState<CartTicket[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const addToCart = (ticket: CartTicket) => {
-    setCart((prev) => [...prev, ticket]);
+  // Cargar carrito al montar
+  useEffect(() => {
+    refreshCart();
+    // eslint-disable-next-line
+  }, []);
+
+  const refreshCart = async () => {
+    setLoading(true);
+    try {
+      const data = await cartService.getCart();
+      setCart(data.items);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeFromCart = (ticketId: string) => {
-    setCart((prev) => prev.filter((t) => t.id !== ticketId));
+  const addToCart = async (item: AddCartItemDto) => {
+    setLoading(true);
+    try {
+      await cartService.addItem(item);
+      await refreshCart();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearCart = () => setCart([]);
+  const removeFromCart = async (itemId: number) => {
+    setLoading(true);
+    try {
+      await cartService.removeItem(itemId);
+      await refreshCart();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearCart = async () => {
+    setLoading(true);
+    try {
+      // Eliminar todos los items uno a uno
+      await Promise.all(cart.map((item) => cartService.removeItem(item.id_item_carrito)));
+      await refreshCart();
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, refreshCart, loading }}>
+
       {children}
     </CartContext.Provider>
   );
-};
+}

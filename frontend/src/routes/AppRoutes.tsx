@@ -18,7 +18,7 @@ import PrivateRoute from "./PrivateRoute"
 import AdminRoute from "./AdminRoute"
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
-import Carrito from "../modules/home/pages/Carrito";
+import Carrito from "../modules/carrito/page/Carrito";
 
 export default function AppRoutes() {
   return (

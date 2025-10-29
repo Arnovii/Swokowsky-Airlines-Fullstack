@@ -1,5 +1,6 @@
 
 import React from 'react';
+import AddToCartButton from '../../../common/AddToCartButton';
 import { Plane, Globe } from 'lucide-react';
 import { FlightUtils } from '../utils/flightUtils';
 import type { Flight } from '../types/Flight';
@@ -95,12 +96,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight }
           <div className="mb-2">
             <PromoBadge promotion={flight.promotion} />
           </div>
-          <button 
-            onClick={() => onSelectFlight(flight)}
-            className="w-full lg:w-auto px-8 py-4 bg-gradient-to-r from-[#0F6899] to-[#39A5D8] text-white rounded-xl hover:from-[#39A5D8] hover:to-[#0F6899] transition-all duration-300 font-bold font-sans shadow-lg hover:shadow-2xl hover:scale-105 transform border border-[#39A5D8]/30"
-          >
-            ✈️ Ver detalles
-          </button>
+          <AddToCartButton onClick={() => onSelectFlight(flight)} />
         </div>
       </div>
     </div>

@@ -1,15 +1,18 @@
-import React, { useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
 
+import React, { useMemo } from 'react';
+import { useCart } from '../../../context/CartContext';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useFlightSearch } from '../hooks/useFlightSearch';
 import { FlightCard } from '../components/FlightCard';
 import { LoadingState, ErrorState, NoFlightsFound } from '../components/EmptyStates';
 import type { Flight } from '../types/Flight';
 import { toCardFlight } from '../types/Flight';
 
+
 export function FlightSearchResults() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const searchCriteria = useMemo(() => ({
     originCityId: parseInt(searchParams.get('originId') || '0', 10) || null,
@@ -30,29 +33,21 @@ export function FlightSearchResults() {
   const { results, loading, error, refetch } = useFlightSearch(searchCriteria);
 
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} onRetry={refetch} />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
 
   // Normaliza todos los vuelos para asegurar que idVuelo siempre sea el id del backend
   const outboundFlights: Flight[] = (results?.outbound || []).map(toCardFlight);
   const inboundFlights: Flight[] = (results?.inbound || []).map(toCardFlight);
 
-  // Navegación a detalles de vuelo
-  const handleSelectFlight = (flight: Flight) => {
-    // Usa siempre el id del backend (id_vuelo) como idVuelo
-    const flightId = flight.idVuelo;
-    if (!flightId || typeof flightId !== 'number') {
-      alert('Error: El vuelo seleccionado no tiene un ID válido del backend.');
-      return;
-    }
-    const params = new URLSearchParams({
-      originCityId: searchParams.get('originId') || '',
-      destinationCityId: searchParams.get('destinationId') || '',
-      departureDate: searchParams.get('departureDate') || '',
-      returnDate: searchParams.get('returnDate') || '',
-      roundTrip: searchParams.get('roundTrip') || '',
-      passengers: searchParams.get('passengers') || ''
+  // Agregar vuelo al carrito y redirigir
+  const handleSelectFlight = async (flight: Flight) => {
+    // Por simplicidad, agregamos 1 ticket en clase económica (ajusta según UI)
+    await addToCart({
+      id_vueloFK: flight.idVuelo,
+      cantidad_de_tickets: 1,
+      clase: 'economica',
     });
-    navigate(`/detalle-vuelo/${flightId}?${params.toString()}`);
+    navigate('/carrito');
   };
 
   return (
