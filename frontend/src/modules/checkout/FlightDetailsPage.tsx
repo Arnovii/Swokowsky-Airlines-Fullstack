@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Flight } from '../types/Flight';
+import type { Flight } from '../flightsearch/types/Flight';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import FlightInfo from '../components/FlightInfo';
-import ClassSelector from '../components/ClassSelector';
-import PassengerFormModern from '../components/PassengerForm';
-import type { PassengerFormData } from '../components/PassengerForm';
-import BookingHolderForm from '../components/BookingHolderForm';
-import ReservationSummary from '../components/ReservationSummary';
-import { useCart } from '../../../context/CartContext';
-import { useAuth } from '../../../context/AuthContext';
-import { reserveTickets, buyTickets } from '../services/ticketService';
-import { FlightService } from '../services/flightService';
+import FlightInfo from './FlightInfo';
+import ClassSelector from './ClassSelector';
+import PassengerFormModern from './PassengerForm';
+import type { PassengerFormData } from './PassengerForm';
+import BookingHolderForm from './BookingHolderForm';
+import ReservationSummary from './ReservationSummary';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { reserveTickets, buyTickets } from '../flightsearch/services/ticketService';
+import { FlightService } from '../flightsearch/services/flightService';
 
 // ================== COMPONENTES DE TOAST MODERNOS ==================
 const SuccessIcon = () => (

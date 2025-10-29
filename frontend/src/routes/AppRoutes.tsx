@@ -8,7 +8,7 @@ import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
-import FlightDetailsPage from "../modules/flightsearch/pages/FlightDetailsPage";
+import FlightDetailsPage from "../modules/checkout/FlightDetailsPage";
 
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"

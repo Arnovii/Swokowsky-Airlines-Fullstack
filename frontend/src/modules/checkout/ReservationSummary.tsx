@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CartTicket } from '../../../context/types';
+import type { CartTicket } from '../../context/types';
 
 interface ReservationSummaryProps {
   flight: any; // Reemplazar por tipo real de vuelo
