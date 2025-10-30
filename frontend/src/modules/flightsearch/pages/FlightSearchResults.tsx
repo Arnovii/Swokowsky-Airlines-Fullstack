@@ -17,6 +17,9 @@ export function FlightSearchResults() {
   // Estado para el modal y vuelo seleccionado
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  // NUEVO: Estados para vuelos de ida y vuelta
+  const [selectedOutboundFlight, setSelectedOutboundFlight] = useState<Flight | null>(null);
+  const [selectedInboundFlight, setSelectedInboundFlight] = useState<Flight | null>(null);
 
   const searchCriteria = useMemo(() => ({
     originCityId: parseInt(searchParams.get('originId') || '0', 10) || null,
@@ -42,22 +45,75 @@ export function FlightSearchResults() {
   const outboundFlights: Flight[] = (results?.outbound || []).map(toCardFlight);
   const inboundFlights: Flight[] = (results?.inbound || []).map(toCardFlight);
 
-  // Abrir modal al hacer clic en agregar al carrito
-  const handleSelectFlight = (flight: Flight) => {
-    setSelectedFlight(flight);
-    setIsModalOpen(true);
+  // : Abrir modal al hacer clic en agregar al carrito
+  const handleSelectFlight = (flight: Flight, isOutbound?: boolean) => {
+    if (searchCriteria.roundTrip && isOutbound !== undefined) {
+      // Para viajes de ida y vuelta
+      if (isOutbound) {
+        setSelectedOutboundFlight(flight);
+        // Si ya hay un vuelo de regreso seleccionado, abrir el modal
+        if (selectedInboundFlight) {
+          setIsModalOpen(true);
+        }
+      } else {
+        setSelectedInboundFlight(flight);
+        // Si ya hay un vuelo de ida seleccionado, abrir el modal
+        if (selectedOutboundFlight) {
+          setIsModalOpen(true);
+        }
+      }
+    } else {
+      // Para viajes solo de ida (comportamiento original)
+      setSelectedFlight(flight);
+      setIsModalOpen(true);
+    }
   };
 
-  // Agregar al carrito con la clase seleccionada
+  // : Función para calcular precio total
+  const getTotalPrice = () => {
+    if (!searchCriteria.roundTrip) {
+      return selectedFlight?.price || 0;
+    }
+    let total = selectedOutboundFlight?.price || 0;
+    total += selectedInboundFlight?.price || 0;
+    return total;
+  };
+
+  // : Agregar al carrito con la clase seleccionada
   const handleClassSelection = async (clase: 'economica' | 'primera_clase') => {
-    if (!selectedFlight) return;
+    // Para vuelos de solo ida (comportamiento original)
+    if (!searchCriteria.roundTrip && selectedFlight) {
+      try {
+        await addToCart({
+          id_vueloFK: selectedFlight.idVuelo,
+          cantidad_de_tickets: searchCriteria.passengers,
+          clase: clase,
+        });
+        navigate('/carrito');
+      } catch (error) {
+        console.error('Error al agregar al carrito:', error);
+      }
+      return;
+    }
+
+    // : Para vuelos de ida y vuelta
+    if (!selectedOutboundFlight || !selectedInboundFlight) return;
     
     try {
+      // Agregar vuelo de ida
       await addToCart({
-        id_vueloFK: selectedFlight.idVuelo,
+        id_vueloFK: selectedOutboundFlight.idVuelo,
         cantidad_de_tickets: searchCriteria.passengers,
         clase: clase,
       });
+
+      // Agregar vuelo de regreso
+      await addToCart({
+        id_vueloFK: selectedInboundFlight.idVuelo,
+        cantidad_de_tickets: searchCriteria.passengers,
+        clase: clase,
+      });
+
       navigate('/carrito');
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
@@ -69,13 +125,30 @@ export function FlightSearchResults() {
       {/* Modal de selección de clase */}
       <ClassSelectorModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          // NUEVO: Limpiar selecciones de roundtrip al cerrar
+          if (searchCriteria.roundTrip) {
+            setSelectedOutboundFlight(null);
+            setSelectedInboundFlight(null);
+          }
+        }}
         onSelectClass={handleClassSelection}
-        flightInfo={selectedFlight ? {
-          origen: selectedFlight.origen?.ciudad || '',
-          destino: selectedFlight.destino?.ciudad || '',
-          precio: selectedFlight.price || 0,
-        } : undefined}
+        flightInfo={
+          searchCriteria.roundTrip && selectedOutboundFlight
+            ? {
+                origen: selectedOutboundFlight.origen?.ciudad || '',
+                destino: selectedOutboundFlight.destino?.ciudad || '',
+                precio: getTotalPrice(),
+              }
+            : selectedFlight
+            ? {
+                origen: selectedFlight.origen?.ciudad || '',
+                destino: selectedFlight.destino?.ciudad || '',
+                precio: selectedFlight.price || 0,
+              }
+            : undefined
+        }
       />
 
       {/* Botón de regresar responsive */}
@@ -111,6 +184,92 @@ export function FlightSearchResults() {
           </p>
         </div>
 
+        {/* NUEVO: Banner de selección de vuelos (solo para roundtrip) */}
+        {searchCriteria.roundTrip && (selectedOutboundFlight || selectedInboundFlight) && (
+          <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-[#0F6899]/30 to-[#39A5D8]/30 backdrop-blur-lg rounded-xl border border-white/30 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-lg mb-3">Vuelos Seleccionados</h3>
+                <div className="space-y-3">
+                  {/* Vuelo de ida */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      selectedOutboundFlight ? 'bg-green-500' : 'bg-white/20'
+                    }`}>
+                      {selectedOutboundFlight ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <span className="text-white text-sm">1</span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white/90 text-sm font-medium">Vuelo de Ida</p>
+                      {selectedOutboundFlight ? (
+                        <p className="text-white text-base">
+                          {selectedOutboundFlight.origen?.ciudad} → {selectedOutboundFlight.destino?.ciudad} - ${selectedOutboundFlight.price?.toLocaleString()}
+                        </p>
+                      ) : (
+                        <p className="text-white/60 text-sm">Selecciona tu vuelo de ida</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Vuelo de regreso */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      selectedInboundFlight ? 'bg-green-500' : 'bg-white/20'
+                    }`}>
+                      {selectedInboundFlight ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <span className="text-white text-sm">2</span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white/90 text-sm font-medium">Vuelo de Regreso</p>
+                      {selectedInboundFlight ? (
+                        <p className="text-white text-base">
+                          {selectedInboundFlight.origen?.ciudad} → {selectedInboundFlight.destino?.ciudad} - ${selectedInboundFlight.price?.toLocaleString()}
+                        </p>
+                      ) : (
+                        <p className="text-white/60 text-sm">Selecciona tu vuelo de regreso</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  {selectedOutboundFlight && selectedInboundFlight && (
+                    <div className="pt-3 border-t border-white/30">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/90 font-semibold">Total:</span>
+                        <span className="text-white text-xl font-bold">${getTotalPrice().toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botón de limpiar */}
+              <button
+                onClick={() => {
+                  setSelectedOutboundFlight(null);
+                  setSelectedInboundFlight(null);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                title="Limpiar selección"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {showDebug && (
           <details className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/10 backdrop-blur-lg rounded-lg sm:rounded-xl border border-white/20">
             <summary className="cursor-pointer font-medium text-white text-sm sm:text-base">
@@ -139,7 +298,8 @@ export function FlightSearchResults() {
                   <FlightCard
                     key={flight.idVuelo}
                     flight={flight}
-                    onSelectFlight={handleSelectFlight}
+                    onSelectFlight={(f) => handleSelectFlight(f, true)}
+                    isSelected={selectedOutboundFlight?.idVuelo === flight.idVuelo}
                   />
                 ))}
               </div>
@@ -164,7 +324,8 @@ export function FlightSearchResults() {
                   <FlightCard
                     key={flight.idVuelo}
                     flight={flight}
-                    onSelectFlight={handleSelectFlight}
+                    onSelectFlight={(f) => handleSelectFlight(f, false)}
+                    isSelected={selectedInboundFlight?.idVuelo === flight.idVuelo}
                   />
                 ))}
               </div>

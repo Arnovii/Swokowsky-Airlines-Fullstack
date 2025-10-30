@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AddToCartButton from '../../../common/AddToCartButton';
 import { Plane, Globe } from 'lucide-react';
@@ -28,13 +27,28 @@ const PromoBadge: React.FC<PromoBadgeProps> = ({ promotion }) => {
 interface FlightCardProps {
   flight: Flight;
   onSelectFlight: (flight: Flight) => void;
+  isSelected?: boolean; //  prop para indicar si el vuelo está seleccionado
 }
 
-export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight }) => {
+export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight, isSelected = false }) => {
   const finalPrice = FlightUtils.calculateFinalPrice(flight);
 
   return (
-    <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 p-6 hover:shadow-2xl hover:border-[#39A5D8]/50 transition-all duration-300 hover:scale-[1.02] shadow-lg">
+    <div className={`bg-white/95 backdrop-blur-lg rounded-2xl border p-6 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] shadow-lg relative ${
+      isSelected 
+        ? 'border-green-500 ring-4 ring-green-400 shadow-2xl shadow-green-500/50' 
+        : 'border-white/30 hover:border-[#39A5D8]/50'
+    }`}>
+      {/* Badge de selección */}
+      {isSelected && (
+        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 font-semibold text-sm z-10">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Seleccionado
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row lg:items-center gap-6">
         {/* Sección de Ruta y Horarios */}
         <div className="flex-1">
@@ -80,7 +94,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight }
             </span>
           </div>
         </div>
-        {/* Sección de Precio y Selección (sin cambios) */}
+        {/* Sección de Precio y Selección */}
         <div className="flex flex-col lg:items-end gap-3 lg:w-64">
           <div className="flex flex-col items-start lg:items-end">
             {flight.promotion && (
@@ -96,7 +110,13 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelectFlight }
           <div className="mb-2">
             <PromoBadge promotion={flight.promotion} />
           </div>
-          <AddToCartButton onClick={() => onSelectFlight(flight)} />
+          {/* MODIFICADO: El botón ahora cambia según isSelected */}
+          <AddToCartButton 
+            onClick={() => onSelectFlight(flight)}
+            className={isSelected ? 'bg-green-500 hover:bg-green-600' : ''}
+          >
+            {isSelected ? 'Seleccionado ✓' : undefined}
+          </AddToCartButton>
         </div>
       </div>
     </div>

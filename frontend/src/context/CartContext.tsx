@@ -1,7 +1,11 @@
+
+// EN TU CartContext.tsx:
+
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useAuth } from '../context/AuthContext'; // Importar el hook de auth
+import { useAuth } from '../context/AuthContext';
 import cartService from '../modules/carrito/service/cartService';
 import type { AddCartItemDto, CartItem } from '../modules/carrito/service/cartService';
+import { toast } from 'react-toastify'; // ← IMPORTAR TOAST
 
 interface CartProviderProps {
   children: ReactNode;
@@ -27,20 +31,17 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }: CartProviderProps) => {
-  const { user, isAuthenticated } = useAuth(); // Usar el contexto de autenticación
+  const { user, isAuthenticated } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cargar carrito cuando el usuario está autenticado
   useEffect(() => {
     if (isAuthenticated && user) {
       refreshCart();
     } else {
-      // Si no hay usuario, limpiar el carrito
       setCart([]);
     }
-    // eslint-disable-next-line
-  }, [user?.id_usuario, isAuthenticated]); // Recargar cuando cambia el usuario
+  }, [user?.id_usuario, isAuthenticated]);
 
   const refreshCart = async () => {
     if (!isAuthenticated || !user) {
@@ -60,19 +61,78 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
   };
 
-  const addToCart = async (item: AddCartItemDto) => {
-    if (!isAuthenticated || !user) {
-      alert('Debes iniciar sesión para agregar productos al carrito');
-      return;
-    }
-
-    setLoading(true);
+  const addToCart = async (item: {
+    id_vueloFK: number;
+    cantidad_de_tickets: number;
+    clase: 'economica' | 'primera_clase';
+  }) => {
     try {
+      // Calcular tickets totales del mismo vuelo (todas las clases combinadas)
+      const existingTicketsForFlight = cart.reduce((total, cartItem) => {
+        if (cartItem.id_vueloFK === item.id_vueloFK) {
+          return total + cartItem.cantidad_de_tickets;
+        }
+        return total;
+      }, 0);
+
+      const totalTicketsAfterAdd = existingTicketsForFlight + item.cantidad_de_tickets;
+
+      // Si excede 5 tickets en total para este vuelo
+      if (totalTicketsAfterAdd > 5) {
+        const available = 5 - existingTicketsForFlight;
+        
+        // MOSTRAR TOAST DE ERROR
+        if (available > 0) {
+          toast.error(
+            ` Solo puedes agregar ${available} ticket${available > 1 ? 's' : ''} más. Ya tienes ${existingTicketsForFlight} en tu carrito para este vuelo.`,
+            {
+              position: "top-center",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            }
+          );
+        } else {
+          toast.error(
+            ' Ya tienes el límite de 5 tickets para este vuelo en tu carrito.',
+            {
+              position: "top-center",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            }
+          );
+        }
+        
+        // LANZAR ERROR PARA QUE handleClassSelection LO CAPTURE
+        throw new Error('Límite de tickets excedido');
+      }
+
+      setLoading(true);
       await cartService.addItem(item);
       await refreshCart();
+      
     } catch (error) {
-      console.error('Error al agregar item:', error);
+      console.error('Error al agregar al carrito:', error);
+      
+      // Solo mostrar toast si NO es el error de límite (ya se mostró arriba)
+      if (error instanceof Error && error.message !== 'Límite de tickets excedido') {
+        toast.error(
+          'Hubo un problema al agregar los tickets. Intenta de nuevo.',
+          {
+            position: "top-right",
+            autoClose: 4000,
+          }
+        );
+      }
+      
+      // RE-LANZAR EL ERROR para que handleClassSelection lo capture
       throw error;
+      
     } finally {
       setLoading(false);
     }
