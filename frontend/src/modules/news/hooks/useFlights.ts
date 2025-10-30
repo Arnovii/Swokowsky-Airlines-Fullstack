@@ -29,7 +29,7 @@ export const useFlights = () => {
     const fetchFlights = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get<unknown[]>('/api/v1/flights');
+        const response = await axios.get('/flights');
         // Normaliza los datos si es necesario
         const apiFlights = Array.isArray(response.data)
           ? response.data.map((f) => {

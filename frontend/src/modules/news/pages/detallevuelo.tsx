@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Plane, Calendar, MapPin, Tag } from "lucide-react";
+import { ArrowLeft, Plane, Calendar, MapPin, Tag, ShoppingCart } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import AddToCartButton from "@/common/AddToCartButton";
+import { ClassSelectorModal } from "@/modules/flightsearch/components/ClassSelectorModal";
+import { useCart } from "@/context/CartContext"; // 👈 Importa tu CartContext
+import { toast } from "react-toastify";
 
 export interface Noticia {
   titulo: string;
@@ -47,11 +49,6 @@ const ISO_REGEX =
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 
-/**
- * Convierte una ISO 8601 a { fecha: 'dd/MM/yyyy', hora: 'hh:mm AM/PM' } sin aplicar conversiones de zona.
- * - Si prefieres 24h, pasa { use24Hour: true }.
- * - Si prefieres 'a. m.'/'p. m.' en lugar de 'AM'/'PM', pasa { spanishAmPm: true }.
- */
 function formatIsoToReadable(
   iso?: string | null,
   opts?: { use24Hour?: boolean; spanishAmPm?: boolean }
@@ -60,7 +57,6 @@ function formatIsoToReadable(
 
   const m = iso.match(ISO_REGEX)
   if (!m) {
-    // Fallback sencillo: quitar zona si existe y separar T
     const raw = (iso || '').replace(/(Z|[+\-]\d{2}:\d{2})\s*$/, '')
     const parts = raw.split('T')
     if (parts.length === 2) {
@@ -87,7 +83,6 @@ function formatIsoToReadable(
   return { fecha, hora: `${pad(hour12)}:${min} ${ampm}` }
 }
 
-
 function formatearPesos(valor: number) {
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
@@ -99,14 +94,16 @@ function formatearPesos(valor: number) {
 export default function DetalleVuelo() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // 👈 Obtén la función addToCart de tu context
   const [vuelo, setVuelo] = useState<Noticia | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cantidadTickets, setCantidadTickets] = useState(1); // 👈 Por si quieres permitir seleccionar cantidad
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // ✅ Usa SIEMPRE la URL completa de la API para evitar problemas de proxy
         const { data } = await axios.get<Noticia>(
           `http://localhost:3000/api/v1/news/${id}`
         );
@@ -121,18 +118,75 @@ export default function DetalleVuelo() {
     fetchData();
   }, [id]);
 
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleSelectClass = async (clase: 'economica' | 'primera_clase') => {
+    if (!vuelo || !id) return;
+    
+    try {
+      // 👇 Usa tu función addToCart del context
+      await addToCart({
+        id_vueloFK: parseInt(id), // Convierte el ID a número
+        cantidad_de_tickets: cantidadTickets, // Por ahora 1, puedes hacerlo dinámico
+        clase: clase,
+      });
+
+      // Si llegó aquí, se agregó exitosamente
+      const precio = clase === 'economica' 
+        ? vuelo.precio_economica 
+        : vuelo.precio_primera_clase;
+      
+      const descuento = vuelo.promocion?.descuento ?? 0;
+      const precioFinal = Math.round(precio * (1 - descuento));
+
+      toast.success(
+        <div>
+          <strong className="block text-lg mb-1">¡Agregado al carrito! 🎉</strong>
+          <div className="text-sm">
+            <div className="font-semibold">{vuelo.origen.ciudad} → {vuelo.destino.ciudad}</div>
+            <div className="text-gray-600">
+              Clase: {clase === 'economica' ? 'Económica' : 'Primera Clase'}
+            </div>
+            <div className="text-gray-600">
+              Tickets: {cantidadTickets}
+            </div>
+            <div className="font-bold text-green-600 mt-1">
+              {formatearPesos(precioFinal * cantidadTickets)}
+            </div>
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: "light",
+        }
+      );
+
+      navigate('/carrito');
+      
+    } catch (error) {
+      // Los errores ya se manejan en addToCart con toasts
+      // Solo loguea para debug
+      console.error('Error al agregar al carrito desde detalle:', error);
+    }
+  };
+
   if (loading) return <p className="text-center mt-10">Cargando...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
   if (!vuelo) return <p className="text-center mt-10">Vuelo no encontrado</p>;
 
-  // Helper para detectar Colombia (case-insensitive y tolerant)
   const isColombia = (pais: string) => {
-    if (!pais) return false; //cadena vacía ("")
+    if (!pais) return false;
     const s = String(pais).toLowerCase();
     return s === 'colombia' || s === 'co' || s.includes('col');
   };
 
-  // Determinamos si el vuelo es nacional (origen y destino en Colombia)
   const origenPaisRaw = vuelo.origen.pais;
   const destinoPaisRaw = vuelo.destino.pais;
   const esNacional = isColombia(origenPaisRaw) && isColombia(destinoPaisRaw);
@@ -200,7 +254,6 @@ export default function DetalleVuelo() {
                 icon={<Calendar className="w-5 h-5 text-[#0e254d]" />}
               >
                 {(() => {
-                  // Construimos horarios dinámicamente: solo mostramos "local" si NO es nacional
                   const horarios: Array<{ label: string; value: string; pais?: string; tipo?: string }> = [];
 
                   if (!esNacional) {
@@ -295,11 +348,32 @@ export default function DetalleVuelo() {
                   <div className="text-sm text-gray-500 mt-2">Sin promoción disponible</div>
                 )}
               </Card>
+            </section>
 
+            {/* Botón de agregar al carrito */}
+            <section className="flex justify-center mt-8">
+              <AddToCartButton onClick={handleOpenModal}>
+                <span className="flex items- gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  Agregar al carrito de compras
+                </span>
+              </AddToCartButton>
             </section>
           </div>
         </div>
       </div>
+
+      {/* Modal de selección de clase */}
+      <ClassSelectorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectClass={handleSelectClass}
+        flightInfo={{
+          origen: vuelo.origen.ciudad,
+          destino: vuelo.destino.ciudad,
+          precio: vuelo.precio_economica,
+        }}
+      />
     </div>
   );
 }
@@ -338,25 +412,16 @@ function Item({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-/**
- * Props:
- * - label: string
- * - price: number (precio original en COP)
- * - promocion: { descuento: number }  // descuento = 0.2 para 20%
- * - formatearPesos: funcion para formatear números a COP
- */
 function PrecioConDescuento({
   label,
   price,
   promocion,
   formatearPesos,
-  compact = false,
 }: {
   label: string;
   price: number;
   promocion: any;
   formatearPesos: (v: number) => string;
-  compact?: boolean;
 }) {
   const descuento = promocion?.descuento ?? 0;
   const tienePromo = descuento > 0;
@@ -364,7 +429,7 @@ function PrecioConDescuento({
   const ahorro = price - precioConDescuento;
 
   return (
-    <div className={`w-full ${compact ? "py-2" : "py-3"}`}>
+    <div className="w-full py-3">
       <div className="flex items-center justify-between">
         <div className="text-sm font-medium text-gray-700">{label}</div>
         {tienePromo ? (

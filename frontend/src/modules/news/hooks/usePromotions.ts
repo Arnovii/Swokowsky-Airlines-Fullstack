@@ -23,7 +23,7 @@ export const usePromotions = () => {
     const fetchPromotions = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get<unknown[]>('/api/v1/promotions');
+        const response = await axios.get('/news');
         const apiPromotions = Array.isArray(response.data)
           ? response.data.map((p) => {
               const promoObj = p as {
