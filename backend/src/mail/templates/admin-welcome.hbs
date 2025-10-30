@@ -31,21 +31,22 @@
               <td align="center" style="padding:0 56px;">
                 <div style="background:rgba(255,255,255,0.08);border-radius:14px;padding:22px 0;margin:28px 0 0 0;">
                   <span style="font-size:1.08rem;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.5px;font-weight:500;">
-                    Para activar tu cuenta, cambia tu contraseña aquí:
+                    Para activar tu cuenta, inicia sesión para cambiar tu contraseña aquí:
                   </span><br><br>
 
+                  <!-- Contraseña temporal -->
+                  <p style="font-size:1.15rem;color:#e2e8f0;margin:0 0 20px 0;">
+                    Tu contraseña temporal es: <strong>{{temporalPassword}}</strong>
+                  </p>
+
                   <!-- BOTÓN PRINCIPAL -->
-                  <a href="{{resetLink}}" 
+                  <a href="{{loginLink}}" 
                      style="font-size:1.35rem;font-weight:600;color:#ffffff !important;text-decoration:none !important;
                             background-color:#40A7D9 !important;padding:12px 24px;border-radius:8px;margin-top:20px;
                             display:inline-block;transition:background-color 0.3s ease, transform 0.3s ease;">
                     Cambiar Contraseña
                   </a>
                 </div>
-
-                <p style="color:#e2e8f0;font-size:1.12rem;font-style:italic;margin:32px 0 0 0;">
-                  Este enlace expira en 1 hora.
-                </p>
               </td>
             </tr>
 

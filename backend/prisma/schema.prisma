@@ -145,13 +145,13 @@ model ticket {
 model usuario {
   id_usuario            Int                  @id @default(autoincrement())
   tipo_usuario          usuario_tipo_usuario
-  dni                   Int                  @unique  // Cambié de String a Int
+  dni                   Int?                  @unique  // Cambié de String a Int
   nombre                String               @db.VarChar(255)
   apellido              String               @db.VarChar(255)
-  fecha_nacimiento      DateTime             @db.Date
-  nacionalidad          nationalities
-  direccion_facturacion String               @db.VarChar(255)
-  genero                usuario_genero
+  fecha_nacimiento      DateTime?             @db.Date
+  nacionalidad          nationalities?
+  direccion_facturacion String?               @db.VarChar(255)
+  genero                usuario_genero?
   correo                String               @unique @db.VarChar(255)
   username              String               @unique @db.VarChar(255)
   password_bash         String               @db.VarChar(255)
@@ -162,7 +162,7 @@ model usuario {
   tarjeta               tarjeta[]
   ticket                ticket[]
   transacciones         transaccion[]
-  saldo                 Float                @default(0.0)
+  saldo                 Float?                @default(0.0)
   carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
