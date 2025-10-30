@@ -1,8 +1,8 @@
 // ticketService.ts
 // Simulación de llamadas a la API para reservar y comprar tickets
 
-import type { PassengerFormData } from '../components/PassengerForm';
-import type { CartTicket } from '../../../context/types';
+import type { PassengerFormData } from '../../checkout/PassengerForm';
+import type { CartTicket } from '../../carrito/types';
 
 export async function reserveTickets(
   flightId: number,

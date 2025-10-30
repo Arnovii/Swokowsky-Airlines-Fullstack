@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Flight } from '../types/Flight';
+import type { Flight } from '../flightsearch/types/Flight';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import FlightInfo from '../components/FlightInfo';
-import ClassSelector from '../components/ClassSelector';
-import PassengerFormModern from '../components/PassengerForm';
-import type { PassengerFormData } from '../components/PassengerForm';
-import BookingHolderForm from '../components/BookingHolderForm';
-import ReservationSummary from '../components/ReservationSummary';
-import { useCart } from '../../../context/CartContext';
-import { useAuth } from '../../../context/AuthContext';
-import { reserveTickets, buyTickets } from '../services/ticketService';
-// import { FlightService } from '../services/flightService'; // ⏸️ Comentado temporalmente para simulación
+import FlightInfo from './FlightInfo';
+import ClassSelector from './ClassSelector';
+import PassengerFormModern from './PassengerForm';
+import type { PassengerFormData } from './PassengerForm';
+import BookingHolderForm from './BookingHolderForm';
+import ReservationSummary from './ReservationSummary';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { reserveTickets, buyTickets } from '../flightsearch/services/ticketService';
+import { FlightService } from '../flightsearch/services/flightService';
 
 // ================== COMPONENTES DE TOAST MODERNOS ==================
 const SuccessIcon = () => (
@@ -124,121 +124,61 @@ const FlightDetailsPage = () => {
   }, [user]);
 
   useEffect(() => {
-    // Leer parámetros de búsqueda desde la URL con nombres correctos
-    const originCityId = parseInt(searchParams.get('originCityId') || '0', 10);
-    const destinationCityId = parseInt(searchParams.get('destinationCityId') || '0', 10);
-    const departureDate = searchParams.get('departureDate') || '';
-    const returnDate = searchParams.get('returnDate') || '';
-    const roundTrip = searchParams.get('roundTrip') === 'true';
-    const passengers = parseInt(searchParams.get('passengers') || '1', 10);
-
-    //z Validar parámetros requeridos
-    if (!originCityId || !destinationCityId || !departureDate || passengers < 1 || passengers > 5) {
-      setErrorFlight('Faltan parámetros requeridos para buscar el vuelo. Verifica origen, destino, fecha y número de pasajeros.');
+    if (!id) {
+      setErrorFlight('No se proporcionó un ID de vuelo.');
       setLoadingFlight(false);
       return;
     }
-
-    /*
-    // ⏸️ Comentado temporalmente para simulación
-    const searchCriteria = {
-      originCityId,
-      destinationCityId,
-      departureDate,
-      roundTrip,
-      returnDate,
-      passengers,
-    };
-    */
-
     setLoadingFlight(true);
     setErrorFlight(null);
 
-    // 🔄 SIMULACIÓN TEMPORAL PARA DESARROLLO FRONTEND
-    // Comentamos la llamada real al backend y usamos datos simulados
-    setTimeout(() => {
-      // Simular diferentes rutas basadas en los parámetros
-      const isRoundTrip = roundTrip;
-      const hasReturnDate = returnDate !== '';
-      
-      const mockFlight: Flight = {
-        idVuelo: parseInt(id || '1', 10), // Usamos el ID de la URL o 1 por defecto
-        estado: 'Programado',
-        modeloAeronave: 'Boeing 737',
-        capacidadAeronave: 180,
-        precioEconomica: 250000,
-        precioPrimeraClase: 450000,
-        salidaProgramadaUtc: departureDate + 'T06:00:00Z',
-        llegadaProgramadaUtc: departureDate + 'T08:30:00Z',
-        availableSeats: 150,
-        durationMinutes: 150,
-        origen: {
-          nombre: originCityId === 3 ? 'Aeropuerto El Dorado' : 'Aeropuerto Internacional',
-          codigoIata: originCityId === 3 ? 'BOG' : 'CTG',
-          ciudad: originCityId === 3 ? 'Bogotá' : 'Cartagena',
-          pais: 'Colombia'
-        },
-        destino: {
-          nombre: destinationCityId === 5 ? 'Aeropuerto Ernesto Cortissoz' : 'Aeropuerto Las Flores',
-          codigoIata: destinationCityId === 5 ? 'BAQ' : 'EOH',
-          ciudad: destinationCityId === 5 ? 'Barranquilla' : 'Medellín',
-          pais: 'Colombia'
-        },
-        availableClasses: ['economica', 'primera_clase'],
-        price: 250000,
-        priceFirstClass: 450000,
-        aircraftModel: 'Boeing 737',
-        isInternational: false,
-        promocion: isRoundTrip && hasReturnDate ? {
-          nombre: 'Ida y Vuelta',
-          descuento: 15,
-          fechaInicio: departureDate,
-          fechaFin: returnDate
-        } : undefined
-      };
+    type Tarifa = { clase: string; precio_base: number };
 
-      setFlight(mockFlight);
-      setLoadingFlight(false);
-    }, 1000); // Simula tiempo de carga
-
-    /*
-    // � PARA REACTIVAR LA CONEXIÓN REAL AL BACKEND:
-    // 1. Descomenta el import: import { FlightService } from '../services/flightService';
-    // 2. Descomenta este bloque y comenta la simulación de arriba
-    // 3. Asegúrate de que el backend devuelva idVuelo correctamente
-    
-    FlightService.searchFlights(searchCriteria)
-      .then((res: { outbound?: Flight[]; inbound?: Flight[] }) => {
-        let found: Flight | null = null;
-        // Buscar solo por idVuelo numérico
-        if (res.outbound && Array.isArray(res.outbound)) {
-          found = res.outbound.find((f: Flight) => f.idVuelo && String(f.idVuelo) === String(id)) || null;
-        }
-        if (!found && res.inbound && Array.isArray(res.inbound)) {
-          found = res.inbound.find((f: Flight) => f.idVuelo && String(f.idVuelo) === String(id)) || null;
-        }
-        // Si no se encuentra, mostrar el primer vuelo disponible
-        if (!found) {
-          found = (res.outbound && res.outbound.length > 0) ? res.outbound[0] : (res.inbound && res.inbound.length > 0 ? res.inbound[0] : null);
-        }
-        
-        // Validar que el vuelo encontrado tenga idVuelo
-        if (found && !found.idVuelo) {
-          console.warn('Vuelo encontrado pero sin idVuelo válido:', found);
-          setErrorFlight('El vuelo encontrado no tiene un ID válido.');
-          setFlight(null);
-          return;
-        }
-        
-        setFlight(found);
+    FlightService.getFlightById(Number(id))
+      .then((data) => {
+        const tarifas: Tarifa[] = Array.isArray(data.tarifa) ? data.tarifa : [];
+        const flightData: Flight = {
+          idVuelo: data.id_vuelo || data.id || null,
+          estado: data.estado || '',
+          modeloAeronave: data.aeronave?.modelo || '',
+          capacidadAeronave: data.aeronave?.capacidad || 0,
+          precioEconomica: tarifas.find((t) => t.clase === 'economica')?.precio_base || 0,
+          precioPrimeraClase: tarifas.find((t) => t.clase === 'primera_clase')?.precio_base || 0,
+          salidaProgramadaUtc: data.salida_programada_utc || '',
+          llegadaProgramadaUtc: data.llegada_programada_utc || '',
+          availableSeats: data.available_seats || 0,
+          durationMinutes: 0, // Puedes calcularlo si tienes fechas
+          origen: {
+            nombre: data.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.nombre || '',
+            codigoIata: data.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || '',
+            ciudad: '', // Puedes mapear ciudad si está disponible
+            pais: '',   // Puedes mapear país si está disponible
+          },
+          destino: {
+            nombre: data.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.nombre || '',
+            codigoIata: data.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || '',
+            ciudad: '', // Puedes mapear ciudad si está disponible
+            pais: '',   // Puedes mapear país si está disponible
+          },
+          availableClasses: tarifas.map((t) => t.clase) || [],
+          price: tarifas.find((t) => t.clase === 'economica')?.precio_base || 0,
+          priceFirstClass: tarifas.find((t) => t.clase === 'primera_clase')?.precio_base || 0,
+          aircraftModel: data.aeronave?.modelo || '',
+          isInternational: false, // Puedes calcularlo si tienes info de países
+          promocion: data.promocion ? {
+            nombre: data.promocion.nombre || '',
+            descuento: data.promocion.descuento || 0,
+            fechaInicio: data.promocion.fecha_inicio || '',
+            fechaFin: data.promocion.fecha_fin || '',
+          } : undefined,
+        };
+        setFlight(flightData);
       })
-      .catch((err: Error) => {
-        console.error('Error completo:', err);
-        setErrorFlight('Error al cargar vuelo: ' + (err?.message || 'Error desconocido'));
+      .catch((err) => {
+        setErrorFlight('Error al cargar vuelo: ' + (err?.response?.data?.message || err?.message || 'Error desconocido'));
       })
       .finally(() => setLoadingFlight(false));
-    */
-  }, [id, searchParams]);
+  }, [id]);
 
   // Obtener número de pasajeros desde query param
   const passengerCount = parseInt(searchParams.get('passengers') || '1', 10);

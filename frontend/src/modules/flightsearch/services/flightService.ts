@@ -1,3 +1,13 @@
+// Tipos explícitos para Aeropuerto y Metadata
+export interface Aeropuerto {
+  id_aeropuerto: number;
+  id_ciudadFK: number;
+  nombre: string;
+  codigo_iata: string;
+}
+
+// Puedes ajustar este tipo si conoces la estructura real de metadata
+type Metadata = Record<string, unknown>;
 import api from '@/api/axios';
 
 export interface NormalizedFlight {
@@ -20,7 +30,28 @@ export interface NormalizedFlight {
   } | null;
 }
 
-function normalizeFlightData(flight: any): NormalizedFlight {
+interface RawFlight {
+  id_vuelo?: number;
+  precio_economica?: number;
+  precio_base?: number;
+  precio_primera_clase?: number;
+  fecha_salida_programada?: string;
+  hora_salida_utc?: string;
+  fecha_llegada_programada?: string;
+  hora_llegada_utc?: string;
+  available_seats?: number;
+  origen?: Aeropuerto;
+  destino?: Aeropuerto;
+  modelo_aeronave?: string;
+  clases_disponibles?: string[];
+  promocion?: {
+    nombre?: string;
+    descuento?: number;
+    cupoRestante?: number;
+  } | null;
+}
+
+function normalizeFlightData(flight: RawFlight): NormalizedFlight {
   console.log('[normalizeFlightData] vuelo recibido:', flight); // Depuración de id_vuelo
   const departureDate = new Date(`${flight.fecha_salida_programada}T${flight.hora_salida_utc}:00Z`);
   const arrivalDate = new Date(`${flight.fecha_llegada_programada}T${flight.hora_llegada_utc}:00Z`);
@@ -57,11 +88,11 @@ export interface FlightSearchResponse {
   type: 'oneway' | 'roundtrip';
   outbound: NormalizedFlight[];
   inbound: NormalizedFlight[];
-  metadata: Record<string, any>;
+  metadata: Metadata;
 }
 
 export class FlightService {
-  static async searchFlights(searchCriteria: Record<string, any>, options: { signal?: AbortSignal } = {}): Promise<FlightSearchResponse> {
+  static async searchFlights(searchCriteria: Record<string, unknown>, options: { signal?: AbortSignal } = {}): Promise<FlightSearchResponse> {
     try {
       console.log('[FlightService] searchCriteria enviado:', searchCriteria); // <-- Verifica los datos enviados
       const response = await api.post('/flights/search', searchCriteria, {
@@ -75,10 +106,10 @@ export class FlightService {
       let inboundFlights: NormalizedFlight[] = [];
 
       if (data.type === 'roundtrip') {
-        outboundFlights = (data.outbound || []).map(normalizeFlightData);
-        inboundFlights = (data.inbound || []).map(normalizeFlightData);
+        outboundFlights = (data.outbound || []).map((f: RawFlight) => normalizeFlightData(f));
+        inboundFlights = (data.inbound || []).map((f: RawFlight) => normalizeFlightData(f));
       } else if (data.type === 'oneway') {
-        outboundFlights = (data.results || []).map(normalizeFlightData);
+        outboundFlights = (data.results || []).map((f: RawFlight) => normalizeFlightData(f));
       }
 
       return {
@@ -88,13 +119,24 @@ export class FlightService {
         metadata: data.metadata || {},
       };
 
-    } catch (error: any) {
-      if (error.name === 'CanceledError') {
+    } catch (error) {
+      if ((error as { name?: string }).name === 'CanceledError') {
         console.log('Request canceled');
         return { type: 'oneway', outbound: [], inbound: [], metadata: {} };
       }
 
       console.error('API Error in searchFlights:', error);
+      throw error;
+    }
+  }
+
+  // Nueva funcionalidad: obtener detalle de vuelo por ID
+  static async getFlightById(id: number) {
+    try {
+      const response = await api.get(`/flights/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('API Error in getFlightById:', error);
       throw error;
     }
   }
