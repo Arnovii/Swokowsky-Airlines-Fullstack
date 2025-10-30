@@ -128,11 +128,17 @@ const FeaturedNews: React.FC = () => {
   };
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % Math.ceil(news.length / 6));
+    setCurrentSlide((prev) => {
+      const totalSlides = Math.ceil(news.length / 6);
+      return (prev + 1) % totalSlides;
+    });
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + Math.ceil(news.length / 6)) % Math.ceil(news.length / 6));
+    setCurrentSlide((prev) => {
+      const totalSlides = Math.ceil(news.length / 6);
+      return (prev - 1 + totalSlides) % totalSlides;
+    });
   };
 
   const getImageUrl = (article: NewsArticle) => {
@@ -228,7 +234,7 @@ const FeaturedNews: React.FC = () => {
         {/* Grid de Noticias */}
         <div className="relative">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {news.slice(currentSlide * 6, (currentSlide * 6) + 6).map((article) => (
+            {news.slice(currentSlide * 6, (currentSlide + 1) * 6).map((article) => (
               <article
                 key={article.id || article.id_noticia}
                 className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
@@ -339,8 +345,9 @@ const FeaturedNews: React.FC = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
                   />
                 ))}
               </div>
