@@ -1,42 +1,20 @@
-import React, { useState } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useNews } from "../hooks/useNews";
-import { usePromotions } from "../hooks/usePromotions";
-import { useFlights } from "../hooks/useFlights";
 import type { Article } from '../services/newsService';
 import HeroCarousel from "../components/HeroCarousel";
-import NewsDetailModal from "../components/NewsDetailModal";
-import FeaturedNews from "../../home/components/FeaturedNews";
+import NewsGrid from "../components/NewsGrid";
 
 export default function NewsPage() {
-  const { articles, featured, isLoading: newsLoading, error: newsError } = useNews();
-  const { promotions, isLoading: promotionsLoading, error: promotionsError } = usePromotions();
-  const { flights, isLoading: flightsLoading, error: flightsError } = useFlights();
-  
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Simulación del estado de autenticación
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { articles, featured, isLoading, error } = useNews();
+  const navigate = useNavigate();
 
   const handleReadMore = (article: Article) => {
-    setSelectedArticle(article);
-    setIsModalOpen(true);
+    // Navegar a la página de detalle del vuelo
+    navigate(`/noticias/vuelo/${article.id}`);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedArticle(null);
-  };
-
-  // ✅ AGREGADO: Log para debugging (puedes quitarlo después)
-  console.log('📊 NewsPage - Estado actual:', {
-    articlesCount: articles?.length || 0,
-    featuredCount: featured?.length || 0,
-    isLoading: newsLoading,
-    error: newsError
-  });
-
-  if (newsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -47,10 +25,10 @@ export default function NewsPage() {
     );
   }
 
-  if (newsError) {
+  if (error) {
     return (
       <div className="text-center py-20 text-red-500 font-sans">
-        Error al cargar el contenido: {newsError}
+        Error al cargar el contenido: {error}
       </div>
     );
   }
@@ -58,45 +36,20 @@ export default function NewsPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <main className="container mx-auto px-4 py-8 pt-28">
-        {/* ✅ CORREGIDO: Mostrar todas las noticias si no hay destacadas */}
-        {Array.isArray(articles) && articles.length > 0 ? (
-          <>
-            {/* Si hay destacadas, mostrar el carrusel, sino mostrar las primeras 3 */}
-            <HeroCarousel 
-              items={featured.length > 0 ? featured : articles.slice(0, 3)} 
-              onCallToAction={handleReadMore} 
-            />
-            
-            {/* Noticias recientes */}
-            <FeaturedNews 
-              items={featured.length > 0 ? featured : articles} 
-              onCallToAction={handleReadMore}
-            />
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              No hay vuelos disponibles en este momento
-            </h3>
-            <p className="text-gray-500">
-              Las promociones han finalizado o los vuelos están próximos a salir.
-            </p>
-          </div>
+        {/* Carrusel Hero con noticias destacadas */}
+        {featured.length > 0 && (
+          <HeroCarousel 
+            items={featured} 
+            onCallToAction={handleReadMore} 
+          />
         )}
+        
+        {/* Grid de todas las noticias */}
+        <NewsGrid 
+          items={articles} 
+          onCallToAction={handleReadMore}
+        />
       </main>
-
-      {/* Modal para ver el detalle de la noticia */}
-      <NewsDetailModal
-        article={selectedArticle}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        isAuth={isAuthenticated}
-      />
     </div>
   );
 }

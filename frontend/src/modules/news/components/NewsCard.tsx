@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Calendar, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, Eye, ArrowRight } from 'lucide-react';
 import type { Article } from '../services/newsService';
 
 interface NewsCardProps {
@@ -9,71 +8,107 @@ interface NewsCardProps {
 }
 
 // Helper para formatear la fecha
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
+const formatDate = (dateString?: string) => {
+  if (!dateString) return new Date().toLocaleDateString('es-CO', {
     year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  return new Date(dateString).toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 };
 
-// Helper para truncar el texto
-const truncateText = (text: string, maxLength: number) => {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+// Helper para formatear las vistas
+const formatViews = (views?: number) => {
+  if (!views) return '0';
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
+  if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
+  return views.toString();
 };
 
 export default function NewsCard({ article, onReadMore }: NewsCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 flex flex-col">
+    <article className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
       {/* Imagen */}
-      <div className="relative h-48 bg-gradient-to-br from-gray-600 to-gray-800">
-        <img 
-          className="h-full w-full object-cover" 
-          src={article.imageUrl} 
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={article.imageUrl}
           alt={article.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
-            // Fallback si la imagen no carga - mantener el gradiente de fondo
-            e.currentTarget.style.opacity = '0';
+            (e.target as HTMLImageElement).src = '/default-news-image.jpg';
           }}
         />
         
         {/* Badge de noticia */}
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-xs font-bold text-gray-800 font-sans">NOTICIA</span>
-          </div>
+        <div className="absolute top-4 left-4">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg bg-[#0e254d]">
+            General
+          </span>
         </div>
+        
+        {/* Badge de destacada (si aplica) */}
+        {article.isFeatured && (
+          <div className="absolute top-4 right-4">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-yellow-500 text-white">
+              ⭐ Destacada
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Contenido */}
-      <div className="p-6 flex flex-col flex-grow">
-        {/* Fecha */}
-        <div className="flex items-center gap-2 text-gray-500 mb-3">
-          <Calendar size={14} />
-          <span className="text-sm font-sans">{formatDate(article.publishDate)}</span>
-        </div>
-
-        {/* Título */}
-        <h3 className="font-bold text-xl mb-3 text-[#081225] font-sans leading-tight">
+      <div className="p-6">
+        <h3 className="text-xl font-bold text-[#081225] mb-3 line-clamp-2 group-hover:text-[#0e254d] transition-colors">
           {article.title}
         </h3>
 
-        {/* Resumen */}
-        <p className="text-gray-600 text-base mb-6 flex-grow font-sans leading-relaxed">
-          {truncateText(article.summary, 140)}
+        <p className="text-gray-600 mb-4 line-clamp-3">
+          {article.summary}
         </p>
 
-        {/* Botón */}
-        <button 
-          onClick={() => onReadMore(article)}
-          className="group mt-auto w-full bg-gradient-to-r from-[#081225] to-[#1a2332] text-white font-bold py-3 px-4 rounded-lg hover:from-[#1a2332] hover:to-[#081225] transition-all duration-200 font-sans shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-        >
-          Ver detalle
-          <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-        </button>
+        {/* Meta información */}
+        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-1">
+              <Calendar size={14} />
+              <span>{formatDate()}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock size={14} />
+              <span>2 min</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <Eye size={14} />
+            <span>{formatViews(0)}</span>
+          </div>
+        </div>
+
+        {/* Autor */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <span className="text-xs font-bold text-gray-600">S</span>
+            </div>
+            <span className="text-sm font-medium text-gray-700">
+              Swokowsky Airlines
+            </span>
+          </div>
+
+          <button
+            onClick={() => onReadMore(article)}
+            className="inline-flex items-center gap-1 text-[#0e254d] hover:text-[#081225] font-medium transition-colors group"
+          >
+            <span>Leer más</span>
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }

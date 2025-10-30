@@ -1,7 +1,7 @@
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
 import { useFlightSearch } from "@/modules/home/hooks/useFlightSearch";
-
+import { TimeFilter } from "@/modules/home/components/TimeFilter";
 // ================== ICONOS SVG ==================
 const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
   <svg
@@ -127,60 +127,60 @@ const ClockIcon = () => (
   </svg>
 );
 
-// ================== CONSTANTES ==================
-const FRANJAS_HORARIAS = [
-  { id: "manana", label: "Mañana", rango: "6:00 - 11:59" },
-  { id: "tarde", label: "Tarde", rango: "12:00 - 17:59" },
-  { id: "noche", label: "Noche", rango: "18:00 - 5:59" }
-];
+
 
 // ================== COMPONENTE PRINCIPAL ==================
 export default function FilterSearchBar() {
   const {
-    modo,
-    origen,
-    destino,
-    ida,
-    vuelta,
-    pasajeros,
-    mensaje,
-    loading,
-    ciudadesLoaded,
-    camposInvalidos,
-    sugerenciasOrigen,
-    sugerenciasDestino,
-    mostrarCalendario,
-    mostrarPasajeros,
-    origenBloqueado,
-    destinoBloqueado,
-    totalPasajeros,
-    precioMin,
-    precioMax,
-    horarioIda,
-    horarioVuelta,
-    mostrarHorarios,
-    origenRef,
-    destinoRef,
-    setModo,
-    setMostrarCalendario,
-    setMostrarPasajeros,
-    setMostrarHorarios,
-    filtrarOrigen,
-    filtrarDestino,
-    seleccionarOrigen,
-    seleccionarDestino,
-    resetearOrigen,
-    resetearDestino,
-    cambiarPasajeros,
-    actualizarFechas,
-    validarYBuscarVuelo,
-    limpiarErrorCampo,
-    formatearPrecio,
-    handlePrecioChange,
-    toggleHorario,
-    setPrecioMin,
-    setPrecioMax,
-  } = useFlightSearch();
+  modo,
+  origen,
+  destino,
+  ida,
+  vuelta,
+  pasajeros,
+  mensaje,
+  loading,
+  ciudadesLoaded,
+  camposInvalidos,
+  sugerenciasOrigen,
+  sugerenciasDestino,
+  mostrarCalendario,
+  mostrarPasajeros,
+  origenBloqueado,
+  destinoBloqueado,
+  totalPasajeros,
+  precioMin,
+  precioMax,
+  horaIdaInicio,           
+  horaIdaFin,             
+  horaVueltaInicio,        
+  horaVueltaFin,          
+  mostrarHorarios,
+  origenRef,
+  destinoRef,
+  setModo,
+  setMostrarCalendario,
+  setMostrarPasajeros,
+  setMostrarHorarios,
+  filtrarOrigen,
+  filtrarDestino,
+  seleccionarOrigen,
+  seleccionarDestino,
+  resetearOrigen,
+  resetearDestino,
+  cambiarPasajeros,
+  actualizarFechas,
+  validarYBuscarVuelo,
+  limpiarErrorCampo,
+  formatearPrecio,
+  handlePrecioChange,
+  setHoraIdaInicio,        
+  setHoraIdaFin,           
+  setHoraVueltaInicio,   
+  setHoraVueltaFin,       
+  setPrecioMin,
+  setPrecioMax,
+} = useFlightSearch();
 
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
@@ -244,87 +244,21 @@ export default function FilterSearchBar() {
             </div>
 
             {/* Filtro de Horario */}
-            <div className="flex flex-col relative">
-              <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
-                Horario preferido
-              </label>
-              <div
-                onClick={() => setMostrarHorarios(!mostrarHorarios)}
-                className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-[58px]"
-              >
-                <span className="text-base font-sans text-gray-900">
-                  {horarioIda.length > 0 || horarioVuelta.length > 0
-                    ? `${horarioIda.length + horarioVuelta.length} franja${horarioIda.length + horarioVuelta.length > 1 ? 's' : ''} seleccionada${horarioIda.length + horarioVuelta.length > 1 ? 's' : ''}`
-                    : "Seleccionar horarios"}
-                </span>
-                <ChevronDownIcon
-                  className={`transition-transform ${mostrarHorarios ? "rotate-180" : ""}`}
-                />
-              </div>
+            <TimeFilter
+              modo={modo}
+              mostrarHorarios={mostrarHorarios}
+              setMostrarHorarios={setMostrarHorarios}
+              horaIdaInicio={horaIdaInicio}
+              horaIdaFin={horaIdaFin}
+              horaVueltaInicio={horaVueltaInicio}
+              horaVueltaFin={horaVueltaFin}
+              setHoraIdaInicio={setHoraIdaInicio}
+              setHoraIdaFin={setHoraIdaFin}
+              setHoraVueltaInicio={setHoraVueltaInicio}
+              setHoraVueltaFin={setHoraVueltaFin}
+            />
 
-              {mostrarHorarios && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-full">
-                  {/* Horarios de Ida */}
-                  <div className="mb-4">
-                    <div className="text-sm font-semibold text-gray-900 mb-3">Vuelo de Ida</div>
-                    <div className="space-y-2">
-                      {FRANJAS_HORARIAS.map(franja => (
-                        <label
-                          key={`ida-${franja.id}`}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={horarioIda.includes(franja.id)}
-                            onChange={() => toggleHorario("ida", franja.id)}
-                            className="w-4 h-4 text-[#0e254d] rounded"
-                          />
-                          <div className="flex-1">
-                            <div className="text-sm font-sans text-gray-900">{franja.label}</div>
-                            <div className="text-xs text-gray-500">{franja.rango}</div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Horarios de Vuelta */}
-                  {modo === "ida_vuelta" && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="text-sm font-semibold text-gray-900 mb-3">Vuelo de Vuelta</div>
-                      <div className="space-y-2">
-                        {FRANJAS_HORARIAS.map(franja => (
-                          <label
-                            key={`vuelta-${franja.id}`}
-                            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={horarioVuelta.includes(franja.id)}
-                              onChange={() => toggleHorario("vuelta", franja.id)}
-                              className="w-4 h-4 text-[#0e254d] rounded"
-                            />
-                            <div className="flex-1">
-                              <div className="text-sm font-sans text-gray-900">{franja.label}</div>
-                              <div className="text-xs text-gray-500">{franja.rango}</div>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => setMostrarHorarios(false)}
-                    className="w-full mt-4 py-2 bg-[#0e254d] text-white rounded-lg text-sm font-sans hover:bg-[#0a1a3a] transition-colors"
-                  >
-                    Aplicar
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
-
           {/* Formulario Principal */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
             {/* Origen */}

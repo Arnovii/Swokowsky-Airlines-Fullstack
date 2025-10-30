@@ -265,7 +265,15 @@ export const CrearVueloPage: React.FC = () => {
         nuevosErrores.promocion_fin = "La fecha de fin es obligatoria";
         showErrorToast('Campo obligatorio', 'La fecha de fin de la promoción es obligatoria');
       }
+
+      if (form.promocion_fin && salidaDate) {
+      const finPromo = new Date(form.promocion_fin);
+      if (finPromo > salidaDate) {
+        nuevosErrores.promocion_fin = "La fecha de fin de la promoción no puede ser posterior a la salida del vuelo";
+        showErrorToast('Error de validación', 'La fecha de fin de la promoción no puede ser posterior a la salida del vuelo');
+      }
     }
+  }
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
   };
