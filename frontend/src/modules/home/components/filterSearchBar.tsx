@@ -3,24 +3,6 @@ import CalendarioRango from "@/modules/home/components/CalendarioRango";
 import { useFlightSearch } from "@/modules/home/hooks/useFlightSearch";
 
 // ================== ICONOS SVG ==================
-const PlaneDepartureIcon = () => (
-  <svg
-    className="w-6 h-6 text-[#0e254d]"
-    aria-hidden="true"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M12 18.5A2.5 2.5 0 0 1 7.5 20a2.5 2.5 0 0 1-2.5 2.5M12 18.5A2.5 2.5 0 0 0 16.5 20a2.5 2.5 0 0 0 2.5 2.5M8 12h8m-8 3h8m-8-6h8M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
-    />
-  </svg>
-);
-
 const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
   <svg
     className={`w-5 h-5 text-gray-400 ${className}`}
@@ -109,6 +91,49 @@ const PlusIcon = () => (
   </svg>
 );
 
+const DollarIcon = () => (
+  <svg
+    className="w-5 h-5 text-[#0e254d]"
+    aria-hidden="true"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 6v13m0-13c-2.8-.8-4.7-1-6-1v13c1.3 0 3.2.2 6 1m0-13c2.8-.8 4.7-1 6-1v13c-1.3 0-3.2.2-6 1"
+    />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg
+    className="w-5 h-5 text-[#0e254d]"
+    aria-hidden="true"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+// ================== CONSTANTES ==================
+const FRANJAS_HORARIAS = [
+  { id: "manana", label: "Mañana", rango: "6:00 - 11:59" },
+  { id: "tarde", label: "Tarde", rango: "12:00 - 17:59" },
+  { id: "noche", label: "Noche", rango: "18:00 - 5:59" }
+];
+
 // ================== COMPONENTE PRINCIPAL ==================
 export default function FilterSearchBar() {
   const {
@@ -129,11 +154,17 @@ export default function FilterSearchBar() {
     origenBloqueado,
     destinoBloqueado,
     totalPasajeros,
+    precioMin,
+    precioMax,
+    horarioIda,
+    horarioVuelta,
+    mostrarHorarios,
     origenRef,
     destinoRef,
     setModo,
     setMostrarCalendario,
     setMostrarPasajeros,
+    setMostrarHorarios,
     filtrarOrigen,
     filtrarDestino,
     seleccionarOrigen,
@@ -144,6 +175,11 @@ export default function FilterSearchBar() {
     actualizarFechas,
     validarYBuscarVuelo,
     limpiarErrorCampo,
+    formatearPrecio,
+    handlePrecioChange,
+    toggleHorario,
+    setPrecioMin,
+    setPrecioMax,
   } = useFlightSearch();
 
   return (
@@ -176,7 +212,120 @@ export default function FilterSearchBar() {
             </button>
           </div>
 
-          {/* Formulario */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
+            {/* Filtro de Precio */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                Rango de precio
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Mínimo</div>
+                  <input
+                    type="text"
+                    placeholder="0"
+                    value={formatearPrecio(precioMin)}
+                    onChange={(e) => handlePrecioChange(setPrecioMin, e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
+                  />
+                </div>
+                <div className="flex items-center text-gray-400">-</div>
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Máximo</div>
+                  <input
+                    type="text"
+                    placeholder="Sin límite"
+                    value={formatearPrecio(precioMax)}
+                    onChange={(e) => handlePrecioChange(setPrecioMax, e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Filtro de Horario */}
+            <div className="flex flex-col relative">
+              <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                Horario preferido
+              </label>
+              <div
+                onClick={() => setMostrarHorarios(!mostrarHorarios)}
+                className="flex items-center justify-between border border-gray-300 bg-white rounded-xl p-3 cursor-pointer shadow-sm h-[58px]"
+              >
+                <span className="text-base font-sans text-gray-900">
+                  {horarioIda.length > 0 || horarioVuelta.length > 0
+                    ? `${horarioIda.length + horarioVuelta.length} franja${horarioIda.length + horarioVuelta.length > 1 ? 's' : ''} seleccionada${horarioIda.length + horarioVuelta.length > 1 ? 's' : ''}`
+                    : "Seleccionar horarios"}
+                </span>
+                <ChevronDownIcon
+                  className={`transition-transform ${mostrarHorarios ? "rotate-180" : ""}`}
+                />
+              </div>
+
+              {mostrarHorarios && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-full">
+                  {/* Horarios de Ida */}
+                  <div className="mb-4">
+                    <div className="text-sm font-semibold text-gray-900 mb-3">Vuelo de Ida</div>
+                    <div className="space-y-2">
+                      {FRANJAS_HORARIAS.map(franja => (
+                        <label
+                          key={`ida-${franja.id}`}
+                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={horarioIda.includes(franja.id)}
+                            onChange={() => toggleHorario("ida", franja.id)}
+                            className="w-4 h-4 text-[#0e254d] rounded"
+                          />
+                          <div className="flex-1">
+                            <div className="text-sm font-sans text-gray-900">{franja.label}</div>
+                            <div className="text-xs text-gray-500">{franja.rango}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Horarios de Vuelta */}
+                  {modo === "ida_vuelta" && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="text-sm font-semibold text-gray-900 mb-3">Vuelo de Vuelta</div>
+                      <div className="space-y-2">
+                        {FRANJAS_HORARIAS.map(franja => (
+                          <label
+                            key={`vuelta-${franja.id}`}
+                            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={horarioVuelta.includes(franja.id)}
+                              onChange={() => toggleHorario("vuelta", franja.id)}
+                              className="w-4 h-4 text-[#0e254d] rounded"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-sans text-gray-900">{franja.label}</div>
+                              <div className="text-xs text-gray-500">{franja.rango}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setMostrarHorarios(false)}
+                    className="w-full mt-4 py-2 bg-[#0e254d] text-white rounded-lg text-sm font-sans hover:bg-[#0a1a3a] transition-colors"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Formulario Principal */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
             {/* Origen */}
             <div className="flex flex-col relative" ref={origenRef}>

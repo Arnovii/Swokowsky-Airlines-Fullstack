@@ -1,4 +1,4 @@
-import { asiento, PrismaClient, ticket } from "@prisma/client";
+import { PrismaClient, ticket } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -21,10 +21,11 @@ async function main() {
   // GMTs
   await prisma.gmt.createMany({
     data: [
-      { id_gmt: 1, name: "GMT-5", offset: -5 }, // Colombia, Estados Unidos (Costa Este: NY, Miami)
-      { id_gmt: 2, name: "GMT+1", offset: 1 },  // España
-      { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido
-      { id_gmt: 4, name: "GMT-3", offset: -3 },  // Argentina
+      { id_gmt: 1, name: "GMT-5", offset: -5 }, // Colombia (COT)
+      { id_gmt: 2, name: "GMT+1", offset: 1 },  // España (CET / invierno)
+      { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido (GMT / invierno)
+      { id_gmt: 4, name: "GMT-3", offset: -3 }, // Argentina (ART)
+      { id_gmt: 5, name: "GMT-4", offset: -4 }, // Estados Unidos - Este (EDT, p.ej. durante DST)
       // GMT-6 (México) eliminado intencionalmente
     ],
     skipDuplicates: true,
@@ -65,11 +66,11 @@ async function main() {
       { id_ciudad: 30, id_paisFK: 1, id_gmtFK: 1, nombre: "Leticia", codigo: "LET" },
 
       // --- Ciudades Internacionales ---
-      { id_ciudad: 31, id_paisFK: 2, id_gmtFK: 2, nombre: "Madrid", codigo: "MAD" }, // España, GMT+1
-      { id_ciudad: 32, id_paisFK: 3, id_gmtFK: 3, nombre: "Londres", codigo: "LHR" }, // Reino Unido, GMT+0
-      { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 1, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-5
+      { id_ciudad: 31, id_paisFK: 2, id_gmtFK: 2, nombre: "Madrid", codigo: "MAD" }, // España, GMT+1 (CET en invierno)
+      { id_ciudad: 32, id_paisFK: 3, id_gmtFK: 3, nombre: "Londres", codigo: "LHR" }, // Reino Unido, GMT+0 (invierno)
+      { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 5, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-4 (EDT — DST)
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
-      { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 1, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-5
+      { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 5, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-4 (EDT — DST)
       // Ciudad de México (id_ciudad: 36) eliminada intencionalmente
     ],
     skipDuplicates: true,
@@ -120,29 +121,29 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Aeronaves (corregidas para que la suma de configuracion_asientos coincida con capacidad)
+  // Aeronaves
   await prisma.aeronave.createMany({
     data: [
-      { id_aeronave: 1, modelo: "Airbus A320", capacidad: 180 },
-      { id_aeronave: 2, modelo: "Boeing 787", capacidad: 270 },
-      { id_aeronave: 3, modelo: "Embraer E190", capacidad: 100 },
+      { id_aeronave: 1, modelo: "Airbus A320" },
+      { id_aeronave: 2, modelo: "Boeing 787" },
+      { id_aeronave: 3, modelo: "Embraer E190" },
     ],
     skipDuplicates: true,
   });
 
-  // Configuración de asientos (sumas = capacidad)
+  // Configuración de asientos
   await prisma.configuracion_asientos.createMany({
     data: [
-      // A320
-      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 162 },
+      // A320 | 30 asientos -> primeras 18, economica 12
+      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 12  },
       { id_configuracion: 2, id_aeronaveFK: 1, clase: "primera_clase", cantidad: 18 },
 
-      // 787
-      { id_configuracion: 3, id_aeronaveFK: 2, clase: "economica", cantidad: 240 },
+      // 787 | 50 asientos -> primeras 30, economica 20
+      { id_configuracion: 3, id_aeronaveFK: 2, clase: "economica", cantidad: 20 },
       { id_configuracion: 4, id_aeronaveFK: 2, clase: "primera_clase", cantidad: 30 },
 
-      // E190
-      { id_configuracion: 5, id_aeronaveFK: 3, clase: "economica", cantidad: 90 },
+      // E190 | 30 asientos -> primeras 10, economica 20
+      { id_configuracion: 5, id_aeronaveFK: 3, clase: "economica", cantidad: 20 },
       { id_configuracion: 6, id_aeronaveFK: 3, clase: "primera_clase", cantidad: 10 },
     ],
     skipDuplicates: true,
@@ -254,19 +255,19 @@ async function main() {
   await prisma.tarifa.createMany({
     data: [
       // vuelos 1..5,7
-      { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 480000 },     
-      { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 1400000 },  
-      { id_tarifa: 3, id_vueloFK: 2, clase: "economica", precio_base: 1800000 },    
-      { id_tarifa: 4, id_vueloFK: 2, clase: "primera_clase", precio_base: 6000000 },  
-      { id_tarifa: 5, id_vueloFK: 3, clase: "economica", precio_base: 320000 },     
-      { id_tarifa: 6, id_vueloFK: 3, clase: "primera_clase", precio_base: 880000 },   
-      { id_tarifa: 7, id_vueloFK: 4, clase: "economica", precio_base: 600000 },     
-      { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 1600000 },  
-      { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 2000000 },    
-      { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 6800000 }, 
+      { id_tarifa: 1, id_vueloFK: 1, clase: "economica", precio_base: 480000 },
+      { id_tarifa: 2, id_vueloFK: 1, clase: "primera_clase", precio_base: 1400000 },
+      { id_tarifa: 3, id_vueloFK: 2, clase: "economica", precio_base: 1800000 },
+      { id_tarifa: 4, id_vueloFK: 2, clase: "primera_clase", precio_base: 6000000 },
+      { id_tarifa: 5, id_vueloFK: 3, clase: "economica", precio_base: 320000 },
+      { id_tarifa: 6, id_vueloFK: 3, clase: "primera_clase", precio_base: 880000 },
+      { id_tarifa: 7, id_vueloFK: 4, clase: "economica", precio_base: 600000 },
+      { id_tarifa: 8, id_vueloFK: 4, clase: "primera_clase", precio_base: 1600000 },
+      { id_tarifa: 9, id_vueloFK: 5, clase: "economica", precio_base: 2000000 },
+      { id_tarifa: 10, id_vueloFK: 5, clase: "primera_clase", precio_base: 6800000 },
       // tarifas para vuelo 6 y 8 (Ciudad de México) eliminadas intencionalmente
-      { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 360000 },     
-      { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 1200000 },  
+      { id_tarifa: 13, id_vueloFK: 7, clase: "economica", precio_base: 360000 },
+      { id_tarifa: 14, id_vueloFK: 7, clase: "primera_clase", precio_base: 1200000 },
     ],
     skipDuplicates: true,
   });
@@ -337,73 +338,92 @@ async function main() {
     data: [
       {
         id_usuario: 1,
-        tipo_usuario: "admin",
+        tipo_usuario: "root",
         dni: 90000001,
-        nombre: "Admin",
+        nombre: "Root",
         apellido: "General",
         fecha_nacimiento: new Date("1992-07-12"),
         nacionalidad: "Colombia",
         direccion_facturacion: "Av 5 #30-40",
         genero: "F",
-        correo: "ana.gomez@example.com",
+        correo: "root@ejemplo.com",
         username: "anag",
-        password_bash: "ana_pass_hashed",
-        img_url: "",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
         suscrito_noticias: true,
         creado_en: new Date(),
         must_change_password: false,
       },
       {
-        id_usuario: 4,
+        id_usuario: 2,
         tipo_usuario: "cliente",
-        dni: 90000004,
+        dni: 90000002,
         nombre: "Pedro",
         apellido: "Martinez",
         fecha_nacimiento: new Date("1988-11-05"),
         nacionalidad: "Colombia",
         direccion_facturacion: "Cll 20 #10-15",
         genero: "M",
-        correo: "pedro.m@example.com",
+        correo: "cliente1@ejemplo.com",
         username: "pedrom",
-        password_bash: "pedro_pass_hashed",
-        img_url: "",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
         suscrito_noticias: false,
         creado_en: new Date(),
         must_change_password: false,
       },
       {
-        id_usuario: 5,
+        id_usuario: 3,
         tipo_usuario: "cliente",
-        dni: 90000005,
+        dni: 90000003,
         nombre: "Luisa",
         apellido: "Rodríguez",
         fecha_nacimiento: new Date("1995-06-20"),
         nacionalidad: "Colombia",
         direccion_facturacion: "Cra 7 #40-50",
         genero: "F",
-        correo: "luisa.r@example.com",
+        correo: "cliente2@ejemplo.com",
         username: "luisar",
-        password_bash: "luisa_pass_hashed",
-        img_url: "",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
         suscrito_noticias: true,
         creado_en: new Date(),
         must_change_password: false,
       },
       {
-        id_usuario: 6,
+        id_usuario: 4,
         tipo_usuario: "admin",
-        dni: 90000001,
+        dni: 90000004,
         nombre: "Admin",
         apellido: "General",
         fecha_nacimiento: new Date("1992-07-12"),
         nacionalidad: "Colombia",
         direccion_facturacion: "Av 5 #30-40",
         genero: "F",
-        correo: "juana.martinez@utp.edu.co",
+        correo: "admin@ejemplo.com",
         username: "valentina",
-        password_bash: "a123456789",
-        img_url: "",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
         suscrito_noticias: true,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      // Nuevo usuario añadido para que las FK de tickets funcionen
+      {
+        id_usuario: 5,
+        tipo_usuario: "cliente",
+        dni: 90000005,
+        nombre: "Javier",
+        apellido: "Gomez",
+        fecha_nacimiento: new Date("1985-01-10"),
+        nacionalidad: "Argentina",
+        direccion_facturacion: "Cll Falsa 123",
+        genero: "M",
+        correo: "cliente3@ejemplo.com",
+        username: "javierg",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
+        suscrito_noticias: false,
         creado_en: new Date(),
         must_change_password: false,
       },
@@ -411,91 +431,77 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Asientos (creamos asientos "representativos" — no todos, pero suficientes para tickets de prueba)
-  const asientoData: asiento[]  = [];
 
-  // aeronave 1: asientos 1..30
-  for (let i = 1; i <= 30; i++) {
-    asientoData.push({
-      id_asiento: i,
-      id_aeronaveFK: 1,
-      numero: `A${i}`,
-      clases: i <= 18 ? "primera_clase" : "economica", // primeras 18 son primera_clase
-    });
+  
+  // --- SEED: Tickets (sin referencia a asiento table) ---
+// Vamos a simular ocupación usando asiento_numero y asiento_clase.
+// Generamos asiento_numero siguiendo la convención anterior (A#, B#, C#)
+// y asignamos clase según los rangos que antes usabas.
+
+const ticketsData: ticket[] = [];
+let ticketId = 1;
+
+// Helper para calcular clase dado seatId (mismas reglas que antes)
+function clasePorSeatId(seatId: number) {
+  if (seatId <= 30) {
+    return seatId <= 18 ? "primera_clase" : "economica"; // aeronave 1
+  } else if (seatId <= 80) {
+    // ids 31..80 => aeronave 2; antes primera hasta 60
+    return seatId <= 60 ? "primera_clase" : "economica";
+  } else {
+    // ids 81..110 => aeronave 3; antes primera hasta 90
+    return seatId <= 90 ? "primera_clase" : "economica";
   }
+}
 
-  // aeronave 2: asientos 31..80 (50 asientos creados)
-  for (let i = 31; i <= 80; i++) {
-    asientoData.push({
-      id_asiento: i,
-      id_aeronaveFK: 2,
-      numero: `B${i}`,
-      clases: i <= 60 ? "primera_clase" : "economica", // approx: primeros 30 -> primera_clase (ids 31..60)
-    });
-  }
-
-  // aeronave 3: asientos 81..110 (30 asientos)
-  for (let i = 81; i <= 110; i++) {
-    asientoData.push({
-      id_asiento: i,
-      id_aeronaveFK: 3,
-      numero: `C${i}`,
-      clases: i <= 90 ? "primera_clase" : "economica", // small split
-    });
-  }
-
-  await prisma.asiento.createMany({
-    data: asientoData,
-    skipDuplicates: true,
+// Vuelo 1 (BOG->MDE): 12 tickets ocupados (usuarios 2..5 rotando) -> marcamos pagado
+for (let seatId = 1; seatId <= 12; seatId++) {
+  ticketsData.push({
+    id_ticket: ticketId++,
+    id_usuarioFK: 2 + ((seatId - 1) % 4), // 2,3,4,5 repeating
+    id_vueloFK: 1,
+    asiento_numero: `A${seatId}`, // nuevo campo (string)
+    asiento_clase: clasePorSeatId(seatId),
+    precio: 120.0,
+    estado: "pagado", // usar solo estados válidos
+    creado_en: new Date(),
   });
+}
 
-  // Tickets (simulamos ocupación en vuelos)
-  // Para vuelo 1 (BOG->MDE) creamos 12 tickets ocupados (usuarios 2..5 rotando)
-  const ticketsData: ticket[] = [];
-  let ticketId = 1;
-
-  for (let seatId = 1; seatId <= 12; seatId++) {
-    ticketsData.push({
-      id_ticket: ticketId++,
-      id_usuarioFK: 2 + ((seatId - 1) % 4), // 2,3,4,5 repeating
-      id_vueloFK: 1,
-      id_asientoFK: seatId,
-      precio: 120.0,
-      estado: "pagado",
-      creado_en: new Date(),
-    });
-  }
-
-  // Para vuelo 4 (MDE->CTG) creamos 3 tickets
-  for (let seatId = 13; seatId <= 15; seatId++) {
-    ticketsData.push({
-      id_ticket: ticketId++,
-      id_usuarioFK: 3,
-      id_vueloFK: 4,
-      id_asientoFK: seatId,
-      precio: 150.0,
-      estado: "reservado",
-      creado_en: new Date(),
-    });
-  }
-
-  // Para vuelo 5 (MAD->BOG) hacemos 20 tickets para simular alta ocupación
-  for (let seatId = 31; seatId <= 50; seatId++) {
-    ticketsData.push({
-      id_ticket: ticketId++,
-      id_usuarioFK: 4 + ((seatId - 31) % 2), // 4,5 repeating
-      id_vueloFK: 5,
-      id_asientoFK: seatId,
-      precio: 500.0,
-      estado: seatId % 7 === 0 ? "cancelado" : "pagado", // algunos cancelados
-      creado_en: new Date(),
-    });
-  }
-
-  await prisma.ticket.createMany({
-    data: ticketsData,
-    skipDuplicates: true,
+// Vuelo 4 (MDE->CTG): antes estaban "reservado" (ya no existe). 
+// Si quieres simular ocupación efectiva, conviértelos a 'pagado'. Si prefieres que no cuenten, usa 'cancelado'.
+// Aquí los convertimos a 'pagado' para simular ocupación.
+for (let seatId = 13; seatId <= 15; seatId++) {
+  ticketsData.push({
+    id_ticket: ticketId++,
+    id_usuarioFK: 3,
+    id_vueloFK: 4,
+    asiento_numero: `A${seatId}`,
+    asiento_clase: clasePorSeatId(seatId),
+    precio: 150.0,
+    estado: "pagado", // cambiado desde 'reservado'
+    creado_en: new Date(),
   });
+}
+
+// Vuelo 5 (MAD->BOG): 20 tickets, algunos 'cancelado' para simular huecos
+for (let seatId = 31; seatId <= 50; seatId++) {
+  ticketsData.push({
+    id_ticket: ticketId++,
+    id_usuarioFK: 4 + ((seatId - 31) % 2), // 4,5 repeating
+    id_vueloFK: 5,
+    asiento_numero: `B${seatId}`, // aeronave 2 tenía prefijo B en tu semilla original
+    asiento_clase: clasePorSeatId(seatId),
+    precio: 500.0,
+    estado: seatId % 7 === 0 ? "cancelado" : "pagado", // algunos cancelados
+    creado_en: new Date(),
+  });
+}
+
+await prisma.ticket.createMany({
+  data: ticketsData,
+  skipDuplicates: true,
+});
 
   console.log("Seeding finished.");
 }
