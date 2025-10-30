@@ -10,6 +10,10 @@ import {nationalities, usuario_genero} from '@prisma/client';
 import { Transform } from 'class-transformer';
 
 /*
+
+¿Como saber cuando viene en el DTO? 
+R\ Cuando es un campo que 
+
 | Campo en `usuario`       | ¿Viene en DTO?  | Notas                                                                      |
 | ------------------------ | --------------  | -------------------------------------------------------------------------- |
 | `id_usuario`             | ❌ No           | Autogenerado por la BD                                                     |

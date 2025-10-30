@@ -1,67 +1,87 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from '../users/dto/create-user.dto';
+import * as bcryptjs from 'bcryptjs'
 import { MailService } from '../../mail/mail.service';
-import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
+import { nationalities, usuario_genero, usuario_tipo_usuario } from '@prisma/client';
+import { UsersService } from '../users/users.service';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { DeleteAdminDto } from './dto/detele-admin.dto';
+
 
 @Injectable()
 export class RootService {
   constructor(
-  private readonly prisma: PrismaService,
-  private readonly mailService: MailService,
-  private readonly jwtService: JwtService, 
-) {}
+    private readonly userService: UsersService,
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService // <-- para leer variables de entorno
 
+  ) { }
 
-  async createAdmin(idRoot: number, dto: CreateUserDto) {
-    // 1️⃣ Verificar si el usuario que ejecuta la acción es ROOT
-    const root = await this.prisma.usuario.findUnique({
-      where: { id_usuario: idRoot },
-    });
-
-    if (!root || root.tipo_usuario !== 'root') {
-      throw new ForbiddenException('No tienes permisos para crear administradores');
+  // Función para generar una contraseña aleatoria
+  generateRandomPassword = (length: number = 8) => {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?"; // Caracteres posibles
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
     }
+    return password;
+  }
 
-    // 2️⃣ Hashear la contraseña inicial
-    const hashedPassword = await bcrypt.hash(dto.password_bash, 10);
+  async getAllAdmins() {
+    return this.prisma.usuario.findMany({
+      where: {
+        tipo_usuario: usuario_tipo_usuario.admin,
+      },
+    });
+  }
 
-    // 3️⃣ Crear el usuario tipo ADMIN con el flag "must_change_password"
+  async createAdmin(dto: CreateAdminDto) {
+
+    //Verificaciones
+    const userByEmail = await this.userService.findUserByEmail(dto.correo)
+    if (userByEmail) throw new BadRequestException("Ya existe un administrador con ese correo.")
+
+    const userByUsername = await this.userService.findUserByUsername(dto.username)
+    if (userByUsername) throw new BadRequestException("Ya existe un administrador con ese username.")
+
+    //Crear contraseña aleatoria
+    const randomPassword = this.generateRandomPassword()
+
+    //Hashear la contraseña inicial
+    const hashedPassword = await bcryptjs.hash(randomPassword, 10);
+
+    // Crear el usuario tipo ADMIN con el flag "must_change_password"
     const nuevoAdmin = await this.prisma.usuario.create({
       data: {
-        dni: dto.dni,
+        tipo_usuario: usuario_tipo_usuario.admin,
         nombre: dto.nombre,
         apellido: dto.apellido,
-        fecha_nacimiento: new Date(dto.fecha_nacimiento),
-        nacionalidad: dto.nacionalidad,
-        genero: dto.genero,
-        correo: dto.correo,
         username: dto.username,
+        correo: dto.correo,
         password_bash: hashedPassword,
-        img_url: dto.img_url,
-        tipo_usuario: 'admin',
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
+        suscrito_noticias: false,
         creado_en: new Date(),
-        must_change_password: true,
-        direccion_facturacion: 'No especificada',
+        must_change_password: true
+        //Los demás datos son NULL, el administrador podrá agregarlos editando su perfil.
       },
     });
 
-    // 4️⃣ Generar token temporal de 1 hora para el cambio de contraseña
-    const token = await this.jwtService.signAsync(
-      { correo: nuevoAdmin.correo },
-      { expiresIn: '1h' },
-    );
 
-    const resetLink = `https://tu-frontend.com/change-password?token=${token}`;
+    const loginLink = `${this.configService.get<string>('FRONTEND_URL')}login`;
 
-    // 5️⃣ Enviar correo usando tu MailService con plantilla
+    // Enviar correo usando tu MailService con plantilla
     await this.mailService.sendAdminWelcomeEmail(nuevoAdmin.correo, {
       name: nuevoAdmin.nombre,
-      resetLink,
+      loginLink: loginLink,
+      temporalPassword: randomPassword
     });
 
-    // 6️⃣ Responder al root con datos del nuevo admin
+    // Responder al root con datos del nuevo admin
     return {
       message: 'Administrador creado exitosamente ✅',
       admin: {
@@ -72,4 +92,26 @@ export class RootService {
       },
     };
   }
+
+  async deleteAdmin(dto: DeleteAdminDto) {
+    const adminEmail = dto.correo;
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { correo: adminEmail },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con correo ${adminEmail} no encontrado.`);
+    }
+
+    if (usuario.tipo_usuario !== 'admin') {
+      throw new Error('Este usuario no tiene el rol "admin", no puede ser eliminado.');
+    }
+
+    // Eliminar el usuario de la base de datos
+    return this.prisma.usuario.delete({
+      where: { correo:adminEmail },
+    });
+  }
 }
+
