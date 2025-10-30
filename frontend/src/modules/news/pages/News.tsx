@@ -28,6 +28,14 @@ export default function NewsPage() {
     setSelectedArticle(null);
   };
 
+  // ✅ AGREGADO: Log para debugging (puedes quitarlo después)
+  console.log('📊 NewsPage - Estado actual:', {
+    articlesCount: articles?.length || 0,
+    featuredCount: featured?.length || 0,
+    isLoading: newsLoading,
+    error: newsError
+  });
+
   if (newsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -50,13 +58,20 @@ export default function NewsPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <main className="container mx-auto px-4 py-8 pt-28">
-        {/* Carrusel con noticias destacadas */}
-        {featured.length > 0 ? (
+        {/* ✅ CORREGIDO: Mostrar todas las noticias si no hay destacadas */}
+        {Array.isArray(articles) && articles.length > 0 ? (
           <>
-            <HeroCarousel items={featured} onCallToAction={handleReadMore} />
+            {/* Si hay destacadas, mostrar el carrusel, sino mostrar las primeras 3 */}
+            <HeroCarousel 
+              items={featured.length > 0 ? featured : articles.slice(0, 3)} 
+              onCallToAction={handleReadMore} 
+            />
             
             {/* Noticias recientes */}
-            <FeaturedNews items={featured} onCallToAction={handleReadMore}/>
+            <FeaturedNews 
+              items={featured.length > 0 ? featured : articles} 
+              onCallToAction={handleReadMore}
+            />
           </>
         ) : (
           <div className="text-center py-20">
