@@ -17,11 +17,52 @@ export class NewsService {
 
 
 
-  async getAllNews(): Promise<noticia[]> {
+  async getAllNews(): Promise<Array<noticia & {
+    fecha_partida_colombia: string | null;
+    hora_partida_colombia: string | null;
+  }>> {
     try {
-      const noticias: noticia[] = await this.prisma.noticia.findMany();
-      return noticias;
-    } catch (error) { throw new BadRequestException('Error al obtener noticias'); }
+      const noticias = await this.prisma.noticia.findMany({
+        include: { vuelo: true }, // traemos el vuelo para acceder a salida_programada_utc
+      });
+
+      const formatted = noticias.map(n => {
+        const salidaUtc = n.vuelo?.salida_programada_utc ?? null;
+
+        let fecha_partida_colombia: string | null = null;
+        let hora_partida_colombia: string | null = null;
+
+        if (salidaUtc) {
+          // salidaUtc viene como Date (o string convertible). Usamos Intl para convertir a America/Bogota
+          const salidaDate = new Date(salidaUtc);
+
+          // Fecha en formato local colombiano (ej: "30/10/2025")
+          fecha_partida_colombia = salidaDate.toLocaleDateString('es-CO', {
+            timeZone: 'America/Bogota',
+          });
+
+          // Hora en formato "HH:MM" (24h) en zona Colombia
+          hora_partida_colombia = salidaDate.toLocaleTimeString('es-CO', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+        }
+
+        // Eliminamos la relación vuelo si no quieres devolverla; si la quieres mantener, quita el destructuring
+        const { vuelo, ...rest } = n;
+        return {
+          ...rest,
+          fecha_partida_colombia,
+          hora_partida_colombia,
+        };
+      });
+
+      return formatted;
+    } catch (error) {
+      throw new BadRequestException('Error al obtener noticias');
+    }
   }
 
   async getNewByID(id: number) {
@@ -466,7 +507,7 @@ export class NewsService {
     const precioPrimeraFormatted = precioPrimera != null ? formatterCurrency.format(Number(precioPrimera)) : '';
 
     // Formatear promoción fechas (si existe)
-    let promocionFormatted: {nombre:string; descripcion:string; descuento:number; fecha_inicio:string; fecha_fin:string; periodo_lectura:string;}| null = null;
+    let promocionFormatted: { nombre: string; descripcion: string; descuento: number; fecha_inicio: string; fecha_fin: string; periodo_lectura: string; } | null = null;
     if (vuelo?.promocion) {
       try {
         const p = vuelo.promocion;
@@ -475,7 +516,7 @@ export class NewsService {
         promocionFormatted = {
           nombre: p.nombre,
           descripcion: p.descripcion,
-          descuento: (typeof p.descuento === 'number') ? (p.descuento*100): 0,
+          descuento: (typeof p.descuento === 'number') ? (p.descuento * 100) : 0,
           fecha_inicio: inicio,
           fecha_fin: fin,
           periodo_lectura: `${inicio} → ${fin}`, // campo amigable para mostrar directo
@@ -485,7 +526,7 @@ export class NewsService {
         promocionFormatted = {
           nombre: vuelo.promocion.nombre,
           descripcion: vuelo.promocion.descripcion,
-          descuento: vuelo.promocion.descuento*100,
+          descuento: vuelo.promocion.descuento * 100,
           fecha_inicio: String(vuelo.promocion.fecha_inicio),
           fecha_fin: String(vuelo.promocion.fecha_fin),
           periodo_lectura: `${String(vuelo.promocion.fecha_inicio)} → ${String(vuelo.promocion.fecha_fin)}`,
