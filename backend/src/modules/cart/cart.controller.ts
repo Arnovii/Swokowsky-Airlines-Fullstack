@@ -5,10 +5,15 @@ import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto'
 import { ActiveUser } from '../../common/decorators/active-user.decorator';
 import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator'
+import { usuario_tipo_usuario } from '@prisma/client';
 
-@ApiTags('Carrito')
+@ApiTags('Carrito - Ruta solo para usuarios tipo CLIENTE')
 @ApiBearerAuth('bearerAuth')
 @Controller('cart')
+@Roles(usuario_tipo_usuario.cliente)
+@UseGuards(RolesGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) { }
 

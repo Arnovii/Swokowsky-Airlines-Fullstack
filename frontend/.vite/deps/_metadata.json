@@ -1,0 +1,76 @@
+{
+  "hash": "08980c61",
+  "configHash": "135df27c",
+  "lockfileHash": "329d88c7",
+  "browserHash": "a238945a",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "f29281ee",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "4cb1980f",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "60acb91c",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "58d76c33",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "1e007407",
+      "needsInterop": false
+    },
+    "react-icons/fi": {
+      "src": "../../node_modules/react-icons/fi/index.mjs",
+      "file": "react-icons_fi.js",
+      "fileHash": "53cbefed",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "d0e48dc6",
+      "needsInterop": false
+    },
+    "date-fns": {
+      "src": "../../node_modules/date-fns/index.js",
+      "file": "date-fns.js",
+      "fileHash": "8d5713f9",
+      "needsInterop": false
+    },
+    "date-fns/locale": {
+      "src": "../../node_modules/date-fns/locale.js",
+      "file": "date-fns_locale.js",
+      "fileHash": "de04ad68",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-2XU5YHAM": {
+      "file": "chunk-2XU5YHAM.js"
+    },
+    "chunk-FYGYNQUM": {
+      "file": "chunk-FYGYNQUM.js"
+    },
+    "chunk-32EALFBN": {
+      "file": "chunk-32EALFBN.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}
