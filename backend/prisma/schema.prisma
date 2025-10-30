@@ -63,19 +63,6 @@ model ciudad {
   @@index([id_gmtFK], map: "id_gmtFK")
 }
 
-model pago {
-  id_pago      Int         @id @default(autoincrement())
-  id_ticketFK  Int
-  id_tarjetaFK Int
-  monto        Float       @db.Float
-  fecha        DateTime    @db.DateTime(0)
-  estado       pago_estado
-  ticket       ticket      @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_1")
-  tarjeta      tarjeta     @relation(fields: [id_tarjetaFK], references: [id_tarjeta], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_2")
-
-  @@index([id_tarjetaFK], map: "id_tarjetaFK")
-  @@index([id_ticketFK], map: "id_ticketFK")
-}
 
 model pais {
   id_pais Int      @id @default(autoincrement())
@@ -90,6 +77,10 @@ model pasajero {
   nombre           String          @db.VarChar(255)
   apellido         String          @db.VarChar(255)
   dni              String          @db.VarChar(255)
+  phone            String          @db.VarChar(255)
+  email            String          @db.VarChar(255)
+  contact_name     String          @db.VarChar(255)
+  phone_name       String          @db.VarChar(255)
   genero           pasajero_genero
   fecha_nacimiento DateTime        @db.Date
   ticket           ticket          @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
@@ -118,7 +109,6 @@ model tarjeta {
   tipo         tarjeta_tipo
   banco        String       @db.VarChar(255)
   creado_en    DateTime     @db.DateTime(0)
-  pago         pago[]
   usuario      usuario      @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "tarjeta_ibfk_1")
 
   @@index([id_usuarioFK], map: "id_usuarioFK")
@@ -133,13 +123,13 @@ model ticket {
   precio       Float         @db.Float
   estado       ticket_estado
   creado_en      DateTime      @db.DateTime(0) @default(now())
-  pago         pago[]
-  pasajero     pasajero[]
-  usuario      usuario       @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
-  vuelo        vuelo         @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
 
-  @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx") // recomendado para tus consultas de ocupación
-  @@index([estado, creado_en], map: "ticket_estado_creado_en_idx") // opcional, útil para reportes
+  pasajero     pasajero[]
+  usuario        usuario      @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+  vuelo          vuelo        @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
+
+  @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx")
+  @@index([estado, creado_en], map: "ticket_estado_creado_en_idx")
 }
 
 model usuario {
@@ -170,7 +160,6 @@ model transaccion {
   id_transaccion Int           @id @default(autoincrement())
   usuario_id     Int
   monto          Float
-  tipo           String         // 'recarga' o 'pago'
   fecha          DateTime       @default(now())
   usuario        usuario        @relation(fields: [usuario_id], references: [id_usuario])
 }
@@ -270,11 +259,6 @@ enum asiento_clases {
   primera_clase @map("primera clase")
 }
 
-enum pago_estado {
-  pendiente
-  aprobado
-  rechazado
-}
 
 enum ticket_estado {
   pagado
