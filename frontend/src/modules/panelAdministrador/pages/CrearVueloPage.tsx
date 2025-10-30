@@ -355,83 +355,313 @@ export const CrearVueloPage: React.FC = () => {
             opacity: 1;
           }
         }
-        
+
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
         }
-        
-        .modern-datepicker {
+
+        .modern-datepicker-custom {
           z-index: 9999 !important;
         }
-        
-        .react-datepicker {
-          border: 2px solid #e5e7eb;
-          border-radius: 16px;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-          font-family: inherit;
+
+        .react-datepicker-popper {
+          z-index: 9999 !important;
         }
-        
-        .react-datepicker__header {
-          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #081225 100%);
+
+        .modern-calendar-custom.react-datepicker {
           border: none;
-          border-radius: 14px 14px 0 0;
+          border-radius: 20px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          font-family: inherit;
+          overflow: hidden;
+        }
+
+        /* Header del calendario con gradiente y texto blanco */
+        .modern-calendar-custom .react-datepicker__header {
+          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #1180B8 100%);
+          border: none;
+          border-radius: 0;
+          padding: 20px 16px 16px;
+        }
+
+        .modern-calendar-custom .react-datepicker__current-month {
+          color: white !important;
+          font-weight: 700;
+          font-size: 17px;
+          margin-bottom: 12px;
+          letter-spacing: 0.3px;
+        }
+
+        .modern-calendar-custom .react-datepicker__day-name {
+          color: white !important;
+          font-weight: 700;
+          font-size: 13px;
+          width: 2.5rem;
+          line-height: 2.5rem;
+          margin: 0.2rem;
+        }
+
+        /* Dropdowns de mes y año con texto blanco */
+        .modern-calendar-custom .react-datepicker__month-dropdown-container,
+        .modern-calendar-custom .react-datepicker__year-dropdown-container {
+          margin: 0 5px;
+        }
+
+        .modern-calendar-custom .react-datepicker__month-read-view,
+        .modern-calendar-custom .react-datepicker__year-read-view {
+          color: white !important;
+          font-weight: 700;
+        }
+
+        .modern-calendar-custom .react-datepicker__month-read-view--down-arrow,
+        .modern-calendar-custom .react-datepicker__year-read-view--down-arrow {
+          border-color: white transparent transparent;
+          border-width: 0.35rem 0.35rem 0;
+          top: 6px;
+        }
+
+        .modern-calendar-custom .react-datepicker__navigation-icon::before {
+          border-color: white;
+          border-width: 2px 2px 0 0;
+        }
+
+        .modern-calendar-custom .react-datepicker__navigation:hover *::before {
+          border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Días del calendario */
+        .modern-calendar-custom .react-datepicker__month {
+          margin: 0;
           padding: 16px;
+          background: white;
         }
-        
-        .react-datepicker__current-month {
+
+        .modern-calendar-custom .react-datepicker__day {
+          border-radius: 12px;
+          transition: all 0.2s ease;
+          width: 2.5rem;
+          line-height: 2.5rem;
+          margin: 0.2rem;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .modern-calendar-custom .react-datepicker__day:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .modern-calendar-custom .react-datepicker__day--selected {
+          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #1180B8 100%) !important;
+          color: white !important;
           font-weight: 700;
-          font-size: 16px;
+          box-shadow: 0 4px 12px rgba(18, 51, 97, 0.5);
         }
-        
-        .react-datepicker__day-name {
-          color: white;
-          font-weight: 600;
-        }
-        
-        .react-datepicker__day {
-          border-radius: 10px;
-          transition: all 0.2s;
-        }
-        
-        .react-datepicker__day:hover {
-          background: #3b82f6;
+
+        .modern-calendar-custom .react-datepicker__day--keyboard-selected {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
         }
-        
-        .react-datepicker__day--selected {
-          background: #6366f1;
+
+        .modern-calendar-custom .react-datepicker__day--today {
+          background: rgba(59, 130, 246, 0.15);
+          font-weight: 700;
+          color: #1e40af;
+          border: 2px solid #3b82f6;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--today:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
+          border-color: transparent;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--disabled {
+          color: #d1d5db !important;
+          cursor: not-allowed;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--disabled:hover {
+          background: transparent !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--outside-month {
+          color: #d1d5db;
+        }
+
+        /* Dropdown de selección de mes/año con fondo oscuro y texto blanco */
+        .react-datepicker__month-dropdown,
+        .react-datepicker__year-dropdown {
+          background: linear-gradient(135deg, #0a1836 0%, #123361 100%);
+          border: 2px solid #1180B8;
+          border-radius: 12px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .react-datepicker__month-option,
+        .react-datepicker__year-option {
+          color: white !important;
+          padding: 8px 12px;
+          font-weight: 500;
+        }
+
+        .react-datepicker__month-option:hover,
+        .react-datepicker__year-option:hover {
+          background: rgba(59, 130, 246, 0.3) !important;
+          color: white !important;
+        }
+
+        .react-datepicker__month-option--selected,
+        .react-datepicker__year-option--selected {
+          background: linear-gradient(135deg, #1180B8 0%, #0a8fc7 100%) !important;
+          color: white !important;
           font-weight: 700;
         }
-        
-        .react-datepicker__day--today {
-          background: rgba(59, 130, 246, 0.1);
-          font-weight: 700;
-        }
-        
-        .react-datepicker__time-container {
-          border-left: 2px solid #e5e7eb;
-        }
-        
-        .react-datepicker__time-list-item:hover {
-          background: #3b82f6 !important;
-          color: white;
-        }
-        
-        .react-datepicker__time-list-item--selected {
-          background: #6366f1 !important;
-          color: white;
-          font-weight: 700;
-        }
-        
+
         input[type="time"]::-webkit-calendar-picker-indicator {
           cursor: pointer;
           display: none;
         }
-        .react-datepicker__time-list-header {
-          color: #fff;
+
+        /* Días del calendario */
+        .modern-calendar-custom .react-datepicker__month {
+          margin: 0;
+          padding: 16px;
+          background: white;
+        }
+
+        .modern-calendar-custom .react-datepicker__day {
+          border-radius: 12px;
+          transition: all 0.2s ease;
+          width: 2.5rem;
+          line-height: 2.5rem;
+          margin: 0.2rem;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .modern-calendar-custom .react-datepicker__day:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .modern-calendar-custom .react-datepicker__day--selected {
+          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #1180B8 100%) !important;
+          color: white !important;
+          font-weight: 700;
+          box-shadow: 0 4px 12px rgba(18, 51, 97, 0.5);
+        }
+
+        .modern-calendar-custom .react-datepicker__day--keyboard-selected {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--today {
+          background: rgba(59, 130, 246, 0.15);
+          font-weight: 700;
+          color: #1e40af;
+          border: 2px solid #3b82f6;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--today:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          border-color: transparent;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--disabled {
+          color: #d1d5db !important;
+          cursor: not-allowed;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--disabled:hover {
+          background: transparent !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+
+        .modern-calendar-custom .react-datepicker__day--outside-month {
+          color: #d1d5db;
+        }
+
+        /* Contenedor de tiempo */
+        .modern-calendar-custom .react-datepicker__time-container {
+          border-left: 2px solid #e5e7eb;
+          width: 100px;
+        }
+
+        .modern-calendar-custom .react-datepicker__time-container .react-datepicker__time {
+          background: white;
+          border-radius: 0 0 20px 0;
+        }
+
+        .modern-calendar-custom .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+          width: 100%;
+        }
+
+        .modern-calendar-custom .react-datepicker__time-list-item {
+          transition: all 0.2s ease;
+          padding: 8px 10px;
+          font-weight: 500;
+        }
+
+        .modern-calendar-custom .react-datepicker__time-list-item:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+          color: white !important;
+        }
+
+        .modern-calendar-custom .react-datepicker__time-list-item--selected {
+          background: linear-gradient(135deg, #0a1836 0%, #123361 60%, #1180B8 100%) !important;
+          color: white !important;
+          font-weight: 700;
+        }
+
+        /* Ocultar el indicador de tiempo en inputs */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+          cursor: pointer;
+          display: none;
+        }
+
+        /* Dropdown de selección de mes/año con fondo oscuro y texto blanco */
+        .modern-calendar-custom .react-datepicker__month-read-view,
+        .modern-calendar-custom .react-datepicker__year-read-view {
+          color: white !important;
+          font-weight: 700;
+        }
+
+        .modern-calendar-custom .react-datepicker__month-read-view--down-arrow,
+        .modern-calendar-custom .react-datepicker__year-read-view--down-arrow {
+          border-color: white transparent transparent;
+          border-width: 0.35rem 0.35rem 0;
+          top: 6px;
+        }
+
+        .react-datepicker__month-option,
+        .react-datepicker__year-option {
+          color: white !important;
+          padding: 8px 12px;
+          font-weight: 500;
+        }
+
+        .react-datepicker__month-option:hover,
+        .react-datepicker__year-option:hover {
+          background: rgba(59, 130, 246, 0.3) !important;
+          color: white !important;
+        }
+
+        .react-datepicker__month-option--selected,
+        .react-datepicker__year-option--selected {
+          background: linear-gradient(135deg, #1180B8 0%, #0a8fc7 100%) !important;
+          color: white !important;
+          font-weight: 700;
         }
       `}</style>
       
@@ -665,8 +895,239 @@ export const CrearVueloPage: React.FC = () => {
                 )}
               </div>
 
-    
+              {/* Sección: Fechas y Horarios */}
+              <div className="mb-10">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-xl flex items-center justify-center shadow-lg">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Fechas y Horarios</span>
+                </h2>
 
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Salida */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                        Salida
+                      </h3>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
+                      <div>
+                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          
+                          Fecha de Salida
+                        </label>
+                        <div className="relative">
+                          <DatePicker
+                            selected={salidaDate}
+                            onChange={date => {
+                              if (date) {
+                                if (salidaDate) {
+                                  date.setHours(salidaDate.getHours(), salidaDate.getMinutes());
+                                } else {
+                                  date.setHours(6, 0);
+                                }
+                              }
+                              setSalidaDate(date);
+                            }}
+                            dateFormat="dd/MM/yyyy"
+                            minDate={new Date()}
+                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
+                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                            placeholderText="Selecciona fecha de salida"
+                            popperClassName="modern-datepicker-custom"
+                            calendarClassName="modern-calendar-custom"
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={15}
+                            showPopperArrow={false}
+                          />
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-2)">
+                              <defs>
+                                <linearGradient id="gradient-icon-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-3)">
+                              <defs>
+                                <linearGradient id="gradient-icon-3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          Hora de Salida 
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            value={salidaDate ? salidaDate.toTimeString().substring(0, 5) : ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const [hours, minutes] = e.target.value.split(':');
+                                const newDate = salidaDate ? new Date(salidaDate) : new Date();
+                                newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                                setSalidaDate(newDate);
+                              }
+                            }}
+                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium`}
+                          />
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-5)">
+                              <defs>
+                                <linearGradient id="gradient-icon-5" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {errores.salida && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errores.salida}
+                    </p>}
+                  </div>
+
+                  {/* Llegada */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                        Llegada
+                      </h3>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
+                      <div>
+                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          Fecha de Llegada
+                        </label>
+                        <div className="relative">
+                          <DatePicker
+                            selected={llegadaDate}
+                            onChange={date => {
+                              if (date) {
+                                if (llegadaDate) {
+                                  date.setHours(llegadaDate.getHours(), llegadaDate.getMinutes());
+                                } else {
+                                  date.setHours(8, 0);
+                                }
+                              }
+                              setLlegadaDate(date);
+                            }}
+                            dateFormat="dd/MM/yyyy"
+                            minDate={salidaDate || new Date()}
+                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
+                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.llegada ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                            placeholderText="Selecciona fecha de llegada"
+                            popperClassName="modern-datepicker-custom"
+                            calendarClassName="modern-calendar-custom"
+                            showMonthDropdown
+                            showYearDropdown
+                            dropdownMode="select"
+                            scrollableYearDropdown
+                            yearDropdownItemNumber={15}
+                            showPopperArrow={false}
+                          />
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-7)">
+                              <defs>
+                                <linearGradient id="gradient-icon-7" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-8)">
+                              <defs>
+                                <linearGradient id="gradient-icon-8" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          
+                          Hora de Llegada
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            value={llegadaDate ? llegadaDate.toTimeString().substring(0, 5) : ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const [hours, minutes] = e.target.value.split(':');
+                                const newDate = llegadaDate ? new Date(llegadaDate) : new Date();
+                                newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                                setLlegadaDate(newDate);
+                              }
+                            }}
+                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.llegada ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium`}
+                          />
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-10)">
+                              <defs>
+                                <linearGradient id="gradient-icon-10" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="#0a1836" />
+                                  <stop offset="50%" stopColor="#123361" />
+                                  <stop offset="100%" stopColor="#081225" />
+                                </linearGradient>
+                              </defs>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {errores.llegada && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errores.llegada}
+                    </p>}
+                  </div>
+                </div>
+              </div>
+
+            
               {/* Sección: Imagen */}
               <div className="mb-10">
                 <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
@@ -870,46 +1331,168 @@ export const CrearVueloPage: React.FC = () => {
                         {errores.promo_descripcion && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promo_descripcion}</p>}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-bold text-white mb-2">
-                            Inicio de promoción
-                          </label>
-                          <DatePicker
-                            selected={form.promocion_inicio ? new Date(form.promocion_inicio) : null}
-                            onChange={date => setForm((f: typeof form) => ({ ...f, promocion_inicio: date ? date.toISOString() : "" }))}
-                            showTimeSelect
-                            timeFormat="HH:mm"
-                            timeIntervals={15}
-                            dateFormat="dd/MM/yyyy HH:mm"
-                            minDate={new Date()}
-                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_inicio ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900`}
-                            placeholderText="Selecciona fecha y hora"
-                            popperClassName="modern-datepicker"
-                          />
-                          {errores.promocion_inicio && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promocion_inicio}</p>}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Inicio de Promoción */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="text-lg font-bold text-white">
+                              Inicio de Promoción
+                            </h3>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
+                            <div>
+                              <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-1)">
+                                  <defs>
+                                    <linearGradient id="gradient-promo-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" stopColor="#0a1836" />
+                                      <stop offset="50%" stopColor="#123361" />
+                                      <stop offset="100%" stopColor="#081225" />
+                                    </linearGradient>
+                                  </defs>
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Fecha y Hora de Inicio
+                              </label>
+                              <div className="relative">
+                                <DatePicker
+                                  selected={form.promocion_inicio ? new Date(form.promocion_inicio) : null}
+                                  onChange={date => setForm((f: typeof form) => ({ ...f, promocion_inicio: date ? date.toISOString() : "" }))}
+                                  showTimeSelect
+                                  timeFormat="HH:mm"
+                                  timeIntervals={15}
+                                  dateFormat="dd/MM/yyyy HH:mm"
+                                  minDate={new Date()}
+                                  maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
+                                  className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.promocion_inicio ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                                  placeholderText="Selecciona fecha y hora de inicio"
+                                  popperClassName="modern-datepicker-custom"
+                                  calendarClassName="modern-calendar-custom"
+                                  showMonthDropdown
+                                  showYearDropdown
+                                  dropdownMode="select"
+                                  scrollableYearDropdown
+                                  yearDropdownItemNumber={15}
+                                  showPopperArrow={false}
+                                />
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-2)">
+                                    <defs>
+                                      <linearGradient id="gradient-promo-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#0a1836" />
+                                        <stop offset="50%" stopColor="#123361" />
+                                        <stop offset="100%" stopColor="#081225" />
+                                      </linearGradient>
+                                    </defs>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-3)">
+                                    <defs>
+                                      <linearGradient id="gradient-promo-3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#0a1836" />
+                                        <stop offset="50%" stopColor="#123361" />
+                                        <stop offset="100%" stopColor="#081225" />
+                                      </linearGradient>
+                                    </defs>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {errores.promocion_inicio && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {errores.promocion_inicio}
+                          </p>}
                         </div>
-                        <div>
-                          <label className="block text-sm font-bold text-white mb-2">
-                            Fin de promoción
-                          </label>
-                          <DatePicker
-                            selected={form.promocion_fin ? new Date(form.promocion_fin) : null}
-                            onChange={date => setForm((f: typeof form) => ({ ...f, promocion_fin: date ? date.toISOString() : "" }))}
-                            showTimeSelect
-                            timeFormat="HH:mm"
-                            timeIntervals={15}
-                            dateFormat="dd/MM/yyyy HH:mm"
-                            minDate={form.promocion_inicio ? new Date(form.promocion_inicio) : new Date()}
-                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 bg-white border-2 ${errores.promocion_fin ? 'border-brand-darkcyan' : 'border-brand-cyan'} rounded-xl focus:border-brand-darkcyan focus:ring-4 focus:ring-brand-cyan transition-all duration-200 outline-none font-semibold text-gray-900`}
-                            placeholderText="Selecciona fecha y hora"
-                            popperClassName="modern-datepicker"
-                          />
-                          {errores.promocion_fin && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.promocion_fin}</p>}
+
+                        {/* Fin de Promoción */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="text-lg font-bold text-white">
+                              Fin de Promoción
+                            </h3>
+                          </div>
+
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
+                            <div>
+                              <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-4)">
+                                  <defs>
+                                    <linearGradient id="gradient-promo-4" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" stopColor="#0a1836" />
+                                      <stop offset="50%" stopColor="#123361" />
+                                      <stop offset="100%" stopColor="#081225" />
+                                    </linearGradient>
+                                  </defs>
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Fecha y Hora de Fin
+                              </label>
+                              <div className="relative">
+                                <DatePicker
+                                  selected={form.promocion_fin ? new Date(form.promocion_fin) : null}
+                                  onChange={date => setForm((f: typeof form) => ({ ...f, promocion_fin: date ? date.toISOString() : "" }))}
+                                  showTimeSelect
+                                  timeFormat="HH:mm"
+                                  timeIntervals={15}
+                                  dateFormat="dd/MM/yyyy HH:mm"
+                                  minDate={form.promocion_inicio ? new Date(form.promocion_inicio) : new Date()}
+                                  maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
+                                  className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.promocion_fin ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                                  placeholderText="Selecciona fecha y hora de fin"
+                                  popperClassName="modern-datepicker-custom"
+                                  calendarClassName="modern-calendar-custom"
+                                  showMonthDropdown
+                                  showYearDropdown
+                                  dropdownMode="select"
+                                  scrollableYearDropdown
+                                  yearDropdownItemNumber={15}
+                                  showPopperArrow={false}
+                                />
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-5)">
+                                    <defs>
+                                      <linearGradient id="gradient-promo-5" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#0a1836" />
+                                        <stop offset="50%" stopColor="#123361" />
+                                        <stop offset="100%" stopColor="#081225" />
+                                      </linearGradient>
+                                    </defs>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-promo-6)">
+                                    <defs>
+                                      <linearGradient id="gradient-promo-6" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#0a1836" />
+                                        <stop offset="50%" stopColor="#123361" />
+                                        <stop offset="100%" stopColor="#081225" />
+                                      </linearGradient>
+                                    </defs>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {errores.promocion_fin && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {errores.promocion_fin}
+                          </p>}
                         </div>
                       </div>
+
+
+
                     </div>
                   )}
                 </div>
