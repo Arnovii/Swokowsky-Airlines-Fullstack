@@ -42,7 +42,6 @@ export class WalletService {
         transacciones: {
           create: {
             monto,
-            tipo: 'recarga',
           },
         },
       },
