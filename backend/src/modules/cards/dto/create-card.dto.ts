@@ -83,6 +83,3 @@ export class CreateCardDto {
   @Length(16, 16)
   num_tarjeta: string; 
 }
-
-
-
