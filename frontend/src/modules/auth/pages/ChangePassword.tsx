@@ -1,8 +1,6 @@
     import React, { useState } from "react";
     import { useNavigate } from "react-router-dom";
     import { FiEye, FiEyeOff, FiLock } from "react-icons/fi";
-    import api from "../../../api/axios";
-    import { useAuth } from "../../../context/AuthContext";
 
     function isStrong(pwd: string) {
     // Mín 8, una mayúscula, una minúscula, un número y un símbolo
@@ -10,17 +8,16 @@
     return re.test(pwd);
     }
 
-    export default function ForcePasswordChange() {
+    export default function ChangePassword() {
     const navigate = useNavigate();
-    const { user, setUser } = useAuth() as any; // asumiendo que tu AuthContext expone setUser
-    const [oldPwd, setOldPwd] = useState("");
+
     const [newPwd, setNewPwd] = useState("");
     const [confirm, setConfirm] = useState("");
-    const [showOld, setShowOld] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [ok, setOk] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -36,40 +33,18 @@
         setError("La confirmación no coincide con la nueva contraseña.");
         return;
         }
-        try {
+
+        // Solo visual: no llamamos al backend aún.
         setSubmitting(true);
+        try {
+        // Simulación de éxito visual
+        await new Promise((r) => setTimeout(r, 400));
+        setOk(true);
 
-        // Ajusta la ruta si tu backend usa otro path/DTO
-        // Ejemplo esperado backend: POST /auth/change-password { oldPassword, newPassword }
-        const { data } = await api.post("/auth/change-password", {
-            oldPassword: oldPwd,
-            newPassword: newPwd,
-        });
-
-        // Si tu backend devuelve un nuevo token tras el cambio:
-        if (data?.token) {
-            localStorage.setItem("swk_token", data.token);
-        }
-
-        // Marca must_change_password en falso y refresca user del contexto/localStorage
-        const nextUser = {
-            ...(data?.user ?? user ?? {}),
-            must_change_password: false,
-        };
-        localStorage.setItem("swk_user", JSON.stringify(nextUser));
-        if (setUser) setUser(nextUser);
-
-        // Redirige al módulo correcto según tipo_usuario
-        const tipo = (nextUser?.tipo_usuario || "").toString().toLowerCase();
-        if (tipo === "root") {
-            navigate("/panelAdministrador/root", { replace: true });
-        } else if (tipo === "admin") {
-            navigate("/panelAdministrador", { replace: true });
-        } else {
+        // Redirección simple (simulada) tras breve pausa
+        setTimeout(() => {
             navigate("/", { replace: true });
-        }
-        } catch (err: any) {
-        setError(err?.response?.data?.message || "No se pudo cambiar la contraseña.");
+        }, 800);
         } finally {
         setSubmitting(false);
         }
@@ -93,31 +68,6 @@
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Contraseña actual */}
-            <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                Contraseña actual
-                </label>
-                <div className="relative">
-                <input
-                    type={showOld ? "text" : "password"}
-                    value={oldPwd}
-                    onChange={(e) => setOldPwd(e.target.value)}
-                    placeholder="Contraseña temporal"
-                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    required
-                    autoFocus
-                />
-                <button
-                    type="button"
-                    onClick={() => setShowOld((s) => !s)}
-                    className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
-                >
-                    {showOld ? <FiEyeOff /> : <FiEye />}
-                </button>
-                </div>
-            </div>
-
             {/* Nueva contraseña */}
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -131,6 +81,7 @@
                     placeholder="Nueva contraseña segura"
                     className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                     required
+                    autoFocus
                 />
                 <button
                     type="button"
@@ -140,7 +91,6 @@
                     {showNew ? <FiEyeOff /> : <FiEye />}
                 </button>
                 </div>
-                {/* sugerencia de fuerza */}
                 {!newPwd ? null : isStrong(newPwd) ? (
                 <p className="mt-1 text-xs text-green-600">Contraseña fuerte ✅</p>
                 ) : (
@@ -185,9 +135,21 @@
                 </div>
             )}
 
+            {ok && !error && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+                ¡Contraseña actualizada! Redirigiendo…
+                </div>
+            )}
+
             <button
                 type="submit"
-                disabled={submitting}
+                disabled={
+                submitting ||
+                !newPwd ||
+                !confirm ||
+                newPwd !== confirm ||
+                !isStrong(newPwd)
+                }
                 className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-white font-medium shadow-lg shadow-blue-600/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[.99] disabled:opacity-60"
             >
                 {submitting ? "Guardando…" : "Guardar y continuar"}
