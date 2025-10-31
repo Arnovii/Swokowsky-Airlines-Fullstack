@@ -8,7 +8,7 @@ import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
-import FlightDetailsPage from "../modules/checkout/page/checkoutpage";
+import CheckoutPage from '../modules/checkout/page/CheckoutPage';
 
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
@@ -24,7 +24,6 @@ import Carrito from "../modules/carrito/page/Carrito";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Rutas principales con header/footer */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         
@@ -37,7 +36,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ⭐ RUTA PROTEGIDA DEL CARRITO - Solo clientes, NO administradores */}
+       
         <Route
           path="/carrito"
           element={
@@ -47,12 +46,20 @@ export default function AppRoutes() {
           }
         />
 
+        <Route
+          path="/checkout"
+          element={
+            <ClientRoute>
+              <CheckoutPage />
+            </ClientRoute>
+          }
+        />
+
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
-        <Route path="/detalle-vuelo/:id" element={<FlightDetailsPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />

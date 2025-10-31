@@ -9,9 +9,7 @@ import {
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { asiento_clases } from '@prisma/client';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiHeader } from '@nestjs/swagger';
 
-@ApiBearerAuth('bearerAuth')
 @Controller('ticket')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) { }
@@ -26,7 +24,6 @@ export class TicketController {
    *   "precio": 500.0
    * }
    */
-
   @Post()
   async createTicket(@Body() body: any) {
     const { idUsuario, idVuelo, clase, precio } = body;
@@ -58,7 +55,6 @@ export class TicketController {
   /**
    * 🔹 Obtener todos los tickets pagados de un usuario
    */
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token' })
   @Get(':idUsuario')
   async getTicketsByUser(@Param('idUsuario', ParseIntPipe) idUsuario: number) {
     return this.ticketService.getTicketsByUser(idUsuario);

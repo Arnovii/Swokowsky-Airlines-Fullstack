@@ -2,14 +2,12 @@ import { Controller, Post, Body, Req, UseGuards, BadRequestException } from '@ne
 import { CheckoutService } from './checkout.service';
 import { CheckoutDto } from './dto/checkout.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiHeader } from '@nestjs/swagger';
 
-@ApiBearerAuth('bearerAuth')
 @Controller('checkout')
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token' })
+  @UseGuards(AuthGuard)
   @Post()
   async processCheckout(@Body() checkoutDto: CheckoutDto, @Req() req: any) {
     // El saldo se obtiene del token (req.user)
