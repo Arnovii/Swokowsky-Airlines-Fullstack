@@ -1,7 +1,170 @@
 import { PrismaClient, ticket } from "@prisma/client";
 
 const prisma = new PrismaClient();
+async function createTicketsAndPassengers(prisma: PrismaClient) {
+  // configuración y helpers
+  const FIRST = ['Carlos', 'Ana', 'María', 'Luis', 'Sofía', 'Andrés', 'Camila', 'Javier', 'Laura', 'Diego'];
+  const LAST = ['Gómez', 'Rodríguez', 'Pérez', 'Martínez', 'López', 'Hernández', 'García', 'Torres', 'Ramírez', 'Castro'];
 
+  function randInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  function randomName() { return FIRST[randInt(0, FIRST.length - 1)]; }
+  function randomLast() { return LAST[randInt(0, LAST.length - 1)]; }
+  function randomDNI() { return String(randInt(10000000, 99999999)); } // como string para pasajero
+  function randomPhone() { return `3${randInt(100000000, 999999999)}`; } // celular CO
+  function randomEmail(name: string, last: string) {
+    const n = name.toLowerCase().replace(/[^a-z]/g, '');
+    const l = last.toLowerCase().replace(/[^a-z]/g, '');
+    return `${n}.${l}${randInt(1, 999)}@ejemplo.com`;
+  }
+  function randomGender() { return Math.random() < 0.5 ? 'M' : 'F'; }
+  function randomBirth() { return new Date(randInt(1950, 2005), randInt(0, 11), randInt(1, 28)); }
+
+  function clasePorSeatId(seatId: number) {
+    if (seatId <= 30) return seatId <= 18 ? 'primera_clase' : 'economica';
+    if (seatId <= 80) return seatId <= 60 ? 'primera_clase' : 'economica';
+    return seatId <= 90 ? 'primera_clase' : 'economica';
+  }
+
+  // usuarios permitidos (solo clientes). Ajusta ids si necesitas otros.
+  const allowedUserIds = [2, 3, 5];
+
+  const clientes = await prisma.usuario.findMany({
+    where: { id_usuario: { in: allowedUserIds }, tipo_usuario: 'cliente' },
+    select: { id_usuario: true, nombre: true, apellido: true, dni: true, correo: true, genero: true, fecha_nacimiento: true }
+  });
+
+  if (clientes.length === 0) {
+    console.warn('No se encontraron usuarios tipo cliente con los ids esperados. Abortando creación de tickets.');
+    return;
+  }
+
+  // control: máximo 5 tickets por usuario por vuelo
+  const userFlightCounts: Record<string, number> = {}; // key = `${userId}-${vuelo}`
+
+  function canTakeSeat(userId: number, vuelo: number) {
+    const key = `${userId}-${vuelo}`;
+    const cnt = userFlightCounts[key] ?? 0;
+    if (cnt >= 5) return false;
+    userFlightCounts[key] = cnt + 1;
+    return true;
+  }
+
+  // Plan de creación (usa los vuelos que ya tienes: 1,4,5)
+  const plan: Array<{ vuelo: number; seatStart: number; seatEnd: number; precio: number; prefix: string }> = [
+    { vuelo: 1, seatStart: 1, seatEnd: 12, precio: 120.0, prefix: 'A' },   // BOG->MDE
+    { vuelo: 4, seatStart: 13, seatEnd: 15, precio: 150.0, prefix: 'A' },  // MDE->CTG
+    { vuelo: 5, seatStart: 31, seatEnd: 50, precio: 500.0, prefix: 'B' },  // MAD->BOG
+  ];
+
+  // rotación simple para repartir usuarios compradores (intenta ser justo)
+  let nextBuyerIndex = 0;
+  function pickBuyerFor(vuelo: number) {
+    const tries = clientes.length;
+    for (let i = 0; i < tries; i++) {
+      const idx = (nextBuyerIndex + i) % clientes.length;
+      const userId = clientes[idx].id_usuario;
+      if (canTakeSeat(userId, vuelo)) {
+        nextBuyerIndex = (idx + 1) % clientes.length;
+        return userId;
+      }
+    }
+    // todos alcanzaron 5 tickets para este vuelo
+    return null;
+  }
+
+  // resumen para logs
+  const resumenPorUsuario: Record<number, number[]> = {};
+  for (const c of clientes) resumenPorUsuario[c.id_usuario] = [];
+
+  // Crear tickets
+  for (const p of plan) {
+    for (let seatId = p.seatStart; seatId <= p.seatEnd; seatId++) {
+      const buyerId = pickBuyerFor(p.vuelo);
+      if (buyerId === null) {
+        console.log(`Tope alcanzado: no se crean más tickets para vuelo ${p.vuelo} (asiento ${seatId}).`);
+        continue;
+      }
+
+      // verificar no duplicar asiento en la DB (idempotencia)
+      const asientoStr = `${p.prefix}${seatId}`;
+      const exists = await prisma.ticket.findFirst({
+        where: { id_vueloFK: p.vuelo, asiento_numero: asientoStr }
+      });
+      if (exists) {
+        console.log(`Saltando asiento ${asientoStr} vuelo ${p.vuelo}: ya existe ticket id=${exists.id_ticket}`);
+        // aunque no registremos resumen, evitamos crear duplicados
+        continue;
+      }
+
+      // decidir si pasajero usa datos del usuario comprador (primer ticket del comprador)
+      const userAlreadyUsed = resumenPorUsuario[buyerId].length > 0; // si ya tiene ticket creado antes
+      let pasajeroPayload;
+      if (!userAlreadyUsed) {
+        // usar datos del usuario real como pasajero
+        const u = clientes.find(x => x.id_usuario === buyerId)!;
+        pasajeroPayload = {
+          nombre: u.nombre ?? randomName(),
+          apellido: u.apellido ?? randomLast(),
+          dni: u.dni ? String(u.dni) : randomDNI(),
+          phone: randomPhone(), // no existe teléfono en usuario: lo inventamos
+          email: u.correo ?? randomEmail(u.nombre ?? 'user', u.apellido ?? 'last'),
+          contact_name: `${u.nombre ?? ''} ${u.apellido ?? ''}`.trim() || (u.nombre ?? randomName()),
+          phone_name: randomPhone(),
+          genero: (u.genero ?? randomGender()) as any,
+          fecha_nacimiento: u.fecha_nacimiento ?? randomBirth(),
+        };
+      } else {
+        // pasajero aleatorio que NO se convierte en usuario
+        const fn = randomName(); const ln = randomLast();
+        pasajeroPayload = {
+          nombre: fn,
+          apellido: ln,
+          dni: randomDNI(),
+          phone: randomPhone(),
+          email: randomEmail(fn, ln),
+          contact_name: fn,
+          phone_name: randomPhone(),
+          genero: randomGender() as any,
+          fecha_nacimiento: randomBirth(),
+        };
+      }
+
+      const estado = (p.vuelo === 5 && seatId % 7 === 0) ? 'cancelado' : 'pagado';
+
+      try {
+        const created = await prisma.ticket.create({
+          data: {
+            id_usuarioFK: buyerId,
+            id_vueloFK: p.vuelo,
+            asiento_numero: asientoStr,
+            asiento_clase: clasePorSeatId(seatId) as any,
+            precio: p.precio,
+            estado: estado as any,
+            pasajero: {
+              create: pasajeroPayload
+            }
+          },
+          include: { pasajero: true }
+        });
+
+        resumenPorUsuario[buyerId].push(created.id_ticket);
+        console.log(`Ticket creado id=${created.id_ticket} vuelo=${p.vuelo} asiento=${asientoStr} usuario=${buyerId}`);
+      } catch (err: any) {
+        console.error('Error creando ticket (saltado):', err.message ?? err);
+      }
+    }
+  }
+
+  // log resumen final
+  console.log('--- Resumen tickets creados por usuario (id => [tickets]) ---');
+  for (const u of Object.keys(resumenPorUsuario)) {
+    console.log(`${u} => ${JSON.stringify(resumenPorUsuario[Number(u)])}`);
+  }
+
+  console.log('Seeding de tickets + pasajeros finalizado.');
+}
 async function main() {
   console.log("Seeding DB...");
 
@@ -135,7 +298,7 @@ async function main() {
   await prisma.configuracion_asientos.createMany({
     data: [
       // A320 | 30 asientos -> primeras 18, economica 12
-      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 12  },
+      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 12 },
       { id_configuracion: 2, id_aeronaveFK: 1, clase: "primera_clase", cantidad: 18 },
 
       // 787 | 50 asientos -> primeras 30, economica 20
@@ -333,7 +496,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Usuarios (admin + clientes)
+  // Usuarios
   await prisma.usuario.createMany({
     data: [
       {
@@ -432,79 +595,84 @@ async function main() {
   });
 
 
-  
-  // --- SEED: Tickets (sin referencia a asiento table) ---
-// Vamos a simular ocupación usando asiento_numero y asiento_clase.
-// Generamos asiento_numero siguiendo la convención anterior (A#, B#, C#)
-// y asignamos clase según los rangos que antes usabas.
 
-const ticketsData: ticket[] = [];
-let ticketId = 1;
+  //   // --- SEED: Tickets (sin referencia a asiento table) ---
+  // // Vamos a simular ocupación usando asiento_numero y asiento_clase.
+  // // Generamos asiento_numero siguiendo la convención anterior (A#, B#, C#)
+  // // y asignamos clase según los rangos que antes usabas.
 
-// Helper para calcular clase dado seatId (mismas reglas que antes)
-function clasePorSeatId(seatId: number) {
-  if (seatId <= 30) {
-    return seatId <= 18 ? "primera_clase" : "economica"; // aeronave 1
-  } else if (seatId <= 80) {
-    // ids 31..80 => aeronave 2; antes primera hasta 60
-    return seatId <= 60 ? "primera_clase" : "economica";
-  } else {
-    // ids 81..110 => aeronave 3; antes primera hasta 90
-    return seatId <= 90 ? "primera_clase" : "economica";
-  }
-}
+  // const ticketsData: ticket[] = [];
+  // let ticketId = 1;
 
-// Vuelo 1 (BOG->MDE): 12 tickets ocupados (usuarios 2..5 rotando) -> marcamos pagado
-for (let seatId = 1; seatId <= 12; seatId++) {
-  ticketsData.push({
-    id_ticket: ticketId++,
-    id_usuarioFK: 2 + ((seatId - 1) % 4), // 2,3,4,5 repeating
-    id_vueloFK: 1,
-    asiento_numero: `A${seatId}`, // nuevo campo (string)
-    asiento_clase: clasePorSeatId(seatId),
-    precio: 120.0,
-    estado: "pagado", // usar solo estados válidos
-    creado_en: new Date(),
-  });
-}
+  // // Helper para calcular clase dado seatId (mismas reglas que antes)
+  // function clasePorSeatId(seatId: number) {
+  //   if (seatId <= 30) {
+  //     return seatId <= 18 ? "primera_clase" : "economica"; // aeronave 1
+  //   } else if (seatId <= 80) {
+  //     // ids 31..80 => aeronave 2; antes primera hasta 60
+  //     return seatId <= 60 ? "primera_clase" : "economica";
+  //   } else {
+  //     // ids 81..110 => aeronave 3; antes primera hasta 90
+  //     return seatId <= 90 ? "primera_clase" : "economica";
+  //   }
+  // }
 
-// Vuelo 4 (MDE->CTG): antes estaban "reservado" (ya no existe). 
-// Si quieres simular ocupación efectiva, conviértelos a 'pagado'. Si prefieres que no cuenten, usa 'cancelado'.
-// Aquí los convertimos a 'pagado' para simular ocupación.
-for (let seatId = 13; seatId <= 15; seatId++) {
-  ticketsData.push({
-    id_ticket: ticketId++,
-    id_usuarioFK: 3,
-    id_vueloFK: 4,
-    asiento_numero: `A${seatId}`,
-    asiento_clase: clasePorSeatId(seatId),
-    precio: 150.0,
-    estado: "pagado", // cambiado desde 'reservado'
-    creado_en: new Date(),
-  });
-}
+  // // Vuelo 1 (BOG->MDE): 12 tickets ocupados (usuarios 2..5 rotando) -> marcamos pagado
+  // for (let seatId = 1; seatId <= 12; seatId++) {
+  //   ticketsData.push({
+  //     id_ticket: ticketId++,
+  //     id_usuarioFK: 2 + ((seatId - 1) % 4), // 2,3,4,5 repeating
+  //     id_vueloFK: 1,
+  //     asiento_numero: `A${seatId}`, // nuevo campo (string)
+  //     asiento_clase: clasePorSeatId(seatId),
+  //     precio: 120.0,
+  //     estado: "pagado", // usar solo estados válidos
+  //     creado_en: new Date(),
+  //   });
+  // }
 
-// Vuelo 5 (MAD->BOG): 20 tickets, algunos 'cancelado' para simular huecos
-for (let seatId = 31; seatId <= 50; seatId++) {
-  ticketsData.push({
-    id_ticket: ticketId++,
-    id_usuarioFK: 4 + ((seatId - 31) % 2), // 4,5 repeating
-    id_vueloFK: 5,
-    asiento_numero: `B${seatId}`, // aeronave 2 tenía prefijo B en tu semilla original
-    asiento_clase: clasePorSeatId(seatId),
-    precio: 500.0,
-    estado: seatId % 7 === 0 ? "cancelado" : "pagado", // algunos cancelados
-    creado_en: new Date(),
-  });
-}
+  // // Vuelo 4 (MDE->CTG): antes estaban "reservado" (ya no existe). 
+  // // Si quieres simular ocupación efectiva, conviértelos a 'pagado'. Si prefieres que no cuenten, usa 'cancelado'.
+  // // Aquí los convertimos a 'pagado' para simular ocupación.
+  // for (let seatId = 13; seatId <= 15; seatId++) {
+  //   ticketsData.push({
+  //     id_ticket: ticketId++,
+  //     id_usuarioFK: 3,
+  //     id_vueloFK: 4,
+  //     asiento_numero: `A${seatId}`,
+  //     asiento_clase: clasePorSeatId(seatId),
+  //     precio: 150.0,
+  //     estado: "pagado", // cambiado desde 'reservado'
+  //     creado_en: new Date(),
+  //   });
+  // }
 
-await prisma.ticket.createMany({
-  data: ticketsData,
-  skipDuplicates: true,
-});
+  // // Vuelo 5 (MAD->BOG): 20 tickets, algunos 'cancelado' para simular huecos
+  // for (let seatId = 31; seatId <= 50; seatId++) {
+  //   ticketsData.push({
+  //     id_ticket: ticketId++,
+  //     id_usuarioFK: 4 + ((seatId - 31) % 2), // 4,5 repeating
+  //     id_vueloFK: 5,
+  //     asiento_numero: `B${seatId}`, // aeronave 2 tenía prefijo B en tu semilla original
+  //     asiento_clase: clasePorSeatId(seatId),
+  //     precio: 500.0,
+  //     estado: seatId % 7 === 0 ? "cancelado" : "pagado", // algunos cancelados
+  //     creado_en: new Date(),
+  //   });
+  // }
+
+  // await prisma.ticket.createMany({
+  //   data: ticketsData,
+  //   skipDuplicates: true,
+  // });
+
+  await createTicketsAndPassengers(prisma);
+
 
   console.log("Seeding finished.");
 }
+
+
 
 main()
   .catch((e) => {
