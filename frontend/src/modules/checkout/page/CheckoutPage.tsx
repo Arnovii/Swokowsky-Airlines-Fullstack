@@ -57,6 +57,13 @@ const CheckoutPage = () => {
     }
   }, [cart.length, cartLoading, navigate]);
 
+  useEffect(() => {
+    if (!cartLoading && cart.length > 0) {
+      console.log("Estructura del carrito:", cart);
+      console.log("Primer vuelo:", cart[0].vuelo);
+    }
+  }, [cart, cartLoading]);
+
   // Verificar si es administrador
   useEffect(() => {
     const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
