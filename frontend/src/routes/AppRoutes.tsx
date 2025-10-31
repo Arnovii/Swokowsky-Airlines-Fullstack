@@ -16,6 +16,7 @@ import DetalleVuelo from "../modules/news/pages/detallevuelo"
 import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
 import PrivateRoute from "./PrivateRoute"
 import AdminRoute from "./AdminRoute"
+import ClientRoute from "./ClientRoute" 
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
@@ -36,13 +37,13 @@ export default function AppRoutes() {
           }
         />
 
-        {/*Ruta protegida del carrito */}
+        {/* ⭐ RUTA PROTEGIDA DEL CARRITO - Solo clientes, NO administradores */}
         <Route
           path="/carrito"
           element={
-            <PrivateRoute>
+            <ClientRoute>
               <Carrito />
-            </PrivateRoute>
+            </ClientRoute>
           }
         />
 
@@ -62,15 +63,18 @@ export default function AppRoutes() {
             <AdminRoute>
               <PanelAdministrador />
             </AdminRoute>
-          } />
-        <Route path="/panelAdministrador/crear-vuelo"
+          } 
+        />
+        <Route 
+          path="/panelAdministrador/crear-vuelo"
           element={
             <AdminRoute>
               <CrearVueloPage />
             </AdminRoute>
           }
         />
-        <Route path="/panelAdministrador/editar-vuelo/:id"
+        <Route 
+          path="/panelAdministrador/editar-vuelo/:id"
           element={
             <AdminRoute>
               <EditarVueloPage />

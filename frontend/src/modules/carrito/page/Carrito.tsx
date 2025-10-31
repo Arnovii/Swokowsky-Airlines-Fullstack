@@ -7,7 +7,7 @@ import React, { useState } from "react";
 
 const Carrito: React.FC = () => {
     const navigate = useNavigate();
-    const { cart, removeFromCart, clearCart } = useCart();
+    const { cart, removeFromCart, clearCart, refreshCart, updateSingleItem } = useCart();
 
     // Estado local para cantidades de tickets por item
     const [quantities, setQuantities] = useState<{ [id: number]: number }>({});
@@ -33,6 +33,14 @@ const Carrito: React.FC = () => {
     // Acciones carrito reales
     const handleRemove = (id: number) => removeFromCart(id);
     const handleClear = () => clearCart();
+
+    // ⭐ MODIFICADO: Handler para cuando se actualiza cantidad (reinicio de timer)
+    const handleTimerReset = (itemId: number) => {
+        console.log(`🔄 Actualizando timer para item ${itemId}...`);
+        if (updateSingleItem) {
+            updateSingleItem(itemId); // Solo actualizar el item específico
+        }
+    };
 
     const handleCheckout = () => {
         navigate('/checkout');
@@ -94,7 +102,6 @@ const Carrito: React.FC = () => {
                                         >
                                             EXPLORAR VUELOS
                                         </button>
-                                    
                                     </div>
                                 </div>
                             </div>
@@ -106,6 +113,7 @@ const Carrito: React.FC = () => {
                                         item={it}
                                         onRemove={handleRemove}
                                         onLocalQtyChange={qty => setQuantities(q => ({ ...q, [it.id_item_carrito]: qty }))}
+                                        onTimerReset={handleTimerReset} // ⭐ Pasar callback mejorado
                                     />
                                 ))}
 
