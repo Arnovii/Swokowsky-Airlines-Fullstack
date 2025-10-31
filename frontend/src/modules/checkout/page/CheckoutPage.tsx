@@ -80,61 +80,33 @@ const CheckoutPage = () => {
   const handleProceedToPayment = async () => {
     // 1️⃣ Verificar que todos los formularios estén completos
     if (!allFormsComplete()) {
-      alert("Debes completar la información de todos los pasajeros antes de continuar.");
+      alert(" Debes completar la información de todos los pasajeros antes de continuar.");
       return;
     }
 
     try {
-      // 2️⃣ Obtener los datos completos del checkout
+      // 2️⃣ Obtener los datos completos del checkout desde el hook
       const checkoutData = getCheckoutData();
 
-      // 🧩 3️⃣ Construir payload completo para el backend
-      const payload: Record<string, any> = {
-        id_carrito: cart[0]?.id_carrito,  // puede venir del contexto del carrito
-        total: totalAmount,               // suma total de la compra
-      };
 
-      // Agregar los vuelos con su estructura tipo item1, item2...
-      flightCheckoutData.forEach((vuelo, index) => {
-        const itemKey = `item${index + 1}`;
-        payload[itemKey] = {
-          vueloID: vuelo.id_vuelo,
-          CantidadDePasajeros: vuelo.travelerInfoList.length,
+      const payload = {
+        id_carrito: cart[0]?.id_carrito,
+        total: totalAmount,
+        vuelos: flightCheckoutData.map((vuelo) => ({
+          id_vuelo: vuelo.id_vuelo,
           pasajeros: vuelo.travelerInfoList.map((p) => ({
-            nombre: p.nombres,
-            apellido: p.apellidos,
-            dni: p.documento,
-            phone: p.telefono,
-            email: p.email,
-            genero: p.genero,
+            documento: p.documento,
+            nombres: p.nombres,
+            apellidos: p.apellidos,
             fecha_nacimiento: p.fecha_nacimiento,
+            genero: p.genero,
+            telefono: p.telefono,
+            email: p.email,
             contacto_nombre: p.contacto_nombre,
             contacto_telefono: p.contacto_telefono
           }))
-        };
-      });
-
-      console.log("🚀 Payload final enviado al backend:", payload);
-
-      // 4️⃣ Enviar al endpoint del backend
-      const response = await api.post('/checkout', payload);
-      console.log("✅ Checkout exitoso:", response.data);
-
-      // 5️⃣ Procesar pago (simulación o API real)
-      await processPayment(checkoutData, totalAmount);
-
-      // 6️⃣ Redirigir al perfil después del pago
-      setTimeout(() => {
-        navigate('/perfil');
-      }, 3000);
-
-    } catch (error: any) {
-      console.error("❌ Error al procesar checkout:", error.response?.data || error);
-      alert(error.response?.data?.message || "Ocurrió un error al procesar tu compra.");
-    }
-  };
-
-
+        }))
+      };
 
       console.log(" Enviando payload al backend:", payload);
 
