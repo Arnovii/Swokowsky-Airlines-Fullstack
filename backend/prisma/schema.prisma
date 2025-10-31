@@ -125,7 +125,7 @@ model ticket {
   creado_en      DateTime       @db.DateTime(0) @default(now())
 
   // relación one-to-one con pasajero (lado sin FK)
-  pasajero       pasajero       @relation("TicketPasajero")
+  pasajero       pasajero?      @relation("TicketPasajero")
 
   usuario        usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
   vuelo          vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
@@ -154,7 +154,7 @@ model usuario {
   tarjeta               tarjeta[]
   ticket                ticket[]
   transacciones         transaccion[]
-  saldo                 Float?                @default(0.0)
+  saldo                 Float?                @default(0.0) //Solo puede ser modificado con las transacciones de carga de saldo o reembolso 
   carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
