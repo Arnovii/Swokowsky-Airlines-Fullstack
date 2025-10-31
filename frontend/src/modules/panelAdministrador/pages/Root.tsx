@@ -13,6 +13,10 @@
     creado_en?: string;
     };
 
+    function safeStr(v: any): string {
+    return typeof v === "string" ? v : v == null ? "" : String(v);
+    }
+
     function mapAdminResponse(raw: any): AdminItem | null {
     if (!raw) return null;
     const must =
@@ -24,13 +28,13 @@
 
     return {
         id_usuario: raw.id_usuario,
-        correo: raw.correo,
-        username: raw.username,
-        nombre: raw.nombre,
-        apellido: raw.apellido,
-        tipo_usuario: raw.tipo_usuario,
+        correo: safeStr(raw.correo),
+        username: safeStr(raw.username),
+        nombre: safeStr(raw.nombre),
+        apellido: safeStr(raw.apellido),
+        tipo_usuario: safeStr(raw.tipo_usuario) || "admin",
         must_change_password: must,
-        creado_en: raw.creado_en,
+        creado_en: safeStr(raw.creado_en),
     };
     }
 
@@ -47,10 +51,20 @@
     });
     }
 
+    function getInitials(nombre: string, apellido: string) {
+    const n = safeStr(nombre).trim();
+    const a = safeStr(apellido).trim();
+    const i1 = n ? n[0].toUpperCase() : "";
+    const i2 = a ? a[0].toUpperCase() : "";
+    const fallback = (i1 || i2) ? `${i1}${i2}` : "AD";
+    return fallback;
+    }
+
     const Root: React.FC = () => {
     const navigate = useNavigate();
     const [admins, setAdmins] = useState<AdminItem[]>([]);
     const [loadingList, setLoadingList] = useState(false);
+    const [removingId, setRemovingId] = useState<number | string | null>(null);
     const [q, setQ] = useState("");
 
     const filtered = useMemo(() => {
@@ -58,12 +72,12 @@
         if (!s) return admins;
         return admins.filter((a) => {
         return (
-            a.correo.toLowerCase().includes(s) ||
-            a.username.toLowerCase().includes(s) ||
-            a.nombre.toLowerCase().includes(s) ||
-            a.apellido.toLowerCase().includes(s) ||
-            a.tipo_usuario.toLowerCase().includes(s) ||
-            String(a.id_usuario).includes(s)
+            safeStr(a.correo).toLowerCase().includes(s) ||
+            safeStr(a.username).toLowerCase().includes(s) ||
+            safeStr(a.nombre).toLowerCase().includes(s) ||
+            safeStr(a.apellido).toLowerCase().includes(s) ||
+            safeStr(a.tipo_usuario).toLowerCase().includes(s) ||
+            String(a.id_usuario).toLowerCase().includes(s)
         );
         });
     }, [admins, q]);
@@ -71,14 +85,43 @@
     async function fetchAdmins() {
         try {
         setLoadingList(true);
+        // Si api ya tiene baseURL="/api/v1", usa "/root"; si no, "/api/v1/root"
         const { data } = await api.get("/root");
         const list: any[] = Array.isArray(data) ? data : data?.admins ?? data?.data ?? [];
         const normalized = list.map(mapAdminResponse).filter(Boolean) as AdminItem[];
+        normalized.sort((a, b) => {
+            const da = new Date(a.creado_en ?? 0).getTime();
+            const db = new Date(b.creado_en ?? 0).getTime();
+            return isNaN(db - da) ? 0 : db - da;
+        });
         setAdmins(normalized);
         } catch (e: any) {
         console.error("Error al listar administradores:", e?.response?.data || e);
+        setAdmins([]);
         } finally {
         setLoadingList(false);
+        }
+    }
+
+    async function removeAdmin(target: AdminItem) {
+        const correo = safeStr(target.correo);
+        if (!correo) {
+        alert("No se puede eliminar: el usuario no tiene correo definido.");
+        return;
+        }
+        const ok = window.confirm(`¿Eliminar al administrador "${target.username || target.nombre}" (${correo})?`);
+        if (!ok) return;
+
+        try {
+        setRemovingId(target.id_usuario);
+        // Si api NO tiene baseURL="/api/v1", cambia a: await api.delete("/api/v1/root/admin", { data: { correo } })
+        await api.delete("/root/admin", { data: { correo } });
+        await fetchAdmins(); // refrescar tabla desde el backend
+        } catch (e: any) {
+        console.error("No se pudo eliminar el admin:", e?.response?.data || e);
+        alert(e?.response?.data?.message || "No se pudo eliminar el administrador.");
+        } finally {
+        setRemovingId(null);
         }
     }
 
@@ -149,7 +192,7 @@
             </div>
             </div>
 
-            {/* Búsqueda y estadísticas */}
+            {/* Búsqueda y Total */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-4">
                 <div className="relative">
@@ -193,16 +236,17 @@
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Tipo</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Estado</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Creado</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
                     {filtered.length === 0 ? (
                     <tr>
-                        <td colSpan={5} className="px-6 py-16 text-center">
+                        <td colSpan={6} className="px-6 py-16 text-center">
                         <div className="flex flex-col items-center gap-3">
                             <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center">
                             <svg className="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 00-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
                             </div>
                             <div>
@@ -218,11 +262,13 @@
                         <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/20">
-                                {a.nombre.charAt(0).toUpperCase()}{a.apellido.charAt(0).toUpperCase()}
+                                {getInitials(a.nombre, a.apellido)}
                             </div>
                             <div>
-                                <p className="text-white font-semibold">{a.nombre} {a.apellido}</p>
-                                <p className="text-slate-400 text-sm">@{a.username}</p>
+                                <p className="text-white font-semibold">
+                                {(a.nombre || "-")} {(a.apellido || "")}
+                                </p>
+                                <p className="text-slate-400 text-sm">@{a.username || "-"}</p>
                             </div>
                             </div>
                         </td>
@@ -231,13 +277,13 @@
                             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-sm">{a.correo}</span>
+                            <span className="text-sm">{a.correo || "-"}</span>
                             </div>
                         </td>
                         <td className="px-6 py-4">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border ${getTipoColor(a.tipo_usuario)}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                            {a.tipo_usuario.toUpperCase()}
+                            {safeStr(a.tipo_usuario).toUpperCase() || "ADMIN"}
                             </span>
                         </td>
                         <td className="px-6 py-4">
@@ -264,6 +310,24 @@
                             </svg>
                             {formatDateISO(a.creado_en)}
                             </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                            <button
+                            type="button"
+                            onClick={() => removeAdmin(a)}
+                            disabled={removingId === a.id_usuario}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm 
+                                ${removingId === a.id_usuario
+                                ? "border-red-300 text-red-400 bg-red-50/20 cursor-wait"
+                                : "border-red-300 text-red-500 hover:bg-red-50/10"
+                                }`}
+                            title="Eliminar administrador"
+                            >
+                            <svg className={`w-4 h-4 ${removingId === a.id_usuario ? "animate-pulse" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V6a2 2 0 012-2h2a2 2 0 012 2v1" />
+                            </svg>
+                            {removingId === a.id_usuario ? "Eliminando..." : "Eliminar"}
+                            </button>
                         </td>
                         </tr>
                     ))
