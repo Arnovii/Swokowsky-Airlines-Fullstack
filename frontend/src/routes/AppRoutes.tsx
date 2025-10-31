@@ -19,6 +19,8 @@ import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
 import Root from "../modules/panelAdministrador/pages/Root";
+import ChangePassword from "../modules/auth/pages/ChangePassword";
+
 
 
 export default function AppRoutes() {
@@ -86,6 +88,16 @@ export default function AppRoutes() {
           <AdminRoute>
             <Root />
           </AdminRoute>
+        }
+      />
+
+
+      <Route
+        path="/cambiar-password"
+        element={
+          <PrivateRoute>
+            <ChangePassword />
+          </PrivateRoute>
         }
       />
 

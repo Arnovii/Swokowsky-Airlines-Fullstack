@@ -1,5 +1,5 @@
     import React, { useEffect, useMemo, useState } from "react";
-    // import api from "../../../api/axios"; // ← conecta aquí luego
+    import api from "../../../api/axios"; // ✅ usa tu instancia axios
     // import { toast } from "react-toastify";
 
     type AdminItem = {
@@ -28,6 +28,19 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     }
 
+    // Mapea respuesta del backend a nuestro AdminItem
+    function mapAdminResponse(anyData: any): AdminItem | null {
+    if (!anyData) return null;
+    const src = anyData.admin ?? anyData; // por si el backend envía { admin: {...} }
+    return {
+        id_usuario: src?.id_usuario ?? src?.id ?? src?.userId ?? Math.random().toString(36).slice(2, 8),
+        email: src?.correo ?? src?.email ?? "",
+        username: src?.username ?? "",
+        nombre: src?.nombre ?? "",
+        apellido: src?.apellido ?? "",
+    };
+    }
+
     const Root: React.FC = () => {
     // listado
     const [admins, setAdmins] = useState<AdminItem[]>([]);
@@ -54,26 +67,33 @@
     }, [admins, q]);
 
     // =====================
-    // STUBS de API (reemplazar por axios)
+    // Carga inicial (placeholder hasta tener endpoint de listado)
     // =====================
     async function fetchAdmins() {
         try {
         setLoadingList(true);
+        // Si luego agregas un endpoint de listado, úsalo así:
         // const { data } = await api.get("/root/admins");
-        // setAdmins(data);
-        // MOCK:
-        await new Promise((r) => setTimeout(r, 300));
-        setAdmins((prev) => (prev.length ? prev : [
+        // const list = Array.isArray(data) ? data : data?.admins ?? [];
+        // setAdmins(list.map(mapAdminResponse).filter(Boolean) as AdminItem[]);
+
+        // MOCK de arranque si no hay endpoint aún:
+        if (admins.length === 0) {
+            setAdmins([
             { id_usuario: 4, email: "admin@swk.com", username: "admin", nombre: "Admin", apellido: "SWK" },
-        ]));
+            ]);
+        }
         } catch (e: any) {
-        // toast?.error?.(e?.response?.data?.message || "No se pudo cargar admins");
         console.error(e);
+        // toast?.error?.(e?.response?.data?.message || "No se pudo cargar admins");
         } finally {
         setLoadingList(false);
         }
     }
 
+    // =====================
+    // Crear admin usando tu endpoint real
+    // =====================
     async function createAdmin(payload: NewAdmin) {
         // Solo crea cuentas admin nuevas; el backend asigna contraseña aleatoria.
         if (!payload.nombre.trim() || !payload.apellido.trim() || !payload.username.trim()) {
@@ -84,45 +104,51 @@
         // toast?.info?.("Correo inválido");
         return;
         }
+
         try {
         setCreating(true);
-        // const { data } = await api.post("/root/create-admin", payload);
-        // setAdmins((prev) => [data, ...prev]);
-        // toast?.success?.("Administrador creado");
 
-        // MOCK:
-        await new Promise((r) => setTimeout(r, 300));
-        setAdmins((prev) => [
-            {
-            id_usuario: Math.random().toString(36).slice(2, 8),
-            email: payload.correo,
-            username: payload.username,
-            nombre: payload.nombre,
-            apellido: payload.apellido,
-            },
-            ...prev,
-        ]);
+        // 👉 Endpoint real que nos diste
+        const { data } = await api.post("/root/admin", payload);
+
+        // Si el backend retorna el admin creado, agréguelo a la tabla
+        const created = mapAdminResponse(data);
+        if (created) {
+            setAdmins((prev) => [created, ...prev]);
+        } else {
+            // Si no devuelve el objeto, recargamos (cuando tengas endpoint de listado)
+            // await fetchAdmins();
+        }
+
         setForm(initialForm);
+        // toast?.success?.("Administrador creado. La contraseña temporal fue generada.");
         } catch (e: any) {
-        // toast?.error?.(e?.response?.data?.message || "No se pudo crear el admin");
         console.error(e);
+        // toast?.error?.(e?.response?.data?.message || "No se pudo crear el admin");
         } finally {
         setCreating(false);
         }
     }
 
+    // =====================
+    // Eliminar admin (placeholder hasta conocer tu endpoint real de delete)
+    // =====================
     async function removeAdmin(target: AdminItem) {
         if (!confirm(`¿Eliminar cuenta ADMIN de ${target.username || target.email}?`)) return;
         try {
         setRemovingId(target.id_usuario);
-        // await api.delete("/root/delete-admin", { data: { identifier: target.email } });
-        // toast?.success?.("Administrador eliminado");
-        // MOCK:
+
+        // Cuando tengas el endpoint:
+        // await api.delete("/root/admin", { data: { identifier: target.email } });
+
+        // Por ahora quitamos localmente
         await new Promise((r) => setTimeout(r, 250));
         setAdmins((prev) => prev.filter((a) => a.id_usuario !== target.id_usuario));
+
+        // toast?.success?.("Administrador eliminado");
         } catch (e: any) {
-        // toast?.error?.(e?.response?.data?.message || "No se pudo eliminar el admin");
         console.error(e);
+        // toast?.error?.(e?.response?.data?.message || "No se pudo eliminar el admin");
         } finally {
         setRemovingId(null);
         }
@@ -130,6 +156,7 @@
 
     useEffect(() => {
         fetchAdmins();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // =====================
@@ -154,9 +181,7 @@
         {/* Crear ADMIN (sin contraseña) */}
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-2 text-lg font-semibold">Crear nuevo administrador</h2>
-            <p className="mb-4 text-sm text-gray-500">
-            Por favor ingrese los datos
-            </p>
+            <p className="mb-4 text-sm text-gray-500">Por favor ingrese los datos</p>
 
             <form
             onSubmit={(e) => {

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import imagenFondo from "../../../assets/imagen_login.jpg"; // ajusta la ruta si es necesario
+import imagenFondo from "../../../assets/imagen_login.jpg";
 
 export default function Login() {
   const auth = useAuth();
@@ -20,27 +20,29 @@ export default function Login() {
     setError(null);
 
     try {
-      // 🔐 Inicia sesión con tu AuthContext
+      // 🔹 Llama al contexto Auth
       const user = await auth.login(email, password);
-
-      // 🔍 Obtenemos el tipo de usuario (enum Prisma: root, admin, cliente)
       const rawUser =
         user ?? JSON.parse(localStorage.getItem("swk_user") || "{}");
 
-      const tipo = (rawUser?.tipo_usuario || "").toString().toLowerCase();
+      // 🔍 Verificamos si tiene que cambiar su contraseña
+      if (rawUser?.must_change_password === true) {
+        navigate("/cambiar-password", { replace: true });
+        return;
+      }
 
-      // 🚦 Redirección según tipo_usuario
+      // 🔍 Según tipo de usuario redirige
+      const tipo = (rawUser?.tipo_usuario || "").toString().toLowerCase();
       if (tipo === "root") {
         navigate("/panelAdministrador/root", { replace: true });
         return;
       }
-
       if (tipo === "admin") {
         navigate("/panelAdministrador", { replace: true });
         return;
       }
 
-      // Si es cliente u otro tipo, regresa a la ruta anterior o al home
+      // 🔹 Si es cliente u otro, entra normalmente
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.message || "Error al iniciar sesión");
