@@ -13,8 +13,8 @@ const createEmptyTravelerInfo = (): TravelerInfo => ({
   genero: '',
   telefono: '',
   email: '',
-  contacto_nombre: '',
-  contacto_telefono: ''
+  contacto_emergencia_nombre: '', // ✅ Cambiado de contacto_nombre
+  contacto_emergencia_telefono: '' // ✅ Cambiado de contacto_telefono
 });
 
 export const useCheckoutForm = (cartItems: CartItem[]) => {

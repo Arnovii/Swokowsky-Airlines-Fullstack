@@ -12,6 +12,7 @@ import WalletBalance from '../components/WalletBalance';
 import { checkoutService } from '../services/checkoutService';
 
 const CheckoutPage = () => {
+  // ✅ TODOS LOS HOOKS DEBEN ESTAR AL INICIO, SIN CONDICIONES
   const navigate = useNavigate();
   const { cart, loading: cartLoading } = useCart();
   const { user } = useAuth();
@@ -33,6 +34,8 @@ const CheckoutPage = () => {
     paymentResult,
     showModal,
     processPayment,
+    setPaymentSuccess,
+    setPaymentError,
     closeModal,
     resetPayment
   } = usePaymentProcess();
@@ -62,19 +65,26 @@ const CheckoutPage = () => {
     }
   }, [user, navigate]);
 
+  // ✅ Handlers después de los hooks
   const handleExpandFlight = (index: number) => {
     setExpandedFlightIndex(expandedFlightIndex === index ? null : index);
   };
 
   const handleProceedToPayment = async () => {
-    // Verificar que todos los formularios estén completos
     if (!allFormsComplete()) {
       alert("⚠️ Debes completar la información de todos los pasajeros antes de continuar.");
       return;
     }
 
+    if (userBalance < totalAmount) {
+      alert(`⚠️ Saldo insuficiente. Tu saldo es $${userBalance.toLocaleString('es-CO')} y necesitas $${totalAmount.toLocaleString('es-CO')}`);
+      return;
+    }
+
     try {
-      // Preparar payload con la nueva estructura: item1, item2, item3...
+      const checkoutData = getCheckoutData();
+      processPayment(checkoutData, totalAmount);
+
       const payload: Record<string, any> = {};
       
       flightCheckoutData.forEach((vuelo, index) => {
@@ -89,6 +99,8 @@ const CheckoutPage = () => {
             dni: p.documento,
             phone: p.telefono,
             email: p.email,
+            contact_name: p.contacto_emergencia_nombre || null,
+            phone_name: p.contacto_emergencia_telefono || null,
             genero: p.genero,
             fecha_nacimiento: p.fecha_nacimiento
           }))
@@ -97,21 +109,30 @@ const CheckoutPage = () => {
 
       console.log("📦 Enviando payload al backend:", payload);
 
-      // Llamar al servicio de checkout
       const checkoutResponse = await checkoutService.submitCheckout(payload);
       console.log("✅ Checkout exitoso:", checkoutResponse);
 
-      // Procesar pago (muestra modal / loading)
-      const checkoutData = getCheckoutData();
-      await processPayment(checkoutData, totalAmount);
+      setPaymentSuccess({
+        success: true,
+        message: checkoutResponse.message || '¡Tu compra ha sido procesada exitosamente! Te redirigiremos a tu perfil.',
+        transactionId: checkoutResponse.transactionId || 
+                      checkoutResponse.orderId || 
+                      `TXN-${Date.now()}`,
+        remainingBalance: checkoutResponse.remainingBalance || (userBalance - totalAmount)
+      });
 
-      // Redirigir al perfil tras unos segundos
       setTimeout(() => {
         navigate('/perfil');
       }, 3000);
+
     } catch (error: any) {
       console.error("❌ Error al procesar checkout:", error);
-      alert(error.message || "Ocurrió un error al procesar tu compra.");
+      
+      setPaymentError(
+        error.message || 
+        error.response?.data?.message || 
+        "Ocurrió un error al procesar tu compra. Por favor intenta nuevamente."
+      );
     }
   };
 
@@ -122,6 +143,7 @@ const CheckoutPage = () => {
     }
   };
 
+  // ✅ RETURNS CONDICIONALES AL FINAL, DESPUÉS DE TODOS LOS HOOKS
   if (cartLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#39A5D8] flex items-center justify-center p-4">
@@ -141,7 +163,6 @@ const CheckoutPage = () => {
   return (
     <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/carrito')}
@@ -170,16 +191,12 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        {/* Contenido principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna izquierda - Formularios */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Saldo del monedero */}
             <WalletBalance 
               totalAmount={totalAmount}
             />
 
-            {/* Lista de vuelos con formularios */}
             <div className="space-y-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] rounded-xl flex items-center justify-center shadow-lg shadow-[#39A5D8]/20">
@@ -198,14 +215,12 @@ const CheckoutPage = () => {
 
                 return (
                   <div key={item.id_item_carrito} className="space-y-4">
-                    {/* Tarjeta de vuelo */}
                     <FlightCheckoutCard
                       cartItem={item}
                       isComplete={checkoutData?.isComplete || false}
                       onEditClick={() => handleExpandFlight(index)}
                     />
 
-                    {/* Formulario expandible */}
                     {isExpanded && checkoutData && (
                       <div className="animate-fade-in">
                         {Array.from({ length: item.cantidad_de_tickets }).map((_, idx) => (
@@ -234,7 +249,6 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Columna derecha - Resumen */}
           <div className="lg:col-span-1">
             <CheckoutSummary
               totalAmount={totalAmount}
@@ -248,7 +262,6 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* Modal de confirmación de pago */}
       <PaymentConfirmationModal
         isOpen={showModal}
         isSuccess={paymentResult?.success || false}
