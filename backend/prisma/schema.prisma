@@ -73,19 +73,19 @@ model pais {
 
 model pasajero {
   id_pasajero      Int             @id @default(autoincrement())
-  id_ticketFK      Int
+  id_ticketFK      Int             @unique                          // <- hacer UNIQUE para 1:1
   nombre           String          @db.VarChar(255)
   apellido         String          @db.VarChar(255)
   dni              String          @db.VarChar(255)
   phone            String          @db.VarChar(255)
   email            String          @db.VarChar(255)
-  contact_name     String          @db.VarChar(255)
-  phone_name       String          @db.VarChar(255)
-  genero           pasajero_genero
+  contact_name     String?          @db.VarChar(255)
+  phone_name       String?          @db.VarChar(255)
+  genero           usuario_genero
   fecha_nacimiento DateTime        @db.Date
-  ticket           ticket          @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 
-  @@index([id_ticketFK], map: "id_ticketFK")
+  // relación one-to-one (lado con la FK)
+  ticket           ticket          @relation("TicketPasajero", fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 }
 
 model promocion {
@@ -115,18 +115,20 @@ model tarjeta {
 }
 //El ticket sólo se crea en el checkout (después de pago)
 model ticket {
-  id_ticket    Int           @id @default(autoincrement())
-  id_usuarioFK Int
-  id_vueloFK   Int
-  asiento_numero String       @db.VarChar(100) // obligatorio: asignado en checkout
-  asiento_clase  asiento_clases               // obligatorio: clase seleccionada
-  precio       Float         @db.Float
-  estado       ticket_estado
-  creado_en      DateTime      @db.DateTime(0) @default(now())
+  id_ticket      Int            @id @default(autoincrement())
+  id_usuarioFK   Int
+  id_vueloFK     Int
+  asiento_numero String         @db.VarChar(100)
+  asiento_clase  asiento_clases
+  precio         Float          @db.Float
+  estado         ticket_estado
+  creado_en      DateTime       @db.DateTime(0) @default(now())
 
-  pasajero     pasajero[]
-  usuario        usuario      @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
-  vuelo          vuelo        @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
+  // relación one-to-one con pasajero (lado sin FK)
+  pasajero       pasajero?      @relation("TicketPasajero")
+
+  usuario        usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+  vuelo          vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
 
   @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx")
   @@index([estado, creado_en], map: "ticket_estado_creado_en_idx")
@@ -152,7 +154,7 @@ model usuario {
   tarjeta               tarjeta[]
   ticket                ticket[]
   transacciones         transaccion[]
-  saldo                 Float?                @default(0.0)
+  saldo                 Float?                @default(0.0) //Solo puede ser modificado con las transacciones de carga de saldo o reembolso 
   carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
@@ -266,11 +268,6 @@ enum ticket_estado {
   cancelado
 }
 
-enum pasajero_genero {
-  M
-  F
-  X
-}
 
 enum tarjeta_tipo {
   credito
