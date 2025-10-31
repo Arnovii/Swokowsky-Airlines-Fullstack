@@ -1,5 +1,3 @@
-
-
 import type { CartItem } from '../../carrito/service/cartService';
 
 interface FlightCheckoutCardProps {
@@ -32,11 +30,16 @@ const FlightCheckoutCard: React.FC<FlightCheckoutCardProps> = ({
     return clase === 'economica' ? 'Económica' : 'Primera Clase';
   };
 
-  const precioUnitario = cartItem.clase === 'economica' 
-    ? (flight.tarifa?.find(t => t.clase === 'economica')?.precio_base || 0)
-    : (flight.tarifa?.find(t => t.clase === 'primera_clase')?.precio_base || 0);
+  // dentro de FlightCheckoutCard, donde calculas precio:
+const precioUnitario =
+  cartItem.clase === "economica"
+    ? flight.tarifas?.find(t => t.clase === "economica")?.precio_base || 0
+    : flight.tarifas?.find(t => t.clase === "primera_clase")?.precio_base || 0;
 
-  const precioTotal = precioUnitario * cartItem.cantidad_de_tickets;
+const descuento = flight.promocion?.descuento ?? 0; // 0.2 = 20%
+const precioTotal = precioUnitario * cartItem.cantidad_de_tickets * (1 - descuento);
+
+
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-xl">
@@ -81,10 +84,10 @@ const FlightCheckoutCard: React.FC<FlightCheckoutCardProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
               <p className="text-2xl font-bold text-[#0F6899]">
-                {flight.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A'}
+                {flight.aeropuerto_origen?.codigo_iata|| 'N/A'}
               </p>
               <p className="text-sm text-gray-600">
-                {flight.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.nombre || 'Origen'}
+                {flight.aeropuerto_origen?.nombre || 'Origen'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDate(flight.salida_programada_utc)}
@@ -104,10 +107,10 @@ const FlightCheckoutCard: React.FC<FlightCheckoutCardProps> = ({
 
             <div className="flex-1 text-right">
               <p className="text-2xl font-bold text-[#0F6899]">
-                {flight.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A'}
+                {flight.aeropuerto_destino?.codigo_iata || 'N/A'}
               </p>
               <p className="text-sm text-gray-600">
-                {flight.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.nombre || 'Destino'}
+                {flight.aeropuerto_destino?.nombre || 'Destino'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDate(flight.llegada_programada_utc)}
@@ -151,20 +154,31 @@ const FlightCheckoutCard: React.FC<FlightCheckoutCardProps> = ({
         {flight.promocion && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              <svg
+                className="w-5 h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                />
               </svg>
               <div>
                 <p className="text-sm font-semibold text-green-700">
                   {flight.promocion.nombre}
                 </p>
                 <p className="text-xs text-green-600">
-                  {flight.promocion.descuento}% de descuento aplicado
+                  {(flight.promocion.descuento * 100).toFixed(0)}% de descuento aplicado
                 </p>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

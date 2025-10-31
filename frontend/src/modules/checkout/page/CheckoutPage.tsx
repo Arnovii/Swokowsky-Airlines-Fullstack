@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
@@ -10,10 +9,12 @@ import PaymentConfirmationModal from '../components/PaymentConfirmationModal';
 import { useCheckoutForm } from '../hooks/useCheckoutForm';
 import { usePaymentProcess } from '../hooks/usePaymentProcess';
 import WalletBalance from '../components/WalletBalance';
+import { CartItemCard } from '../../carrito/components/CartItemCard';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, loading: cartLoading } = useCart();
+  
   const { user } = useAuth();
   const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
   
@@ -44,7 +45,7 @@ const CheckoutPage = () => {
   const totalAmount = useMemo(() => {
     return cart.reduce((total, item) => {
       const flight = item.vuelo;
-      const tarifa = flight.tarifa?.find(t => t.clase === item.clase);
+      const tarifa = flight.tarifas?.find(t => t.clase === item.clase);
       const precioUnitario = tarifa?.precio_base || 0;
       return total + (precioUnitario * item.cantidad_de_tickets);
     }, 0);
@@ -77,23 +78,83 @@ const CheckoutPage = () => {
   };
 
   const handleProceedToPayment = async () => {
+    // 1️⃣ Verificar que todos los formularios estén completos
     if (!allFormsComplete()) {
+      alert("Debes completar la información de todos los pasajeros antes de continuar.");
       return;
     }
 
-    const checkoutData = getCheckoutData();
-    const result = await processPayment(checkoutData, totalAmount);
+    try {
+      // 2️⃣ Obtener los datos completos del checkout
+      const checkoutData = getCheckoutData();
 
-    if (result.success) {
-      // Limpiar carrito después de pago exitoso (opcional)
-      // await clearCart();
-      
-      // Navegar al perfil después de 3 segundos
+      // 🧩 3️⃣ Construir payload completo para el backend
+      const payload: Record<string, any> = {
+        id_carrito: cart[0]?.id_carrito,  // puede venir del contexto del carrito
+        total: totalAmount,               // suma total de la compra
+      };
+
+      // Agregar los vuelos con su estructura tipo item1, item2...
+      flightCheckoutData.forEach((vuelo, index) => {
+        const itemKey = `item${index + 1}`;
+        payload[itemKey] = {
+          vueloID: vuelo.id_vuelo,
+          CantidadDePasajeros: vuelo.travelerInfoList.length,
+          pasajeros: vuelo.travelerInfoList.map((p) => ({
+            nombre: p.nombres,
+            apellido: p.apellidos,
+            dni: p.documento,
+            phone: p.telefono,
+            email: p.email,
+            genero: p.genero,
+            fecha_nacimiento: p.fecha_nacimiento,
+            contacto_nombre: p.contacto_nombre,
+            contacto_telefono: p.contacto_telefono
+          }))
+        };
+      });
+
+      console.log("🚀 Payload final enviado al backend:", payload);
+
+      // 4️⃣ Enviar al endpoint del backend
+      const response = await api.post('/checkout', payload);
+      console.log("✅ Checkout exitoso:", response.data);
+
+      // 5️⃣ Procesar pago (simulación o API real)
+      await processPayment(checkoutData, totalAmount);
+
+      // 6️⃣ Redirigir al perfil después del pago
       setTimeout(() => {
         navigate('/perfil');
       }, 3000);
+
+    } catch (error: any) {
+      console.error("❌ Error al procesar checkout:", error.response?.data || error);
+      alert(error.response?.data?.message || "Ocurrió un error al procesar tu compra.");
     }
   };
+
+
+
+      console.log(" Enviando payload al backend:", payload);
+
+      // 4️⃣ Llamada al endpoint de checkout
+      const response = await api.post('/checkout', payload);
+      console.log(" Checkout exitoso:", response.data);
+
+      // 5️⃣ Procesar pago (muestra modal / loading)
+      await processPayment(checkoutData, totalAmount);
+
+      // 6️⃣ Redirigir al perfil tras unos segundos
+      setTimeout(() => {
+        navigate('/perfil');
+      }, 3000);
+    } catch (error: any) {
+      console.error("❌ Error al procesar checkout:", error.response?.data || error);
+      alert(error.response?.data?.message || "Ocurrió un error al procesar tu compra.");
+    }
+  };
+
 
   const handleModalClose = () => {
     closeModal();
@@ -188,23 +249,27 @@ const CheckoutPage = () => {
                     {/* Formulario expandible */}
                     {isExpanded && checkoutData && (
                       <div className="animate-fade-in">
-                        <TravelerForm
-                          index={index + 1}
-                          data={checkoutData.travelerInfo!}
-                          onChange={(data) => updateTravelerInfo(index, data)}
-                          flightInfo={{
-                            origin: item.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A',
-                            destination: item.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A',
-                            date: new Date(item.vuelo.salida_programada_utc).toLocaleDateString('es-CO', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })
-                          }}
-                        />
+                        {Array.from({ length: item.cantidad_de_tickets }).map((_, idx) => (
+                          <TravelerForm
+                            key={idx}
+                            index={idx + 1}
+                            data={checkoutData.travelerInfo?.[idx] || {}}
+                            onChange={(data) => updateTravelerInfo(index, idx, data)}
+                            flightInfo={{
+                              origin: item.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A',
+                              destination: item.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A',
+                              date: new Date(item.vuelo.salida_programada_utc).toLocaleDateString('es-CO', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              }),
+                            }}
+                          />
+                        ))}
                       </div>
                     )}
+
                   </div>
                 );
               })}

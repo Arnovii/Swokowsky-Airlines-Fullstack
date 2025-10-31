@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import type { TravelerInfo } from '../modules/checkout/types/checkoutTypes';
 
@@ -34,29 +33,90 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
 
   // Función para validar un campo cuando pierde el foco (onBlur)
   const validateField = (field: keyof TravelerInfo) => {
-    const value = data[field];
+    const rawValue = data[field] ?? '';
+    const value = rawValue.trim(); // ✨ elimina espacios al inicio y al final
     let error = '';
 
-    // Validación de campos vacíos
-    if (!value || value.trim() === '') {
+    // 1️⃣ Campo obligatorio
+    if (!value) {
       error = 'Este campo es obligatorio';
-    } 
-    // Validación específica de email
-    else if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      error = 'Email inválido';
-    } 
-    // Validación de teléfonos (10 dígitos)
-    else if ((field === 'telefono' || field === 'telefonoContacto') && !/^\d{10}$/.test(value)) {
-      error = 'Debe tener 10 dígitos';
-    } 
-    // Validación de documento (mínimo 6 caracteres)
-    else if (field === 'documento' && value.length < 6) {
-      error = 'Documento inválido';
     }
 
+    // 2️⃣ No permitir comillas, símbolos raros ni caracteres de escape
+    else if (/['"<>`´]/.test(value)) {
+      error = 'Caracteres inválidos';
+    }
+
+    // 3️⃣ Validación de nombres y apellidos (solo letras, espacios y acentos válidos)
+    else if (
+      (field === 'nombres' || field === 'apellidos') &&
+      !/^[A-Za-zÁÉÍÓÚáéíóúÑñ]+(?:\s[A-Za-zÁÉÍÓÚáéíóúÑñ]+)*$/.test(value)
+    ) {
+      error = 'Solo se permiten letras y un espacio entre palabras';
+    }
+
+    // 4️⃣ Validación de documento (solo números, sin espacios ni letras)
+    else if (field === 'documento' && !/^\d{6,15}$/.test(value)) {
+      error = 'El documento debe tener entre 6 y 15 dígitos numéricos';
+    }
+
+    // 5️⃣ Validación de fecha de nacimiento (no vacía ni futura)
+    else if (field === 'fecha_nacimiento') {
+      const date = new Date(value);
+      const now = new Date();
+
+      if (isNaN(date.getTime())) {
+        error = 'Fecha inválida';
+      } else if (date > now) {
+        error = 'La fecha no puede ser futura';
+      } else {
+        const age = now.getFullYear() - date.getFullYear();
+        if (age < 0 || age > 120) {
+          error = 'Fecha de nacimiento no válida';
+        }
+      }
+    }
+
+    // 6️⃣ Validación de género (solo opciones válidas)
+    else if (field === 'genero' && !['masculino', 'femenino', 'otro'].includes(value.toLowerCase())) {
+      error = 'Selecciona un género válido';
+    }
+
+    // 7️⃣ Validación de email (sin espacios, formato correcto)
+    else if (field === 'email') {
+      if (/\s/.test(value)) {
+        error = 'El correo no puede contener espacios';
+      } else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(value)) {
+        error = 'Correo electrónico inválido';
+      }
+    }
+
+    // 8️⃣ Teléfonos (solo 10 dígitos, sin símbolos ni letras)
+    else if ((field === 'telefono' || field === 'contacto_telefono') && !/^\d{10}$/.test(value)) {
+      error = 'Debe tener exactamente 10 dígitos numéricos';
+    }
+
+    // 9️⃣ Nombre del contacto (solo letras y espacios)
+    else if (field === 'contacto_nombre' && !/^[A-Za-zÁÉÍÓÚáéíóúÑñ]+(?:\s[A-Za-zÁÉÍÓÚáéíóúÑñ]+)*$/.test(value)) {
+      error = 'Solo se permiten letras en el nombre del contacto';
+    }
+
+    // 🔟 Validación general contra entradas tipo "    " o símbolos
+    else if (/^\s*$/.test(rawValue)) {
+      error = 'No puede contener solo espacios';
+    }
+
+    // 🧩 Validación de longitud general (por seguridad)
+    else if (value.length > 100) {
+      error = 'El valor es demasiado largo';
+    }
+
+    // ✅ Actualizamos estado de errores
     setErrors(prev => ({ ...prev, [field]: error }));
     return error === '';
   };
+
+
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
@@ -97,7 +157,8 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
+
             {/* Campo: Documento */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -198,11 +259,11 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Género (Radio buttons estilizados) */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Género <span className="text-red-500">*</span>
               </label>
+
               <div className="flex gap-4">
                 {[
                   { value: 'M', label: 'Masculino', icon: '♂' },
@@ -211,35 +272,48 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 ].map((option) => (
                   <label
                     key={option.value}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    htmlFor={`genero-${option.value}`} // 💡 Vinculamos el label con el input
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 select-none ${
                       data.genero === option.value
                         ? 'border-[#39A5D8] bg-[#39A5D8]/10 text-[#0F6899] font-semibold'
                         : 'border-gray-300 hover:border-[#39A5D8]/50'
                     }`}
                   >
                     <input
+                      id={`genero-${option.value}`} // 💡 ID único por opción
                       type="radio"
+                      name={`genero-${index}`} // 🔹 Para que solo uno se pueda seleccionar por pasajero
                       value={option.value}
                       checked={data.genero === option.value}
                       onChange={(e) => handleChange('genero', e.target.value as 'M' | 'F' | 'Otro')}
-                      className="sr-only" // Ocultar el radio button nativo
+                      className="hidden" // 🔹 Usa "hidden" mejor que "sr-only"
                     />
                     <span className="text-xl">{option.icon}</span>
                     <span>{option.label}</span>
                   </label>
                 ))}
               </div>
+
               {errors.genero && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   {errors.genero}
                 </p>
               )}
             </div>
+
           </div>
         </div>
+
+
+
+
 
         {/* ========== SECCIÓN 2: Información de Contacto ========== */}
         <div>
