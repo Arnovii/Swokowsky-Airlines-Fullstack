@@ -101,8 +101,9 @@ model promocion {
 model tarjeta {
   id_tarjeta   Int          @id @default(autoincrement())
   id_usuarioFK Int
-  saldo        Float    @db.Float
+  saldo        Float        @db.Float
   titular      String       @db.VarChar(255)
+  num_tarjeta  Int          @unique
   vence_mes    Int
   vence_anio   Int
   cvv_ene      String       @db.VarChar(255)
@@ -113,6 +114,7 @@ model tarjeta {
 
   @@index([id_usuarioFK], map: "id_usuarioFK")
 }
+
 //El ticket sólo se crea en el checkout (después de pago)
 model ticket {
   id_ticket      Int            @id @default(autoincrement())
@@ -153,18 +155,10 @@ model usuario {
   must_change_password  Boolean              @default(false)
   tarjeta               tarjeta[]
   ticket                ticket[]
-  transacciones         transaccion[]
-  saldo                 Float?                @default(0.0) //Solo puede ser modificado con las transacciones de carga de saldo o reembolso 
+  saldo                 Float?                @default(0.0) //Solo puede ser modificado cuando se agregan tarjetas o reembolso 
   carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
-model transaccion {
-  id_transaccion Int           @id @default(autoincrement())
-  usuario_id     Int
-  monto          Float
-  fecha          DateTime       @default(now())
-  usuario        usuario        @relation(fields: [usuario_id], references: [id_usuario])
-}
 
 model vuelo {
   id_vuelo                Int @id @default(autoincrement())
