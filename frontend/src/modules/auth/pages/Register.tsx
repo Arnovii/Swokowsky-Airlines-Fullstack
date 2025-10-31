@@ -258,33 +258,82 @@ export default function Register() {
   };
 
   // Validación del formulario
+ // ✅ Validaciones completas
   const validateForm = () => {
-    if (form.dni && form.dni.toString().length < 8) {
-      return "El DNI debe tener almenos 8 caracteres";
+    if (!form.dni || isNaN(Number(form.dni))) {
+      return "El DNI debe ser un número válido.";
     }
-    if (form.username.length < 4 || form.username.length > 21) {
-      return "El nombre de usuario debe tener entre 5 y 20 caracteres";
+    if (form.dni.toString().trim().length < 8) {
+      return "El DNI debe tener al menos 8 dígitos.";
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
-      return "El correo no es válido";
+
+    if (!form.nombre.trim()) {
+      return "El nombre no puede estar vacío ni contener solo espacios.";
     }
+    if (/\d/.test(form.nombre)) {
+      return "El nombre no puede contener números.";
+    }
+
+    if (!form.apellido.trim()) {
+      return "El apellido no puede estar vacío ni contener solo espacios.";
+    }
+    if (/\d/.test(form.apellido)) {
+      return "El apellido no puede contener números.";
+    }
+
+    // Validación de fecha
+    const fecha = new Date(form.fecha_nacimiento);
+    const minDate = new Date("1900-01-01");
+    const today = new Date();
+    if (isNaN(fecha.getTime())) {
+      return "Debes ingresar una fecha de nacimiento válida.";
+    }
+    if (fecha < minDate) {
+      return "La fecha de nacimiento no puede ser anterior a 1900.";
+    }
+    if (fecha > today) {
+      return "La fecha de nacimiento no puede ser posterior a hoy.";
+    }
+
+    if (!form.nacionalidad) {
+      return "Debes seleccionar una nacionalidad.";
+    }
+    if (!form.genero) {
+      return "Debes seleccionar un género.";
+    }
+
+    if (!form.correo.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
+      return "El correo no es válido.";
+    }
+
+    if (!form.username.trim()) {
+      return "El nombre de usuario no puede estar vacío ni tener solo espacios.";
+    }
+
+    if (!form.password.trim()) {
+      return "La contraseña no puede estar vacía ni tener solo espacios.";
+    }
+
     if (form.password.length < 8) {
-      return "La contraseña debe tener al menos 8 caracteres";
+      return "La contraseña debe tener al menos 8 caracteres.";
     }
+
     if (form.password !== form.confirmPassword) {
-      return "Las contraseñas no coinciden";
+      return "Las contraseñas no coinciden.";
     }
-    // Validación de la imagen
+
+    // Validación de imagen
     if (!imgFile) {
-      return "Debes seleccionar una imagen";
+      return "Debes seleccionar una imagen.";
     }
-    const maxBytes = 5 * 1024 * 1024; // 5MB
+    const maxBytes = 5 * 1024 * 1024;
     if (imgFile.size > maxBytes) {
-      return "La imagen no puede ser mayor a 5 MB";
+      return "La imagen no puede ser mayor a 5 MB.";
     }
     if (!/\.(jpg|jpeg|png|gif)$/i.test(imgFile.name)) {
-      return "La imagen debe ser un archivo válido (.jpg, .jpeg, .png, .gif)";
+      return "La imagen debe tener una extensión válida (.jpg, .jpeg, .png, .gif).";
     }
+
     return null;
   };
 
