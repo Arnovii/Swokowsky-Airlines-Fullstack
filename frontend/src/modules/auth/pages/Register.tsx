@@ -283,7 +283,7 @@ export default function Register() {
 
     // Validación de fecha
     const fecha = new Date(form.fecha_nacimiento);
-    const minDate = new Date("1900-01-01");
+    const minDate = new Date("1915-01-01");
     const today = new Date();
     if (isNaN(fecha.getTime())) {
       return "Debes ingresar una fecha de nacimiento válida.";
