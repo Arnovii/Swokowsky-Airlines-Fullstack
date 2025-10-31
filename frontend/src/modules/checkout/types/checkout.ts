@@ -4,25 +4,18 @@ export interface TravelerInfo {
   documento: string;
   nombres: string;
   apellidos: string;
-  fechaNacimiento: string;
-  genero: 'M' | 'F' | 'Otro';
+  fecha_nacimiento: string;
+  genero: string;
   telefono: string;
   email: string;
-  nombreContacto: string;
-  telefonoContacto: string;
+  contacto_nombre: string;
+  contacto_telefono: string;
 }
 
 export interface FlightCheckoutData {
-  ticketId: string;
-  flightId: number;
-  travelerInfo: TravelerInfo | null;
+  id_vuelo: number;
+  travelerInfoList: TravelerInfo[];
   isComplete: boolean;
-}
-
-export interface CheckoutState {
-  flights: FlightCheckoutData[];
-  currentStep: number;
-  totalAmount: number;
 }
 
 export interface PaymentResult {

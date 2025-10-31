@@ -9,19 +9,16 @@ import PaymentConfirmationModal from '../components/PaymentConfirmationModal';
 import { useCheckoutForm } from '../hooks/useCheckoutForm';
 import { usePaymentProcess } from '../hooks/usePaymentProcess';
 import WalletBalance from '../components/WalletBalance';
-import { CartItemCard } from '../../carrito/components/CartItemCard';
+import { checkoutService } from '../services/checkoutService';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, loading: cartLoading } = useCart();
-  
   const { user } = useAuth();
-  const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
   
-  // Simular saldo del usuario (reemplazar con datos reales de la API)
+  const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
   const [userBalance] = useState(2500000);
 
-  // Hook personalizado para manejar formularios
   const {
     flightCheckoutData,
     updateTravelerInfo,
@@ -31,7 +28,6 @@ const CheckoutPage = () => {
     totalForms
   } = useCheckoutForm(cart);
 
-  // Hook personalizado para procesar pago
   const {
     isProcessing,
     paymentResult,
@@ -58,13 +54,6 @@ const CheckoutPage = () => {
     }
   }, [cart.length, cartLoading, navigate]);
 
-  useEffect(() => {
-    if (!cartLoading && cart.length > 0) {
-      console.log("Estructura del carrito:", cart);
-      console.log("Primer vuelo:", cart[0].vuelo);
-    }
-  }, [cart, cartLoading]);
-
   // Verificar si es administrador
   useEffect(() => {
     const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
@@ -78,55 +67,53 @@ const CheckoutPage = () => {
   };
 
   const handleProceedToPayment = async () => {
-    // 1️⃣ Verificar que todos los formularios estén completos
+    // Verificar que todos los formularios estén completos
     if (!allFormsComplete()) {
-      alert(" Debes completar la información de todos los pasajeros antes de continuar.");
+      alert("⚠️ Debes completar la información de todos los pasajeros antes de continuar.");
       return;
     }
 
     try {
-      // 2️⃣ Obtener los datos completos del checkout desde el hook
-      const checkoutData = getCheckoutData();
-
-
-      const payload = {
-        id_carrito: cart[0]?.id_carrito,
-        total: totalAmount,
-        vuelos: flightCheckoutData.map((vuelo) => ({
-          id_vuelo: vuelo.id_vuelo,
+      // Preparar payload con la nueva estructura: item1, item2, item3...
+      const payload: Record<string, any> = {};
+      
+      flightCheckoutData.forEach((vuelo, index) => {
+        const cartItem = cart[index];
+        payload[`item${index + 1}`] = {
+          vueloID: vuelo.id_vuelo,
+          Clase: cartItem.clase,
+          CantidadDePasajeros: vuelo.travelerInfoList.length,
           pasajeros: vuelo.travelerInfoList.map((p) => ({
-            documento: p.documento,
-            nombres: p.nombres,
-            apellidos: p.apellidos,
-            fecha_nacimiento: p.fecha_nacimiento,
-            genero: p.genero,
-            telefono: p.telefono,
+            nombre: p.nombres,
+            apellido: p.apellidos,
+            dni: p.documento,
+            phone: p.telefono,
             email: p.email,
-            contacto_nombre: p.contacto_nombre,
-            contacto_telefono: p.contacto_telefono
+            genero: p.genero,
+            fecha_nacimiento: p.fecha_nacimiento
           }))
-        }))
-      };
+        };
+      });
 
-      console.log(" Enviando payload al backend:", payload);
+      console.log("📦 Enviando payload al backend:", payload);
 
-      // 4️⃣ Llamada al endpoint de checkout
-      const response = await api.post('/checkout', payload);
-      console.log(" Checkout exitoso:", response.data);
+      // Llamar al servicio de checkout
+      const checkoutResponse = await checkoutService.submitCheckout(payload);
+      console.log("✅ Checkout exitoso:", checkoutResponse);
 
-      // 5️⃣ Procesar pago (muestra modal / loading)
+      // Procesar pago (muestra modal / loading)
+      const checkoutData = getCheckoutData();
       await processPayment(checkoutData, totalAmount);
 
-      // 6️⃣ Redirigir al perfil tras unos segundos
+      // Redirigir al perfil tras unos segundos
       setTimeout(() => {
         navigate('/perfil');
       }, 3000);
     } catch (error: any) {
-      console.error("❌ Error al procesar checkout:", error.response?.data || error);
-      alert(error.response?.data?.message || "Ocurrió un error al procesar tu compra.");
+      console.error("❌ Error al procesar checkout:", error);
+      alert(error.message || "Ocurrió un error al procesar tu compra.");
     }
   };
-
 
   const handleModalClose = () => {
     closeModal();
@@ -241,7 +228,6 @@ const CheckoutPage = () => {
                         ))}
                       </div>
                     )}
-
                   </div>
                 );
               })}
