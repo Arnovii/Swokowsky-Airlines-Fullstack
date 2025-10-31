@@ -1,13 +1,15 @@
     import React, { useEffect, useMemo, useState } from "react";
-    import api from "../../../api/axios"; // ✅ usa tu instancia axios
-    // import { toast } from "react-toastify";
+    import api from "../../../api/axios";
 
     type AdminItem = {
     id_usuario: number | string;
-    email: string;
+    correo: string;          // ← tal cual backend
     username: string;
-    nombre?: string;
-    apellido?: string;
+    nombre: string;
+    apellido: string;
+    tipo_usuario: "root" | "admin" | "cliente" | string;
+    must_change_password: boolean;
+    creado_en?: string;
     };
 
     type NewAdmin = {
@@ -28,18 +30,30 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     }
 
-    // Mapea respuesta del backend a nuestro AdminItem
-    function mapAdminResponse(anyData: any): AdminItem | null {
-    if (!anyData) return null;
-    const src = anyData.admin ?? anyData; // por si el backend envía { admin: {...} }
+    function mapAdminResponse(raw: any): AdminItem | null {
+    if (!raw) return null;
     return {
-        id_usuario:
-        src?.id_usuario ?? src?.id ?? src?.userId ?? Math.random().toString(36).slice(2, 8),
-        email: src?.correo ?? src?.email ?? "",
-        username: src?.username ?? "",
-        nombre: src?.nombre ?? "",
-        apellido: src?.apellido ?? "",
+        id_usuario: raw.id_usuario,
+        correo: raw.correo,
+        username: raw.username,
+        nombre: raw.nombre,
+        apellido: raw.apellido,
+        tipo_usuario: raw.tipo_usuario,
+        must_change_password:
+        typeof raw.must_change_password === "boolean"
+            ? raw.must_change_password
+            : String(raw.must_change_password).toLowerCase() === "true" ||
+            raw.must_change_password === 1 ||
+            raw.must_change_password === "1",
+        creado_en: raw.creado_en,
     };
+    }
+
+    function formatDateISO(iso?: string) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString(); // puedes ajustar a tz/format preferido
     }
 
     const Root: React.FC = () => {
@@ -59,95 +73,68 @@
     const filtered = useMemo(() => {
         const s = q.trim().toLowerCase();
         if (!s) return admins;
-        return admins.filter(
-        (a) =>
-            a.email.toLowerCase().includes(s) ||
+        return admins.filter((a) => {
+        return (
+            a.correo.toLowerCase().includes(s) ||
             a.username.toLowerCase().includes(s) ||
+            a.nombre.toLowerCase().includes(s) ||
+            a.apellido.toLowerCase().includes(s) ||
+            a.tipo_usuario.toLowerCase().includes(s) ||
             String(a.id_usuario).includes(s)
         );
+        });
     }, [admins, q]);
 
     // =====================
-    // Carga inicial (placeholder hasta tener endpoint de listado)
+    // LISTAR (GET /api/v1/root)
     // =====================
     async function fetchAdmins() {
         try {
         setLoadingList(true);
-        // Si luego agregas un endpoint de listado, úsalo así:
-        // const { data } = await api.get("/root"); // <- cuando implementes el GET
-        // const list = Array.isArray(data) ? data : data?.admins ?? [];
-        // setAdmins(list.map(mapAdminResponse).filter(Boolean) as AdminItem[]);
-
-        // MOCK de arranque si no hay endpoint aún:
-        if (admins.length === 0) {
-            setAdmins([
-            { id_usuario: 4, email: "admin@swk.com", username: "admin", nombre: "Admin", apellido: "SWK" },
-            ]);
-        }
+        const { data } = await api.get("/root");
+        const list: any[] = Array.isArray(data) ? data : data?.admins ?? data?.data ?? [];
+        const normalized = list.map(mapAdminResponse).filter(Boolean) as AdminItem[];
+        setAdmins(normalized);
         } catch (e: any) {
-        console.error(e);
-        // toast?.error?.(e?.response?.data?.message || "No se pudo cargar admins");
+        console.error("Error al listar administradores:", e?.response?.data || e);
         } finally {
         setLoadingList(false);
         }
     }
 
     // =====================
-    // Crear admin usando tu endpoint real (ya funcionaba)
+    // CREAR (POST /api/v1/root/admin) — backend genera password aleatoria
     // =====================
     async function createAdmin(payload: NewAdmin) {
-        if (!payload.nombre.trim() || !payload.apellido.trim() || !payload.username.trim()) {
-        // toast?.info?.("Completa nombre, apellido y username");
-        return;
-        }
-        if (!isEmailValid(payload.correo)) {
-        // toast?.info?.("Correo inválido");
-        return;
-        }
-
+        if (!payload.nombre.trim() || !payload.apellido.trim() || !payload.username.trim()) return;
+        if (!isEmailValid(payload.correo)) return;
         try {
         setCreating(true);
         const { data } = await api.post("/root/admin", payload);
         const created = mapAdminResponse(data);
-        if (created) {
-            setAdmins((prev) => [created, ...prev]);
-        }
+        if (created) setAdmins((prev) => [created, ...prev]);
+        else await fetchAdmins();
         setForm(initialForm);
-        // toast?.success?.("Administrador creado. La contraseña temporal fue generada.");
         } catch (e: any) {
-        console.error(e);
-        // toast?.error?.(e?.response?.data?.message || "No se pudo crear el admin");
+        console.error("Error al crear admin:", e?.response?.data || e);
         } finally {
         setCreating(false);
         }
     }
 
     // =====================
-    // ✅ Eliminar admin (DELETE real a /root/admin con { correo })
+    // ELIMINAR (DELETE /api/v1/root/admin) { correo }
     // =====================
     async function removeAdmin(target: AdminItem) {
-        const correo = target.email;
-        if (!correo) {
-        console.warn("No se pudo eliminar: email vacío");
-        return;
-        }
-
+        const correo = target.correo;
+        if (!correo) return;
         if (!confirm(`¿Eliminar cuenta ADMIN de ${target.username || correo}?`)) return;
-
         try {
         setRemovingId(target.id_usuario);
-
-        await api.delete("/root/admin", {
-            data: { correo }, // cuerpo esperado por el backend
-        });
-
-        // Actualiza la lista local
-        setAdmins((prev) => prev.filter((a) => a.email !== correo));
-
-        // toast?.success?.("Administrador eliminado");
+        await api.delete("/root/admin", { data: { correo } });
+        setAdmins((prev) => prev.filter((a) => a.correo !== correo));
         } catch (e: any) {
         console.error("Error al eliminar administrador:", e?.response?.data || e);
-        // toast?.error?.(e?.response?.data?.message || "No se pudo eliminar el admin");
         } finally {
         setRemovingId(null);
         }
@@ -155,32 +142,37 @@
 
     useEffect(() => {
         fetchAdmins();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // =====================
-    // RENDER
+    // UI
     // =====================
     return (
-        <div className="mx-auto max-w-6xl p-6 space-y-6">
-        <header className="flex items-start justify-between gap-4">
+        <div className="mx-auto max-w-7xl p-6 space-y-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
             <h1 className="text-2xl font-bold">Gestión de Administradores</h1>
+            <p className="text-sm text-gray-500">
+                Crea y administra cuentas tipo <span className="font-medium">admin</span>. Las contraseñas se generan
+                automáticamente y <span className="font-medium">must_change_password</span> fuerza el cambio en el primer login.
+            </p>
             </div>
 
+            <div className="flex gap-2">
             <button
-            onClick={fetchAdmins}
-            disabled={loadingList}
-            className="rounded-xl border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+                onClick={fetchAdmins}
+                disabled={loadingList}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
             >
-            {loadingList ? "Actualizando…" : "Actualizar lista"}
+                {loadingList ? "Actualizando…" : "Actualizar lista"}
             </button>
+            </div>
         </header>
 
         {/* Crear ADMIN (sin contraseña) */}
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-2 text-lg font-semibold">Crear nuevo administrador</h2>
-            <p className="mb-4 text-sm text-gray-500">Por favor ingrese los datos</p>
+            <p className="mb-4 text-sm text-gray-500">Ingresa los datos del nuevo administrador.</p>
 
             <form
             onSubmit={(e) => {
@@ -248,30 +240,34 @@
 
         {/* Listado de ADMINS */}
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold">Administradores</h2>
             <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar por email, username o id…"
-                className="w-full max-w-xs rounded-xl border border-gray-300 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Buscar por nombre, correo, username, tipo o id…"
+                className="w-full sm:w-80 rounded-xl border border-gray-300 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             </div>
 
-            <div className="overflow-hidden rounded-xl border">
+            <div className="overflow-x-auto rounded-xl border">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                 <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600">Usuario</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600">Email</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600">ID</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Nombre</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Apellido</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Username</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Correo</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Tipo</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Debe cambiar</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">Creado en</th>
                     <th className="px-4 py-3 text-right font-medium text-gray-600">Acciones</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                 {filtered.length === 0 && (
                     <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
                         Sin administradores para mostrar.
                     </td>
                     </tr>
@@ -279,9 +275,23 @@
 
                 {filtered.map((a) => (
                     <tr key={a.id_usuario} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">{a.nombre}</td>
+                    <td className="px-4 py-3">{a.apellido}</td>
                     <td className="px-4 py-3">{a.username}</td>
-                    <td className="px-4 py-3">{a.email}</td>
-                    <td className="px-4 py-3">{a.id_usuario}</td>
+                    <td className="px-4 py-3">{a.correo}</td>
+                    <td className="px-4 py-3">{a.tipo_usuario}</td>
+                    <td className="px-4 py-3">
+                        <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            a.must_change_password
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                        >
+                        {a.must_change_password ? "Sí" : "No"}
+                        </span>
+                    </td>
+                    <td className="px-4 py-3">{formatDateISO(a.creado_en)}</td>
                     <td className="px-4 py-3">
                         <div className="flex justify-end">
                         <button
