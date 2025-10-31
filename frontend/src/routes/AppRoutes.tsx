@@ -22,6 +22,10 @@ import Carrito from "../modules/carrito/page/Carrito";
 import Root from "../modules/panelAdministrador/pages/Root";
 import ChangePassword from "../modules/auth/pages/ChangePassword";
 import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
+import TicketPage from "../modules/user_profile/pages/TicketPage";
+
+
+
 
 export default function AppRoutes() {
   return (
@@ -37,6 +41,28 @@ export default function AppRoutes() {
             </PrivateRoute>
           }
         />
+
+      {/* Módulo Root (admin) */}
+      <Route
+        path="/panelAdministrador/root"
+        element={
+          <AdminRoute>
+            <Root />
+          </AdminRoute>
+        }
+      />
+
+      {/* ✅ Nueva ruta para crear administrador */}
+      <Route
+        path="/panelAdministrador/root/create-admin"
+        element={
+          <AdminRoute>
+            <CreateAdmin />
+          </AdminRoute>
+        }
+      />
+
+        <Route path="/tickets" element={<TicketPage />} />
 
         {/* Ruta protegida del carrito */}
         <Route
@@ -96,25 +122,9 @@ export default function AppRoutes() {
         />
       </Route>
 
-      {/* Módulo Root (admin) */}
-      <Route
-        path="/panelAdministrador/root"
-        element={
-          <AdminRoute>
-            <Root />
-          </AdminRoute>
-        }
-      />
 
-      {/* ✅ Nueva ruta para crear administrador */}
-      <Route
-        path="/panelAdministrador/root/create-admin"
-        element={
-          <AdminRoute>
-            <CreateAdmin />
-          </AdminRoute>
-        }
-      />
+
+
 
       {/* ✅ Cambio de contraseña obligatorio */}
       <Route

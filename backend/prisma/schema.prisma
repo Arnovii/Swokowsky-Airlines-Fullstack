@@ -99,7 +99,7 @@ model tarjeta {
   id_usuarioFK Int
   saldo        Float        @db.Float
   titular      String       @db.VarChar(255)
-  num_tarjeta  Int          @unique
+  num_tarjeta  String       @unique
   vence_mes    Int
   vence_anio   Int
   cvv_ene      String       @db.VarChar(255)

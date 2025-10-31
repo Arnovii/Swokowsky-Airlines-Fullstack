@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
@@ -27,18 +27,27 @@ export class CardsService {
     };
   }
 
-  // 💳 Crear nueva tarjeta con saldo aleatorio
+  // 💳 Crear nueva tarjeta con saldo aleatorio y verificación de duplicados
   async createCard(user: PayloadInterface, dto: CreateCardDto) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id_usuario: Number(user.id_usuario) },
-      select: { id_usuario: true},
+      select: { id_usuario: true },
     });
 
     if (!usuario) {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    // Saldo aleatorio entre 1,000,000 y 5,000,000
+    // 🧩 Verificar si ya existe una tarjeta con ese número
+    const existingCard = await this.prisma.tarjeta.findUnique({
+      where: { num_tarjeta: dto.num_tarjeta },
+    });
+
+    if (existingCard) {
+      throw new BadRequestException('Ya existe una tarjeta con ese número.');
+    }
+
+    // 💰 Saldo aleatorio entre 1,000,000 y 5,000,000
     const saldoAleatorio = Math.floor(Math.random() * (5000000 - 1000000 + 1)) + 1000000;
 
     const nuevaTarjeta = await this.prisma.tarjeta.create({
@@ -47,6 +56,7 @@ export class CardsService {
         id_usuarioFK: usuario.id_usuario,
         saldo: saldoAleatorio,
         titular: dto.titular,
+        num_tarjeta: dto.num_tarjeta,
         vence_mes: dto.vence_mes,
         vence_anio: dto.vence_anio,
         cvv_ene: dto.cvv_ene,
@@ -56,7 +66,7 @@ export class CardsService {
       },
     });
 
-    // Recalcular saldo total del usuario
+    // 🔄 Recalcular saldo total del usuario
     const tarjetasUsuario = await this.prisma.tarjeta.findMany({
       where: { id_usuarioFK: usuario.id_usuario },
       select: { saldo: true },
@@ -64,7 +74,7 @@ export class CardsService {
 
     const saldoTotal = tarjetasUsuario.reduce((acc, t) => acc + t.saldo, 0);
 
-    // Actualizar el saldo del usuario
+    // 📊 Actualizar el saldo total del usuario
     await this.prisma.usuario.update({
       where: { id_usuario: usuario.id_usuario },
       data: { saldo: saldoTotal },
@@ -90,7 +100,7 @@ export class CardsService {
 
     await this.prisma.tarjeta.delete({ where: { id_tarjeta: cardId } });
 
-    // Recalcular saldo total después de eliminar
+    // 🔄 Recalcular saldo total después de eliminar
     const tarjetasRestantes = await this.prisma.tarjeta.findMany({
       where: { id_usuarioFK: Number(user.id_usuario) },
       select: { saldo: true },
@@ -109,6 +119,7 @@ export class CardsService {
     };
   }
 }
+
 
 
 
