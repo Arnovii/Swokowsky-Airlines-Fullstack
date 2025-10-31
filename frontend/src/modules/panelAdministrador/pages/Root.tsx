@@ -33,7 +33,8 @@
     if (!anyData) return null;
     const src = anyData.admin ?? anyData; // por si el backend envía { admin: {...} }
     return {
-        id_usuario: src?.id_usuario ?? src?.id ?? src?.userId ?? Math.random().toString(36).slice(2, 8),
+        id_usuario:
+        src?.id_usuario ?? src?.id ?? src?.userId ?? Math.random().toString(36).slice(2, 8),
         email: src?.correo ?? src?.email ?? "",
         username: src?.username ?? "",
         nombre: src?.nombre ?? "",
@@ -73,7 +74,7 @@
         try {
         setLoadingList(true);
         // Si luego agregas un endpoint de listado, úsalo así:
-        // const { data } = await api.get("/root/admins");
+        // const { data } = await api.get("/root"); // <- cuando implementes el GET
         // const list = Array.isArray(data) ? data : data?.admins ?? [];
         // setAdmins(list.map(mapAdminResponse).filter(Boolean) as AdminItem[]);
 
@@ -92,10 +93,9 @@
     }
 
     // =====================
-    // Crear admin usando tu endpoint real
+    // Crear admin usando tu endpoint real (ya funcionaba)
     // =====================
     async function createAdmin(payload: NewAdmin) {
-        // Solo crea cuentas admin nuevas; el backend asigna contraseña aleatoria.
         if (!payload.nombre.trim() || !payload.apellido.trim() || !payload.username.trim()) {
         // toast?.info?.("Completa nombre, apellido y username");
         return;
@@ -107,19 +107,11 @@
 
         try {
         setCreating(true);
-
-        // 👉 Endpoint real que nos diste
         const { data } = await api.post("/root/admin", payload);
-
-        // Si el backend retorna el admin creado, agréguelo a la tabla
         const created = mapAdminResponse(data);
         if (created) {
             setAdmins((prev) => [created, ...prev]);
-        } else {
-            // Si no devuelve el objeto, recargamos (cuando tengas endpoint de listado)
-            // await fetchAdmins();
         }
-
         setForm(initialForm);
         // toast?.success?.("Administrador creado. La contraseña temporal fue generada.");
         } catch (e: any) {
@@ -131,23 +123,30 @@
     }
 
     // =====================
-    // Eliminar admin (placeholder hasta conocer tu endpoint real de delete)
+    // ✅ Eliminar admin (DELETE real a /root/admin con { correo })
     // =====================
     async function removeAdmin(target: AdminItem) {
-        if (!confirm(`¿Eliminar cuenta ADMIN de ${target.username || target.email}?`)) return;
+        const correo = target.email;
+        if (!correo) {
+        console.warn("No se pudo eliminar: email vacío");
+        return;
+        }
+
+        if (!confirm(`¿Eliminar cuenta ADMIN de ${target.username || correo}?`)) return;
+
         try {
         setRemovingId(target.id_usuario);
 
-        // Cuando tengas el endpoint:
-        // await api.delete("/root/admin", { data: { identifier: target.email } });
+        await api.delete("/root/admin", {
+            data: { correo }, // cuerpo esperado por el backend
+        });
 
-        // Por ahora quitamos localmente
-        await new Promise((r) => setTimeout(r, 250));
-        setAdmins((prev) => prev.filter((a) => a.id_usuario !== target.id_usuario));
+        // Actualiza la lista local
+        setAdmins((prev) => prev.filter((a) => a.email !== correo));
 
         // toast?.success?.("Administrador eliminado");
         } catch (e: any) {
-        console.error(e);
+        console.error("Error al eliminar administrador:", e?.response?.data || e);
         // toast?.error?.(e?.response?.data?.message || "No se pudo eliminar el admin");
         } finally {
         setRemovingId(null);

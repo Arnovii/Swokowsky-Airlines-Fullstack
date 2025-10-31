@@ -9,19 +9,17 @@ import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
 import FlightDetailsPage from "../modules/checkout/FlightDetailsPage";
-import News from "../modules/news/pages/News"
-import DetalleOferta from "../modules/news/pages/detalleoferta"
-import DetalleVuelo from "../modules/news/pages/detallevuelo"
-import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
-import PrivateRoute from "./PrivateRoute"
-import AdminRoute from "./AdminRoute"
+import News from "../modules/news/pages/News";
+import DetalleOferta from "../modules/news/pages/detalleoferta";
+import DetalleVuelo from "../modules/news/pages/detallevuelo";
+import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador";
+import PrivateRoute from "./PrivateRoute";
+import AdminRoute from "./AdminRoute";
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
 import Root from "../modules/panelAdministrador/pages/Root";
 import ChangePassword from "../modules/auth/pages/ChangePassword";
-
-
 
 export default function AppRoutes() {
   return (
@@ -29,7 +27,7 @@ export default function AppRoutes() {
       {/* Rutas principales con header/footer */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        
+
         <Route
           path="/perfil"
           element={
@@ -39,7 +37,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/*Ruta protegida del carrito */}
+        {/* Ruta protegida del carrito */}
         <Route
           path="/carrito"
           element={
@@ -49,31 +47,38 @@ export default function AppRoutes() {
           }
         />
 
+        {/* Auth públicas */}
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Vuelos y noticias */}
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
         <Route path="/detalle-vuelo/:id" element={<FlightDetailsPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
 
+        {/* Panel Admin */}
         <Route
           path="/panelAdministrador"
           element={
             <AdminRoute>
               <PanelAdministrador />
             </AdminRoute>
-          } />
-        <Route path="/panelAdministrador/crear-vuelo"
+          }
+        />
+        <Route
+          path="/panelAdministrador/crear-vuelo"
           element={
             <AdminRoute>
               <CrearVueloPage />
             </AdminRoute>
           }
         />
-        <Route path="/panelAdministrador/editar-vuelo/:id"
+        <Route
+          path="/panelAdministrador/editar-vuelo/:id"
           element={
             <AdminRoute>
               <EditarVueloPage />
@@ -81,7 +86,8 @@ export default function AppRoutes() {
           }
         />
       </Route>
-      
+
+      {/* Módulo Root (admin) */}
       <Route
         path="/panelAdministrador/root"
         element={
@@ -91,9 +97,9 @@ export default function AppRoutes() {
         }
       />
 
-
+      {/* ✅ Cambio de contraseña obligatorio */}
       <Route
-        path="/cambiar-password"
+        path="/ChangePassword"
         element={
           <PrivateRoute>
             <ChangePassword />
@@ -101,8 +107,7 @@ export default function AppRoutes() {
         }
       />
 
-
-      {/* Página 404 */}
+      {/* 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
