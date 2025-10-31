@@ -8,7 +8,6 @@ const NATIONALITIES = [
   { label: "Colombia", value: "Colombia" },
   { label: "Argentina", value: "Argentina" },
   { label: "España", value: "Spain" },
-  // ... (mantén aquí tu lista completa tal como la tenías)
 ];
 
 interface Profile {
@@ -62,6 +61,15 @@ const maskCardNumber = (value: string) => {
   return groups.join(" ").replace(/\d(?=\d{4})/g, "•");
 };
 
+// Formateo COP
+const formatCOP = (n: number) => {
+  try {
+    return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+  } catch {
+    return `$${n.toLocaleString("es-CO")} COP`;
+  }
+};
+
 export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
     NATIONALITIES.find((c) => c.value === val)?.label ?? val ?? "-";
@@ -102,8 +110,11 @@ export default function Perfil() {
   const [contactForm, setContactForm] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monedero y métodos (UI local)
-  const [walletBalance, setWalletBalance] = useState<number>(0);
+  // Monedero (solo saldoTotalUsuario) y métodos (UI local)
+  const [walletBalance, setWalletBalance] = useState<number>(0); // saldoTotalUsuario
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
   ]);
@@ -146,6 +157,29 @@ export default function Perfil() {
     );
   })();
 
+  // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
+  const fetchWallet = async () => {
+    setWalletError(null);
+    setWalletLoading(true);
+    try {
+      // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
+      const res = await api.get("/tarjetas");
+      // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
+      const total = Number(res?.data?.saldoTotalUsuario ?? 0);
+      setWalletBalance(Number.isFinite(total) ? total : 0);
+      // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
+    } catch (err: any) {
+      console.error("GET /tarjetas error:", err?.response?.data || err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "No se pudo obtener el saldo.";
+      setWalletError(msg);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
   // POST /api/v1/tarjetas/cards
   const handleAddCard = async () => {
     setAddCardError(null);
@@ -160,40 +194,45 @@ export default function Perfil() {
       setSavingCard(true);
 
       const { month, year } = parseExp(addCardForm.exp)!;
+      const titular = addCardForm.holder.trim();
+      const banco = addCardForm.banco.trim();
+      const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
+      const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
 
-      // Construir body del endpoint
+      if (digitsOnly.length < 16) {
+        setAddCardError("El número de tarjeta debe tener al menos 16 dígitos.");
+        return;
+      }
+
       const payload = {
-        titular: addCardForm.holder.trim(),
-        vence_mes: month,                // number
-        vence_anio: year,                // number (YYYY)
-        cvv_ene: addCardForm.cvc.trim(), // string
-        tipo: addCardForm.tipo,          // "credito" | "debito"
-        banco: addCardForm.banco.trim(),
+        num_tarjeta: digitsOnly,
+        titular,
+        vence_mes: month,
+        vence_anio: year,
+        cvv_ene: cvv,
+        tipo: addCardForm.tipo,
+        banco,
         creado_en: new Date().toISOString(),
       };
 
-      // Si api tiene baseURL="/api/v1", usa "/tarjetas/cards"
       await api.post("/tarjetas/cards", payload);
 
-      // Actualizar UI local (mock visual del método recién “guardado”)
-      const digits = addCardForm.number.replace(/\D/g, "");
-      const last4 = digits.slice(-4) || "0000";
+      // ✅ Re-consultar saldoTotalUsuario inmediatamente
+      await fetchWallet();
+
+      // UI local de métodos (opcional)
+      const last4 = digitsOnly.slice(-4);
       const newPm: PaymentMethod = {
         id: `pm_${Date.now()}`,
         brand: addCardForm.brand,
         last4,
-        holder: addCardForm.holder.trim(),
+        holder: titular,
         expMonth: String(month).padStart(2, "0"),
-        expYear: String(year), // puedes truncar a YY si prefieres: String(year).slice(-2)
+        expYear: String(year),
         isDefault: addCardForm.makeDefault || paymentMethods.length === 0,
       };
+      setPaymentMethods((prev) => [newPm, ...prev]);
 
-      let next = paymentMethods.map((p) => ({ ...p }));
-      if (newPm.isDefault) next = next.map((p) => ({ ...p, isDefault: false }));
-      next.unshift(newPm);
-      setPaymentMethods(next);
-
-      // Feedback y reset
       setAddCardOk("✅ Tarjeta guardada correctamente.");
       setShowAddCard(false);
       setAddCardForm({
@@ -207,7 +246,11 @@ export default function Perfil() {
         tipo: "credito",
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "No se pudo guardar la tarjeta.";
+      console.error("Crear tarjeta error:", err?.response?.data || err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "❌ No se pudo guardar la tarjeta.";
       setAddCardError(msg);
     } finally {
       setSavingCard(false);
@@ -221,8 +264,6 @@ export default function Perfil() {
   const removeMethod = (id: string) => {
     setPaymentMethods((prev) => prev.filter((p) => p.id !== id));
   };
-
-  const mockTopUp = () => setWalletBalance((b) => b + 50);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
@@ -256,10 +297,9 @@ export default function Perfil() {
           correo: res.data.correo,
           suscrito_noticias: res.data.suscrito_noticias,
         });
-        // FUTURO: traer wallet real
-        // const wallet = await api.get('/wallet/me');
-        // setWalletBalance(wallet.data.balance);
-        // setPaymentMethods(wallet.data.methods);
+
+        // ✅ Traer saldo (saldoTotalUsuario)
+        fetchWallet(); // no await; paralelo
       } catch (err) {
         console.error(err);
       }
@@ -335,8 +375,8 @@ export default function Perfil() {
                   setShowPasswordForm(false);
                   setPasswordMessage(null);
                 }}
-                className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex items-center space-x-2 ${
-                  activeTab === tab.id
+                className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${
+                  activeTab === (tab.id as ActiveTab)
                     ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
                     : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
                 }`}
@@ -349,7 +389,7 @@ export default function Perfil() {
 
           {/* Contenido tabs */}
           <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-            {/* PERSONAL */}
+            {/* PERSONAL (se conserva igual que tenías) */}
             {activeTab === "personal" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -376,6 +416,7 @@ export default function Perfil() {
                   }
                 }}
               >
+                {/* ... (tus campos de personal tal como los tenías) */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
                   <input
@@ -440,6 +481,7 @@ export default function Perfil() {
                     onChange={(e) => setPersonalForm({ ...personalForm, username: e.target.value })}
                   />
                 </div>
+                {/* Foto */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Foto de perfil</label>
                   <div className="flex items-center gap-2 mt-2">
@@ -481,6 +523,7 @@ export default function Perfil() {
                     )}
                   </div>
                 </div>
+
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -520,7 +563,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT */}
+            {/* CONTACT (igual que lo tenías) */}
             {activeTab === "contact" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -616,7 +659,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* SECURITY */}
+            {/* SECURITY (igual que lo tenías) */}
             {activeTab === "security" && (
               <form
                 className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-6"
@@ -697,13 +740,13 @@ export default function Perfil() {
                           setConfirmPassword("");
                           setPasswordMessage(null);
                         }}
-                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-300"
+                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duración-300"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300"
+                        className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duración-300"
                       >
                         Guardar contraseña
                       </button>
@@ -713,31 +756,31 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* WALLET */}
+            {/* WALLET — solo muestra saldoTotalUsuario + Añadir tarjeta */}
             {activeTab === "wallet" && (
               <div className="space-y-6">
                 {/* Saldo */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500">Saldo actual</p>
-                    <p className="text-3xl font-bold text-[#081225] mt-1">${walletBalance.toFixed(2)} USD</p>
+                    {walletLoading ? (
+                      <p className="text-sm text-gray-500 mt-1">Cargando saldo…</p>
+                    ) : walletError ? (
+                      <p className="text-sm text-red-600 mt-1">{walletError}</p>
+                    ) : (
+                      <p className="text-3xl font-bold text-[#081225] mt-1">
+                        {formatCOP(walletBalance)}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddCard(true)}
-                      className="px-4 py-2 rounded-lg bg-white border border-[#0F6899] text-[#0F6899] hover:bg-[#0F6899] hover:text-white transition"
-                    >
-                      Añadir tarjeta
-                    </button>
-                    <button
-                      type="button"
-                      onClick={mockTopUp}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white hover:shadow-lg hover:shadow-[#3B82F6]/20 transition"
-                    >
-                      Recargar saldo
-                    </button>
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCard(true)}
+                    className="px-4 py-2 rounded-lg bg-white border border-[#0F6899] text-[#0F6899] hover:bg-[#0F6899] hover:text-white transition"
+                  >
+                    Añadir tarjeta
+                  </button>
                 </div>
 
                 {/* Feedback de guardado */}
@@ -747,7 +790,7 @@ export default function Perfil() {
                   </div>
                 )}
 
-                {/* Métodos */}
+                {/* Métodos (UI local) */}
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                   <h3 className="text-lg font-semibold text-[#081225] mb-4">Métodos de pago</h3>
                   {paymentMethods.length === 0 ? (
@@ -799,7 +842,7 @@ export default function Perfil() {
                 </div>
 
                 <p className="text-xs text-gray-500">
-                  * La lista de métodos es UI local; ya se envía la tarjeta al backend con el formulario.
+                  * El saldo mostrado corresponde a <strong>saldoTotalUsuario</strong> de <code>GET /tarjetas</code>.
                 </p>
               </div>
             )}
@@ -932,7 +975,7 @@ export default function Perfil() {
                 <button
                   type="button"
                   onClick={() => setShowAddCard(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
                 >
                   Cancelar
                 </button>
