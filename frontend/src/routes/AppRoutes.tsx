@@ -8,7 +8,7 @@ import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
-import FlightDetailsPage from "../modules/checkout/FlightDetailsPage";
+import CheckoutPage from '../modules/checkout/page/CheckoutPage';
 
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
@@ -16,6 +16,7 @@ import DetalleVuelo from "../modules/news/pages/detallevuelo"
 import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
 import PrivateRoute from "./PrivateRoute"
 import AdminRoute from "./AdminRoute"
+import ClientRoute from "./ClientRoute" 
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
@@ -23,7 +24,6 @@ import Carrito from "../modules/carrito/page/Carrito";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Rutas principales con header/footer */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         
@@ -36,13 +36,22 @@ export default function AppRoutes() {
           }
         />
 
-        {/*Ruta protegida del carrito */}
+       
         <Route
           path="/carrito"
           element={
-            <PrivateRoute>
+            <ClientRoute>
               <Carrito />
-            </PrivateRoute>
+            </ClientRoute>
+          }
+        />
+
+        <Route
+          path="/checkout"
+          element={
+            <ClientRoute>
+              <CheckoutPage />
+            </ClientRoute>
           }
         />
 
@@ -51,7 +60,6 @@ export default function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
-        <Route path="/detalle-vuelo/:id" element={<FlightDetailsPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
@@ -62,15 +70,18 @@ export default function AppRoutes() {
             <AdminRoute>
               <PanelAdministrador />
             </AdminRoute>
-          } />
-        <Route path="/panelAdministrador/crear-vuelo"
+          } 
+        />
+        <Route 
+          path="/panelAdministrador/crear-vuelo"
           element={
             <AdminRoute>
               <CrearVueloPage />
             </AdminRoute>
           }
         />
-        <Route path="/panelAdministrador/editar-vuelo/:id"
+        <Route 
+          path="/panelAdministrador/editar-vuelo/:id"
           element={
             <AdminRoute>
               <EditarVueloPage />

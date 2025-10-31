@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import cartService from '../service/cartService';
 import type { CartItem } from '../service/cartService';
 import { useCountdown } from '../hooks/useCountdown';
@@ -7,21 +7,36 @@ type Props = {
     item: CartItem;
     onRemove: (id: number) => void;
     onLocalQtyChange?: (qty: number) => void;
+    onTimerReset?: () => void; // ⭐ SIMPLICADO: Solo notificar sin pasar ID
 };
 
-export function CartItemCard({ item, onRemove, onLocalQtyChange }: Props) {
-    const { hours, minutes, seconds, expired } = useCountdown(item.fecha_limite);
+export function CartItemCard({ item, onRemove, onLocalQtyChange, onTimerReset }: Props) {
+    const [currentDeadline, setCurrentDeadline] = useState(item.fecha_limite);
+    const { hours, minutes, seconds, expired } = useCountdown(currentDeadline);
     const [updating, setUpdating] = useState(false);
     const [localQty, setLocalQty] = useState(item.cantidad_de_tickets);
 
-    const handleUpdate = async (newQty: number) => {
+    // Actualizar deadline cuando cambie el item desde el servidor
+    useEffect(() => {
+        setCurrentDeadline(item.fecha_limite);
+    }, [item.fecha_limite]);
+
+    const handleUpdate = async (newQty: number, isIncrement: boolean = false) => {
         if (newQty < 1 || newQty > 5 || newQty === localQty) return;
+        
         setLocalQty(newQty);
         if (onLocalQtyChange) onLocalQtyChange(newQty);
         setUpdating(true);
+        
         try {
             await cartService.updateItem(item.id_item_carrito, newQty);
-        } catch {
+            
+            // ⭐ SOLO REINICIAR TIMER SI ES INCREMENTO (+)
+            if (isIncrement && onTimerReset) {
+                onTimerReset();
+            }
+        } catch (error) {
+            console.error('Error al actualizar cantidad:', error);
             setLocalQty(item.cantidad_de_tickets);
             if (onLocalQtyChange) onLocalQtyChange(item.cantidad_de_tickets);
         } finally {
@@ -29,7 +44,7 @@ export function CartItemCard({ item, onRemove, onLocalQtyChange }: Props) {
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         setLocalQty(item.cantidad_de_tickets);
     }, [item.cantidad_de_tickets]);
 
@@ -37,7 +52,6 @@ export function CartItemCard({ item, onRemove, onLocalQtyChange }: Props) {
     const getPlaneImage = (modelo: string | undefined) => {
         if (!modelo) return 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=400&fit=crop';
         
-        // Mapeo de modelos a imágenes (puedes usar URLs o rutas locales)
         const planeImages: { [key: string]: string } = {
             'Airbus A320': 'https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=400&h=400&fit=crop',
             'Boeing 787': 'https://images.unsplash.com/photo-1583792116623-18620e3177c9?w=400&h=400&fit=crop',
@@ -64,7 +78,6 @@ export function CartItemCard({ item, onRemove, onLocalQtyChange }: Props) {
                             alt={item.vuelo?.aeronave?.modelo || 'Avión'}
                             className="w-full md:w-32 h-32 rounded-xl object-cover shadow-md border-2 border-gray-200 group-hover:border-[#39A5D8] transition-all duration-300"
                             onError={(e) => {
-                                // Fallback si la imagen no carga
                                 e.currentTarget.src = 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=400&fit=crop';
                             }}
                         />

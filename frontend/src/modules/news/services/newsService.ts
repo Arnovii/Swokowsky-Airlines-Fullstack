@@ -1,13 +1,14 @@
+// src/modules/news/services/newsService.ts
+
 export interface Article {
   id: number;
   title: string;
   summary: string;
-  content: string; // Contenido en formato HTML
+  content: string;
   imageUrl: string;
   isFeatured: boolean;
 }
 
-// Datos de ejemplo que simulan venir de tu backend
 const mockArticles: Article[] = [
   {
     id: 1,
@@ -75,16 +76,13 @@ const mockArticles: Article[] = [
   },
 ];
 
-// Simula una llamada a la API con un retraso para mostrar el estado de "cargando"
 const apiCall = <T>(data: T, delay = 500): Promise<T> => 
   new Promise(resolve => setTimeout(() => resolve(data), delay));
 
-// Función para obtener todos los artículos
 export const getAllArticles = (): Promise<Article[]> => {
   return apiCall(mockArticles);
 };
 
-// Función para obtener los artículos destacados (máximo 3 para el carrusel)
 export const getFeaturedArticles = (): Promise<Article[]> => {
   const featured = mockArticles.filter(article => article.isFeatured).slice(0, 3);
   return apiCall(featured);

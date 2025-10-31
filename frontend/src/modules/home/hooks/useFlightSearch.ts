@@ -33,9 +33,10 @@ export const useFlightSearch = () => {
   // Estados de filtros adicionales
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
-  const [horarioIda, setHorarioIda] = useState<string[]>([]);
-  const [horarioVuelta, setHorarioVuelta] = useState<string[]>([]);
-  const [mostrarHorarios, setMostrarHorarios] = useState(false);
+  const [horaIdaInicio, setHoraIdaInicio] = useState("");
+  const [horaIdaFin, setHoraIdaFin] = useState("");
+  const [horaVueltaInicio, setHoraVueltaInicio] = useState("");
+  const [horaVueltaFin, setHoraVueltaFin] = useState("");
 
   // Estados de ciudades
   const [ciudades, setCiudades] = useState<Ciudad[]>([]);
@@ -62,11 +63,12 @@ export const useFlightSearch = () => {
   // Ciudades seleccionadas
   const [ciudadOrigenSeleccionada, setCiudadOrigenSeleccionada] = useState<Ciudad | null>(null);
   const [ciudadDestinoSeleccionada, setCiudadDestinoSeleccionada] = useState<Ciudad | null>(null);
+  const [mostrarHorarios, setMostrarHorarios] = useState(false); 
 
   // Refs
   const origenRef = useRef<HTMLDivElement>(null);
   const destinoRef = useRef<HTMLDivElement>(null);
-
+  
   // Valores computados
   const totalPasajeros = pasajeros.adultos + pasajeros.menores;
 
@@ -139,27 +141,6 @@ export const useFlightSearch = () => {
     setPrecioMax("");
   };
 
-  // ================== FILTROS DE HORARIO ==================
-  const toggleHorario = (tipo: "ida" | "vuelta", franjaId: string) => {
-    if (tipo === "ida") {
-      setHorarioIda(prev => 
-        prev.includes(franjaId) 
-          ? prev.filter(h => h !== franjaId)
-          : [...prev, franjaId]
-      );
-    } else {
-      setHorarioVuelta(prev => 
-        prev.includes(franjaId) 
-          ? prev.filter(h => h !== franjaId)
-          : [...prev, franjaId]
-      );
-    }
-  };
-
-  const limpiarFiltrosHorario = () => {
-    setHorarioIda([]);
-    setHorarioVuelta([]);
-  };
 
   // ================== FILTROS ==================
   const filtrarOrigen = (valor: string) => {
@@ -286,88 +267,111 @@ export const useFlightSearch = () => {
   };
 
   // ================== VALIDACIÓN ==================
-  const validarYBuscarVuelo = () => {
-    setCamposInvalidos({
-      origen: false,
-      destino: false,
-      ida: false,
-      vuelta: false
-    });
 
-    let hayErrores = false;
-    const errores: any = {};
+const validarYBuscarVuelo = async () => {
+  // Limpiar errores previos
+  setCamposInvalidos({
+    origen: false,
+    destino: false,
+    ida: false,
+    vuelta: false
+  });
+  setMensaje("");
 
-    if (!ciudadOrigenSeleccionada) {
-      errores.origen = true;
-      hayErrores = true;
+  let hayErrores = false;
+  const errores: any = {};
+
+  // Validación de campos obligatorios
+  if (!ciudadOrigenSeleccionada) {
+    errores.origen = true;
+    hayErrores = true;
+  }
+
+  if (!ciudadDestinoSeleccionada) {
+    errores.destino = true;
+    hayErrores = true;
+  }
+
+  if (!ida) {
+    errores.ida = true;
+    hayErrores = true;
+  }
+
+  if (modo === "ida_vuelta" && !vuelta) {
+    errores.vuelta = true;
+    hayErrores = true;
+  }
+
+  if (hayErrores) {
+    setCamposInvalidos(errores);
+    setMensaje("Por favor, completa los campos marcados en rojo.");
+    return;
+  }
+
+  // Validación de precios
+  if (precioMin && precioMax && Number(precioMin) > Number(precioMax)) {
+    setMensaje("El precio mínimo no puede ser mayor que el máximo.");
+    return;
+  }
+
+  // Validación de horarios de ida
+  if (horaIdaInicio && horaIdaFin && horaIdaInicio > horaIdaFin) {
+    setMensaje("La hora de inicio del vuelo de ida no puede ser mayor que la hora final.");
+    return;
+  }
+
+  // Validación de horarios de vuelta
+  if (modo === "ida_vuelta" && horaVueltaInicio && horaVueltaFin && horaVueltaInicio > horaVueltaFin) {
+    setMensaje("La hora de inicio del vuelo de vuelta no puede ser mayor que la hora final.");
+    return;
+  }
+
+  // Limpiar nombres de ciudades
+  const origenCiudad = limpiarCiudad(origen);
+  const destinoCiudad = limpiarCiudad(destino);
+
+  // Validaciones de reglas de negocio
+  const origenEsCapitalNacional = CAPITALES_NACIONALES.includes(origenCiudad);
+  const origenEsHubInternacional = ORIGENES_INTERNACIONALES.includes(origenCiudad);
+  const origenEsInternacional = DESTINOS_INTERNACIONALES.includes(origenCiudad);
+  const destinoEsCapitalNacional = CAPITALES_NACIONALES.includes(destinoCiudad);
+  const destinoEsInternacional = DESTINOS_INTERNACIONALES.includes(destinoCiudad);
+  const destinoEsHubInternacional = ORIGENES_INTERNACIONALES.includes(destinoCiudad);
+
+  if (origenEsInternacional) {
+    if (!destinoEsHubInternacional) {
+      setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
+      return;
     }
-
-    if (!ciudadDestinoSeleccionada) {
-      errores.destino = true;
-      hayErrores = true;
-    }
-
-    if (!ida) {
-      errores.ida = true;
-      hayErrores = true;
-    }
-
-    if (modo === "ida_vuelta" && !vuelta) {
-      errores.vuelta = true;
-      hayErrores = true;
-    }
-
-    if (hayErrores) {
-      setCamposInvalidos(errores);
-      setMensaje("Por favor, completa los campos marcados en rojo.");
+  } else {
+    if (!origenEsCapitalNacional) {
+      setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
       return;
     }
 
-    // Validación de precios
-    if (precioMin && precioMax && Number(precioMin) > Number(precioMax)) {
-      setMensaje("El precio mínimo no puede ser mayor que el máximo.");
+    if (destinoEsInternacional && !origenEsHubInternacional) {
+      setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
       return;
     }
 
-    const origenCiudad = limpiarCiudad(origen);
-    const destinoCiudad = limpiarCiudad(destino);
-
-    const origenEsCapitalNacional = CAPITALES_NACIONALES.includes(origenCiudad);
-    const origenEsHubInternacional = ORIGENES_INTERNACIONALES.includes(origenCiudad);
-    const origenEsInternacional = DESTINOS_INTERNACIONALES.includes(origenCiudad);
-    const destinoEsCapitalNacional = CAPITALES_NACIONALES.includes(destinoCiudad);
-    const destinoEsInternacional = DESTINOS_INTERNACIONALES.includes(destinoCiudad);
-    const destinoEsHubInternacional = ORIGENES_INTERNACIONALES.includes(destinoCiudad);
-
-    if (origenEsInternacional) {
-      if (!destinoEsHubInternacional) {
-        setMensaje("Desde ciudades internacionales solo puedes regresar a Pereira, Bogotá, Medellín, Cali o Cartagena.");
-        return;
-      }
-    } else {
-      if (!origenEsCapitalNacional) {
-        setMensaje("Los vuelos solo pueden salir desde capitales principales del país.");
-        return;
-      }
-
-      if (destinoEsInternacional && !origenEsHubInternacional) {
-        setMensaje("Para vuelos internacionales, solo puedes salir desde Pereira, Bogotá, Medellín, Cali o Cartagena.");
-        return;
-      }
-
-      if (!destinoEsInternacional && !destinoEsCapitalNacional) {
-        setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
-        return;
-      }
-    }
-
-    if (origenCiudad === destinoCiudad) {
-      setMensaje("El origen y destino no pueden ser la misma ciudad.");
+    if (!destinoEsInternacional && !destinoEsCapitalNacional) {
+      setMensaje("Los vuelos nacionales solo pueden ir hacia otras capitales principales.");
       return;
     }
+  }
 
+  if (origenCiudad === destinoCiudad) {
+    setMensaje("El origen y destino no pueden ser la misma ciudad.");
+    return;
+  }
+
+  // Mostrar loading
+  setLoading(true);
+  setMensaje("Buscando vuelos disponibles...");
+
+  try {
+    // Construir parámetros de búsqueda para la URL
     const searchParams = new URLSearchParams({
-
       originId: ciudadOrigenSeleccionada.id_ciudad.toString(),
       destinationId: ciudadDestinoSeleccionada.id_ciudad.toString(),
       departureDate: ida,
@@ -377,88 +381,110 @@ export const useFlightSearch = () => {
       destino: ciudadDestinoSeleccionada.nombre,
     });
 
+    // Agregar fecha de vuelta si aplica
     if (modo === "ida_vuelta" && vuelta) {
       searchParams.append('returnDate', vuelta);
     }
 
-    // Agregar filtros de precio si están definidos
+    // Agregar filtros de precio
     if (precioMin) {
-      searchParams.append('precioMin', precioMin);
+      searchParams.append('minimumPrice', precioMin);
     }
     if (precioMax) {
-      searchParams.append('precioMax', precioMax);
+      searchParams.append('maximumPrice', precioMax);
     }
 
-    // Agregar filtros de horario si están seleccionados
-    if (horarioIda.length > 0) {
-      searchParams.append('horarioIda', horarioIda.join(','));
+    // Agregar filtros de horario de IDA
+    if (horaIdaInicio) {
+      searchParams.append('outboundInitialHour', horaIdaInicio);
     }
-    if (modo === "ida_vuelta" && horarioVuelta.length > 0) {
-      searchParams.append('horarioVuelta', horarioVuelta.join(','));
+    if (horaIdaFin) {
+      searchParams.append('outboundFinalHour', horaIdaFin);
     }
 
+    // Agregar filtros de horario de VUELTA
+    if (modo === "ida_vuelta") {
+      if (horaVueltaInicio) {
+        searchParams.append('returnInitialHour', horaVueltaInicio);
+      }
+      if (horaVueltaFin) {
+        searchParams.append('returnFinalHour', horaVueltaFin);
+      }
+    }
+
+    // Navegar a la página de resultados
     navigate(`/buscar-vuelos?${searchParams.toString()}`);
-  };
+    
+
+  } catch (error: any) {
+    console.error('Error al procesar la búsqueda:', error);
+    setMensaje(error.message || "Error al procesar la búsqueda. Por favor, intenta de nuevo.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return {
-    // Estados
-    modo,
-    origen,
-    destino,
-    ida,
-    vuelta,
-    pasajeros,
-    mensaje,
-    loading,
-    ciudades,
-    ciudadesLoaded,
-    camposInvalidos,
-    sugerenciasOrigen,
-    sugerenciasDestino,
-    mostrarCalendario,
-    mostrarPasajeros,
-    origenBloqueado,
-    destinoBloqueado,
-    ciudadOrigenSeleccionada,
-    ciudadDestinoSeleccionada,
-    totalPasajeros,
-    
-    // Estados de filtros adicionales
-    precioMin,
-    precioMax,
-    horarioIda,
-    horarioVuelta,
-    mostrarHorarios,
-    
-    // Refs
-    origenRef,
-    destinoRef,
-    
-    // Setters
-    setModo,
-    setMostrarCalendario,
-    setMostrarPasajeros,
-    setPrecioMin,
-    setPrecioMax,
-    setHorarioIda,
-    setHorarioVuelta,
-    setMostrarHorarios,
-    
-    // Funciones
-    filtrarOrigen,
-    filtrarDestino,
-    seleccionarOrigen,
-    seleccionarDestino,
-    resetearOrigen,
-    resetearDestino,
-    cambiarPasajeros,
-    actualizarFechas,
-    validarYBuscarVuelo,
-    limpiarErrorCampo,
-    formatearPrecio,
-    handlePrecioChange,
-    toggleHorario,
-    limpiarFiltrosHorario,
-    limpiarFiltrosPrecio,
+  // Estados
+  modo,
+  origen,
+  destino,
+  ida,
+  vuelta,
+  pasajeros,
+  mensaje,
+  loading,
+  ciudades,
+  ciudadesLoaded,
+  camposInvalidos,
+  sugerenciasOrigen,
+  sugerenciasDestino,
+  mostrarCalendario,
+  mostrarPasajeros,
+  mostrarHorarios,
+  origenBloqueado,
+  destinoBloqueado,
+  ciudadOrigenSeleccionada,
+  ciudadDestinoSeleccionada,
+  totalPasajeros,
+  
+  // Estados de filtros adicionales
+  precioMin,
+  precioMax,
+  horaIdaInicio,
+  horaIdaFin,
+  horaVueltaInicio,
+  horaVueltaFin,
+  
+  // Refs
+  origenRef,
+  destinoRef,
+  
+  // Setters
+  setModo,
+  setMostrarCalendario,
+  setMostrarPasajeros,
+  setMostrarHorarios,
+  setPrecioMin,
+  setPrecioMax,
+  setHoraIdaInicio,
+  setHoraIdaFin,
+  setHoraVueltaInicio,
+  setHoraVueltaFin,
+  
+  // Funciones
+  filtrarOrigen,
+  filtrarDestino,
+  seleccionarOrigen,
+  seleccionarDestino,
+  resetearOrigen,
+  resetearDestino,
+  cambiarPasajeros,
+  actualizarFechas,
+  validarYBuscarVuelo,
+  limpiarErrorCampo,
+  formatearPrecio,
+  handlePrecioChange,
+  limpiarFiltrosPrecio,
   };
-};
+}; 
