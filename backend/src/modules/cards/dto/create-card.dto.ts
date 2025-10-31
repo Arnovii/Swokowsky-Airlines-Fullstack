@@ -73,6 +73,15 @@ export class CreateCardDto {
   })
   @IsDateString()
   creado_en: Date;
+
+  @ApiProperty({
+    example: "1234567890123456",
+    description: 'numero de tarjeta único.',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @Length(16, 16)
+  num_tarjeta: string; 
 }
 
 
