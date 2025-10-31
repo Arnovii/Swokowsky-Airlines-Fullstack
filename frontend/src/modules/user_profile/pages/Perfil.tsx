@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 
 // Lista de nacionalidades (ejemplo, puedes ampliarla)
@@ -283,6 +283,24 @@ export default function Perfil() {
   // 🔁 CAMBIO: ahora ActiveTab incluye "wallet"
   const [activeTab, setActiveTab] = useState<ActiveTab>("personal");
 
+  // Sincronizar tabs con query parameters
+const [searchParams, setSearchParams] = useSearchParams();
+const tabFromUrl = searchParams.get("tab") as ActiveTab | null;
+
+useEffect(() => {
+  if (tabFromUrl && ["personal", "contact", "security", "wallet"].includes(tabFromUrl)) {
+    setActiveTab(tabFromUrl);
+  } else {
+    setSearchParams({ tab: "personal" });
+  }
+}, [tabFromUrl, setSearchParams]);
+
+  const handleTabChange = (newTab: ActiveTab) => {
+  setActiveTab(newTab);
+  setSearchParams({ tab: newTab });
+};
+
+
   // MANTENER: seguridad
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -471,6 +489,19 @@ export default function Perfil() {
                 className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
               >
                 Ir al Panel Administrador
+              </button>
+            </div>
+          )}
+
+          {/* MANTENER: botón root */}
+          {profile.tipo_usuario === "root" && (
+            <div className="mt-6 flex justify-center pb-4">
+              <button
+                type="button"
+                onClick={() => navigate("/panelAdministrador/root")}
+                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
+              >
+                Ir al Panel Root
               </button>
             </div>
           )}
