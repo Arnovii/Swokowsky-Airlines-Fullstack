@@ -1,4 +1,3 @@
-// src/modules/checkout/page/CheckoutPage.tsx
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -98,11 +97,11 @@ const CheckoutPage = () => {
 
   if (cartLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#081225] via-[#123361] to-[#39A5D8] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#39A5D8] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-md w-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#39A5D8] mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">Cargando checkout</h3>
-          <p className="text-gray-500">Preparando tu información...</p>
+          <h3 className="text-xl font-semibold text-[#123361] mb-2">Cargando checkout</h3>
+          <p className="text-gray-600">Preparando tu información...</p>
         </div>
       </div>
     );
@@ -113,15 +112,15 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#081225] via-[#123361] to-[#39A5D8] py-8 px-4">
+    <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => navigate('/carrito')}
-            className="group flex items-center gap-3 px-6 py-3 bg-white/20 backdrop-blur-lg rounded-xl border border-white/30 text-white font-semibold transition-all duration-300 hover:bg-white/30 hover:border-white/50 hover:scale-105 shadow-lg hover:shadow-xl mb-6"
+            className="group flex items-center gap-3 px-6 py-3 bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] rounded-xl border border-[#39A5D8]/20 text-white font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-[#39A5D8]/30 hover:scale-105 mb-6"
           >
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-all duration-300">
+            <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center group-hover:bg-white/20 transition-all duration-300 shadow-lg">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
@@ -130,15 +129,15 @@ const CheckoutPage = () => {
           </button>
 
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#0F6899] to-[#39A5D8] rounded-full mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] rounded-full mb-4 shadow-xl shadow-[#39A5D8]/20">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
-              Finalizar Compra
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] bg-clip-text text-transparent mb-3">
+              FINALIZAR COMPRA
             </h1>
-            <p className="text-white/80 text-lg">
+            <p className="text-[#123361]/80 text-lg font-medium">
               Completa la información de los pasajeros para confirmar tu reserva
             </p>
           </div>
@@ -150,20 +149,19 @@ const CheckoutPage = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Saldo del monedero */}
             <WalletBalance 
-              balance={userBalance} 
               totalAmount={totalAmount}
             />
 
             {/* Lista de vuelos con formularios */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-lg rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] rounded-xl flex items-center justify-center shadow-lg shadow-[#39A5D8]/20">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-white">
-                  Información de Pasajeros ({cart.length} {cart.length === 1 ? 'vuelo' : 'vuelos'})
+                <h2 className="text-3xl font-bold bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] bg-clip-text text-transparent">
+                  INFORMACIÓN DE PASAJEROS ({cart.length} {cart.length === 1 ? 'vuelo' : 'vuelos'})
                 </h2>
               </div>
 

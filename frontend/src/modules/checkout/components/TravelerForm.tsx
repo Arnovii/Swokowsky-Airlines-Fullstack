@@ -1,4 +1,3 @@
-// src/modules/checkout/components/TravelerForm.tsx
 
 import { useState } from 'react';
 import type { TravelerInfo } from '../modules/checkout/types/checkoutTypes';
@@ -72,7 +71,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               </svg>
             </div>
             <div className="text-white">
-              <h3 className="text-lg font-bold">Pasajero #{index}</h3>
+              <h3 className="text-lg font-bold">Pasajero </h3>
               <p className="text-white/80 text-sm">{flightInfo.origin} → {flightInfo.destination}</p>
             </div>
           </div>
