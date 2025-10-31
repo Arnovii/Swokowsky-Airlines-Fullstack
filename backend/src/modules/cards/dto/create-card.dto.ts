@@ -74,6 +74,3 @@ export class CreateCardDto {
   @IsDateString()
   creado_en: Date;
 }
-
-
-

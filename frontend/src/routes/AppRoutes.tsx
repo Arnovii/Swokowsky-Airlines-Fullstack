@@ -38,6 +38,26 @@ export default function AppRoutes() {
           }
         />
 
+      {/* Módulo Root (admin) */}
+      <Route
+        path="/panelAdministrador/root"
+        element={
+          <AdminRoute>
+            <Root />
+          </AdminRoute>
+        }
+      />
+
+      {/* ✅ Nueva ruta para crear administrador */}
+      <Route
+        path="/panelAdministrador/root/create-admin"
+        element={
+          <AdminRoute>
+            <CreateAdmin />
+          </AdminRoute>
+        }
+      />
+
         {/* Ruta protegida del carrito */}
         <Route
           path="/carrito"
@@ -96,25 +116,9 @@ export default function AppRoutes() {
         />
       </Route>
 
-      {/* Módulo Root (admin) */}
-      <Route
-        path="/panelAdministrador/root"
-        element={
-          <AdminRoute>
-            <Root />
-          </AdminRoute>
-        }
-      />
 
-      {/* ✅ Nueva ruta para crear administrador */}
-      <Route
-        path="/panelAdministrador/root/create-admin"
-        element={
-          <AdminRoute>
-            <CreateAdmin />
-          </AdminRoute>
-        }
-      />
+
+
 
       {/* ✅ Cambio de contraseña obligatorio */}
       <Route
