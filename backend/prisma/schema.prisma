@@ -151,8 +151,6 @@ model usuario {
   suscrito_noticias     Boolean              @default(false)
   creado_en             DateTime             @db.DateTime(0)
   must_change_password  Boolean              @default(false)
-  saldo                 Float?               @default(0)
-  carrito               carrito?
   tarjeta               tarjeta[]
   ticket                ticket[]
   saldo                 Float?                @default(0.0) //Solo puede ser modificado cuando se agregan tarjetas o reembolso 
