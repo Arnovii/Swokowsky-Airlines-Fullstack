@@ -122,6 +122,15 @@ export class MailService {
     });
   }
 
+  async sendTicketEmail(to: string, data: { nombre: string; TituloNoticiaVuelo: string; NumeroAsiento: string }) {
+    return this.sendMail({
+      to,
+      subject: 'Confirmación de Ticket - Swokowsky Airlines',
+      template: 'ticket-confirmation',
+      context: data,
+    });
+  }
+
   /**
    * Envía una notificación (plantilla new-notification) a múltiples destinatarios.
    * Usa internamente sendNewNotificationEmail para cada email.

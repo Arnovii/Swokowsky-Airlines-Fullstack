@@ -1,5 +1,6 @@
+// src/pages/TicketListView.tsx
 import React, { useEffect, useState } from "react";
-
+import api from "../../../api/axios";
 interface Ticket {
   id_ticket: number;
   id_usuarioFK: number;
@@ -13,47 +14,28 @@ interface Ticket {
 
 export default function TicketListView() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulación de fetch
-    setTimeout(() => {
-      setTickets([
-        {
-          id_ticket: 1,
-          id_usuarioFK: 3,
-          id_vueloFK: 22,
-          asiento_numero: "12A",
-          asiento_clase: "Ejecutiva",
-          precio: 550.75,
-          estado: "Confirmado",
-          creado_en: "2025-10-30T12:45:00",
-        },
-        {
-          id_ticket: 2,
-          id_usuarioFK: 5,
-          id_vueloFK: 18,
-          asiento_numero: "7C",
-          asiento_clase: "Económica",
-          precio: 320.5,
-          estado: "Pendiente",
-          creado_en: "2025-10-28T09:20:00",
-        },
-        {
-          id_ticket: 3,
-          id_usuarioFK: 2,
-          id_vueloFK: 33,
-          asiento_numero: "3B",
-          asiento_clase: "Primera Clase",
-          precio: 980.99,
-          estado: "Cancelado",
-          creado_en: "2025-10-25T17:10:00",
-        },
-      ]);
-    }, 600);
+    const fetchTickets = async () => {
+      try {
+        const idUsuario = 3; // 👈 puedes obtenerlo del token o del contexto del usuario
+        const res = await api.get(`/tickets/user/${idUsuario}`);
+        setTickets(res.data);
+      } catch (err: any) {
+        console.error("Error al cargar tickets:", err);
+        setError("No se pudieron cargar los tickets.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTickets();
   }, []);
 
-  if (tickets.length === 0)
-    return <div className="text-center py-10">Cargando tickets...</div>;
+  if (loading) return <div className="text-center py-10">Cargando tickets...</div>;
+  if (error) return <div className="text-center text-red-500">{error}</div>;
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50">

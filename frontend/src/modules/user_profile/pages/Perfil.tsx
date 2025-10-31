@@ -609,17 +609,36 @@ export default function Perfil() {
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-                </div>
-                <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Suscrito a noticias</label>
-                  <input
-                    type="checkbox"
-                    checked={!!contactForm.suscrito_noticias}
-                    disabled={!editContact}
-                    onChange={(e) => setContactForm({ ...contactForm, suscrito_noticias: e.target.checked })}
-                    className="ml-2"
-                  />
-                </div>
+<div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
+  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+    Suscrito a noticias
+  </label>
+
+        <input
+          type="checkbox"
+          checked={!!contactForm.suscrito_noticias}
+          onChange={async (e) => {
+            const nuevoValor = e.target.checked;
+            setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+
+            try {
+              await api.patch("/profile", { suscrito_noticias: nuevoValor });
+              setUpdateMessage(
+                nuevoValor
+                  ? "✅ Te has suscrito correctamente a las noticias."
+                  : "❌ Has cancelado la suscripción a las noticias."
+              );
+            } catch (err: any) {
+              console.error("Error al actualizar suscripción:", err);
+              setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
+              // Revertir visualmente el cambio si falla
+              setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+            }
+          }}
+          className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
+        />
+      </div>
+                      </div>
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -937,13 +956,41 @@ export default function Perfil() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
-                    <input
-                      type="text"
-                      value={addCardForm.banco}
-                      onChange={(e) => setAddCardForm((s) => ({ ...s, banco: e.target.value }))}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                      placeholder="Banco de Bogotá"
-                    />
+<input
+    type="text"
+    inputMode="text"
+    autoComplete="off"
+    // HTML pattern por si usas validación nativa del form:
+    pattern="^[A-Za-zÀ-ÿ\s]+$"
+    value={addCardForm.banco}
+    onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
+      // Evita inyectar caracteres inválidos antes de que entren al input
+      const data = (e as unknown as InputEvent).data ?? "";
+      if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
+        (e.nativeEvent as InputEvent).preventDefault();
+      }
+    }}
+    onKeyDown={(e) => {
+      // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
+      const allowedKeys = [
+        "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+      ];
+      if (allowedKeys.includes(e.key)) return;
+      if (/^\d$/.test(e.key)) e.preventDefault();
+    }}
+    onPaste={(e) => {
+      // Valida pegado: solo letras y espacios
+      const text = e.clipboardData.getData("text");
+      if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
+    }}
+    onChange={(e) => {
+      // Filtro definitivo por si algo se cuela (ej. autocompletar)
+      const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+      setAddCardForm((s) => ({ ...s, banco: limpio }));
+    }}
+    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+    placeholder="Banco de Bogotá"
+  />
                   </div>
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Tipo</label>
@@ -958,17 +1005,7 @@ export default function Perfil() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    id="makeDefault"
-                    type="checkbox"
-                    checked={addCardForm.makeDefault}
-                    onChange={(e) => setAddCardForm((s) => ({ ...s, makeDefault: e.target.checked }))}
-                  />
-                  <label htmlFor="makeDefault" className="text-sm text-gray-700">
-                    Establecer como método predeterminado (UI)
-                  </label>
-                </div>
+
               </div>
 
               <div className="mt-6 flex justify-end gap-3">

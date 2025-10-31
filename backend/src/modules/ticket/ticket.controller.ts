@@ -8,55 +8,28 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
-import { asiento_clases } from '@prisma/client';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { ActiveUser } from '../../common/decorators/active-user.decorator';
+import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
+import { usuario_tipo_usuario } from '@prisma/client';
+import { UseGuards } from '@nestjs/common';
 
-@Controller('ticket')
+
+
+@ApiTags('tickets - ruta solo para usuarios tipo CLIENTE')
+@ApiBearerAuth('bearerAuth')
+@Roles(usuario_tipo_usuario.cliente)
+@UseGuards(RolesGuard)
+@Controller('tickets')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) { }
 
-  /**
-   * 🔹 Crear un nuevo ticket (por defecto en estado 'Pagado')
-   * Ejemplo JSON de entrada:
-   * {
-   *   "idUsuario": 1,
-   *   "idVuelo": 10,
-   *   "clase": "Economica",
-   *   "precio": 500.0
-   * }
-   */
-  @Post()
-  async createTicket(@Body() body: any) {
-    const { idUsuario, idVuelo, clase, precio } = body;
-
-    if (!idUsuario || !idVuelo || !clase || !precio) {
-      throw new BadRequestException(
-        'Faltan datos obligatorios: idUsuario, idVuelo, clase o precio',
-      );
-    }
-
-    // Normalizar el valor de clase para aceptar diferentes formatos
-    let claseNormalizada: asiento_clases;
-    const claseLower = String(clase).toLowerCase();
-    if (claseLower === 'economica') {
-      claseNormalizada = asiento_clases.economica;
-    } else if (claseLower === 'primeraclase' || claseLower === 'primera_clase') {
-      claseNormalizada = asiento_clases.primera_clase;
-    } else {
-      throw new BadRequestException('La clase debe ser "Economica"/"economica" o "PrimeraClase"/"primera_clase"');
-    }
-    return this.ticketService.createTicket(
-      Number(idUsuario),
-      Number(idVuelo),
-      claseNormalizada,
-      Number(precio),
-    );
-  }
-
-  /**
-   * 🔹 Obtener todos los tickets pagados de un usuario
-   */
-  @Get(':idUsuario')
-  async getTicketsByUser(@Param('idUsuario', ParseIntPipe) idUsuario: number) {
-    return this.ticketService.getTicketsByUser(idUsuario);
+  @Get()
+  @ApiOperation({ summary: 'Obtiene la tarjeta del usuario autenticado' })
+  @ApiHeader({ name: 'Authorization', description: 'Bearer token' })
+  async getCard(@ActiveUser() user: PayloadInterface) {
+    return this.ticketService.getTicketsByUser(user.id_usuario);
   }
 }
