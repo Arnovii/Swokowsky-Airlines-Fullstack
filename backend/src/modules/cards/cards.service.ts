@@ -52,7 +52,6 @@ export class CardsService {
 
     const nuevaTarjeta = await this.prisma.tarjeta.create({
       data: {
-        num_tarjeta: 0,
         id_usuarioFK: usuario.id_usuario,
         saldo: saldoAleatorio,
         titular: dto.titular,
