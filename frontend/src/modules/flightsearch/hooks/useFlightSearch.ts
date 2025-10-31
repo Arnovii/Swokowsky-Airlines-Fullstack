@@ -93,7 +93,45 @@ export const useFlightSearch = (
     setError(null);
 
     try {
-      const rawResponse = await FlightService.searchFlights(criteria, { signal });
+     
+      const searchParams: Record<string, any> = {
+        originCityId: criteria.originCityId,
+        destinationCityId: criteria.destinationCityId,
+        departureDate: criteria.departureDate,
+        passengers: criteria.passengers,
+        roundTrip: criteria.roundTrip,
+      };
+
+      // Agregar fecha de retorno si existe
+      if (criteria.returnDate) {
+        searchParams.returnDate = criteria.returnDate;
+      }
+
+      // NUEVO: Agregar filtros de precio
+      if (criteria.minimumPrice) {
+        searchParams.minimumPrice = Number(criteria.minimumPrice);
+      }
+      if (criteria.maximumPrice) {
+        searchParams.maximumPrice = Number(criteria.maximumPrice);
+      }
+
+      if (criteria.outboundFinalHour) {
+        searchParams.finalHour = criteria.outboundFinalHour;
+      }
+      if (criteria.outboundInitialHour) {
+        // La API espera "initialHour" (string de hora, ej: "06:00")
+        searchParams.initialHour = criteria.outboundInitialHour; 
+      }
+      
+      // Agrega la hora final general (usando el valor de outboundFinalHour)
+      if (criteria.outboundFinalHour) {
+        // La API espera "finalHour" (string de hora, ej: "16:00")
+        searchParams.finalHour = criteria.outboundFinalHour;
+      }
+
+      console.log('[useFlightSearch] Enviando búsqueda con filtros:', searchParams);
+
+      const rawResponse = await FlightService.searchFlights(searchParams, { signal });
 
       // Manejo: si FlightService devuelve un AxiosResponse, extraemos .data
       const payload = rawResponse && rawResponse.data ? rawResponse.data : rawResponse;

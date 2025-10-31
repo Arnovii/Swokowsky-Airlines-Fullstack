@@ -6,32 +6,47 @@ const TimeInput = ({ label, value, onChange, placeholder = "HH:MM" }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleTimeChange = (e) => {
-    let input = e.target.value.replace(/[^\d]/g, '');
+    const input = e.target.value;
     
-    if (input.length >= 2) {
-      const hours = input.slice(0, 2);
-      const minutes = input.slice(2, 4);
-      
-      // Validar horas (00-23)
-      const validHours = Math.min(parseInt(hours) || 0, 23).toString().padStart(2, '0');
-      
-      if (input.length > 2) {
-        // Validar minutos (00-59)
-        const validMinutes = Math.min(parseInt(minutes) || 0, 59).toString().padStart(2, '0');
-        input = `${validHours}:${validMinutes}`;
+    // Permitir solo números y dos puntos
+    const cleaned = input.replace(/[^\d:]/g, '');
+    
+    // Limitar a formato HH:MM (5 caracteres máximo)
+    if (cleaned.length <= 5) {
+      // Auto-insertar los dos puntos después de 2 dígitos
+      if (cleaned.length === 2 && !cleaned.includes(':') && input.length > value.length) {
+        onChange(cleaned + ':');
       } else {
-        input = validHours;
+        onChange(cleaned);
       }
     }
-    
-    onChange(input);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Autocompletar formato si está incompleto
-    if (value && value.length === 2) {
-      onChange(`${value}:00`);
+    
+    // Validar y formatear al perder el foco
+    if (value) {
+      const parts = value.split(':');
+      if (parts.length === 2) {
+        let hours = parseInt(parts[0], 10);
+        let minutes = parseInt(parts[1], 10);
+        
+        // Validar rangos
+        if (isNaN(hours)) hours = 0;
+        if (isNaN(minutes)) minutes = 0;
+        hours = Math.min(Math.max(hours, 0), 23);
+        minutes = Math.min(Math.max(minutes, 0), 59);
+        
+        const formatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        onChange(formatted);
+      } else if (parts.length === 1 && parts[0].length > 0) {
+        // Si solo hay horas, agregar :00
+        let hours = parseInt(parts[0], 10);
+        if (isNaN(hours)) hours = 0;
+        hours = Math.min(Math.max(hours, 0), 23);
+        onChange(`${hours.toString().padStart(2, '0')}:00`);
+      }
     }
   };
 
@@ -61,31 +76,21 @@ const TimeInput = ({ label, value, onChange, placeholder = "HH:MM" }) => {
 
 // Componente TimeFilter para usar en filterSearchBar
 interface TimeFilterProps {
-  modo: "ida_vuelta" | "solo_ida";
   mostrarHorarios: boolean;
   setMostrarHorarios: (value: boolean) => void;
   horaIdaInicio: string;
   horaIdaFin: string;
-  horaVueltaInicio: string;
-  horaVueltaFin: string;
   setHoraIdaInicio: (value: string) => void;
   setHoraIdaFin: (value: string) => void;
-  setHoraVueltaInicio: (value: string) => void;
-  setHoraVueltaFin: (value: string) => void;
 }
 
 export const TimeFilter: React.FC<TimeFilterProps> = ({
-  modo,
   mostrarHorarios,
   setMostrarHorarios,
   horaIdaInicio,
   horaIdaFin,
-  horaVueltaInicio,
-  horaVueltaFin,
   setHoraIdaInicio,
   setHoraIdaFin,
-  setHoraVueltaInicio,
-  setHoraVueltaFin,
 }) => {
   const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
     <svg
@@ -104,31 +109,21 @@ export const TimeFilter: React.FC<TimeFilterProps> = ({
   );
 
   const getResumenHorario = () => {
-    const partes = [];
-    
     if (horaIdaInicio || horaIdaFin) {
       const inicio = horaIdaInicio || "00:00";
       const fin = horaIdaFin || "23:59";
-      partes.push(`Ida: ${inicio} - ${fin}`);
+      return `Horarios: ${inicio} - ${fin}`;
     }
     
-    if (modo === "ida_vuelta" && (horaVueltaInicio || horaVueltaFin)) {
-      const inicio = horaVueltaInicio || "00:00";
-      const fin = horaVueltaFin || "23:59";
-      partes.push(`Vuelta: ${inicio} - ${fin}`);
-    }
-    
-    return partes.length > 0 ? partes.join(" • ") : "Seleccionar horarios";
+    return "Seleccionar horarios";
   };
 
   const limpiarHorarios = () => {
     setHoraIdaInicio("");
     setHoraIdaFin("");
-    setHoraVueltaInicio("");
-    setHoraVueltaFin("");
   };
 
-  const hayHorariosSeleccionados = horaIdaInicio || horaIdaFin || horaVueltaInicio || horaVueltaFin;
+  const hayHorariosSeleccionados = horaIdaInicio || horaIdaFin;
 
   return (
     <div className="flex flex-col relative">
@@ -151,7 +146,7 @@ export const TimeFilter: React.FC<TimeFilterProps> = ({
           {/* Horarios de Ida */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold text-gray-900">Vuelo de Ida</div>
+              <div className="text-sm font-semibold text-gray-900">Horario en hora colombiana</div>
               <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 Rango de tiempo
               </div>
@@ -174,34 +169,6 @@ export const TimeFilter: React.FC<TimeFilterProps> = ({
             </div>
           </div>
 
-          {/* Horarios de Vuelta */}
-          {modo === "ida_vuelta" && (
-            <div className="pt-4 border-t border-gray-200 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm font-semibold text-gray-900">Vuelo de Vuelta</div>
-                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  Rango de tiempo
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <TimeInput
-                  label="Desde"
-                  value={horaVueltaInicio}
-                  onChange={setHoraVueltaInicio}
-                  placeholder="06:00"
-                />
-                <div className="flex items-end pb-3 text-gray-400 font-bold">→</div>
-                <TimeInput
-                  label="Hasta"
-                  value={horaVueltaFin}
-                  onChange={setHoraVueltaFin}
-                  placeholder="22:00"
-                />
-              </div>
-            </div>
-          )}
-
           {/* Botones de acción */}
           <div className="flex gap-2">
             <button
@@ -222,4 +189,3 @@ export const TimeFilter: React.FC<TimeFilterProps> = ({
     </div>
   );
 };
-

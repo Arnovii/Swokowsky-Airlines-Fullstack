@@ -245,17 +245,12 @@ export default function FilterSearchBar() {
 
             {/* Filtro de Horario */}
             <TimeFilter
-              modo={modo}
               mostrarHorarios={mostrarHorarios}
               setMostrarHorarios={setMostrarHorarios}
               horaIdaInicio={horaIdaInicio}
               horaIdaFin={horaIdaFin}
-              horaVueltaInicio={horaVueltaInicio}
-              horaVueltaFin={horaVueltaFin}
               setHoraIdaInicio={setHoraIdaInicio}
               setHoraIdaFin={setHoraIdaFin}
-              setHoraVueltaInicio={setHoraVueltaInicio}
-              setHoraVueltaFin={setHoraVueltaFin}
             />
 
           </div>
