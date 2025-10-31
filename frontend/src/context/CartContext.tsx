@@ -1,11 +1,8 @@
-
-// EN TU CartContext.tsx:
-
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import cartService from '../modules/carrito/service/cartService';
 import type { AddCartItemDto, CartItem } from '../modules/carrito/service/cartService';
-import { toast } from 'react-toastify'; // ← IMPORTAR TOAST
+import { toast } from 'react-toastify';
 
 interface CartProviderProps {
   children: ReactNode;
@@ -36,7 +33,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    // ⭐ NO cargar carrito si es administrador
+    const isAdmin = user?.tipo_usuario === "admin" || user?.tipo_usuario === "root";
+    
+    if (isAuthenticated && user && !isAdmin) {
       refreshCart();
     } else {
       setCart([]);
@@ -45,6 +45,13 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const refreshCart = async () => {
     if (!isAuthenticated || !user) {
+      setCart([]);
+      return;
+    }
+
+    // ⭐ NO intentar cargar carrito si es administrador
+    const isAdmin = user?.tipo_usuario === "admin" || user?.tipo_usuario === "root";
+    if (isAdmin) {
       setCart([]);
       return;
     }
@@ -81,10 +88,9 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       if (totalTicketsAfterAdd > 5) {
         const available = 5 - existingTicketsForFlight;
         
-        // MOSTRAR TOAST DE ERROR
         if (available > 0) {
           toast.error(
-            ` Solo puedes agregar ${available} ticket${available > 1 ? 's' : ''} más. Ya tienes ${existingTicketsForFlight} en tu carrito para este vuelo.`,
+            `⚠️ Solo puedes agregar ${available} ticket${available > 1 ? 's' : ''} más. Ya tienes ${existingTicketsForFlight} en tu carrito para este vuelo.`,
             {
               position: "top-center",
               autoClose: 5000,
@@ -96,7 +102,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           );
         } else {
           toast.error(
-            ' Ya tienes el límite de 5 tickets para este vuelo en tu carrito.',
+            '⚠️ Ya tienes el límite de 5 tickets para este vuelo en tu carrito.',
             {
               position: "top-center",
               autoClose: 5000,
@@ -108,7 +114,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           );
         }
         
-        // LANZAR ERROR PARA QUE handleClassSelection LO CAPTURE
         throw new Error('Límite de tickets excedido');
       }
 
@@ -119,7 +124,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
       
-      // Solo mostrar toast si NO es el error de límite (ya se mostró arriba)
       if (error instanceof Error && error.message !== 'Límite de tickets excedido') {
         toast.error(
           'Hubo un problema al agregar los tickets. Intenta de nuevo.',
@@ -130,7 +134,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         );
       }
       
-      // RE-LANZAR EL ERROR para que handleClassSelection lo capture
       throw error;
       
     } finally {
@@ -163,7 +166,16 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, refreshCart, loading }}>
+    <CartContext.Provider 
+      value={{ 
+        cart, 
+        addToCart, 
+        removeFromCart, 
+        clearCart, 
+        refreshCart, 
+        loading 
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

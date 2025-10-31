@@ -1,20 +1,31 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get} from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
+import { ApiHeader } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator'
+import { usuario_tipo_usuario } from '@prisma/client';
+import { UseGuards } from '@nestjs/common';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { ActiveUser } from '../../common/decorators/active-user.decorator';
+import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
 import { WalletService } from './wallet.service';
-import { RechargeDto } from './dto/recharge.dto';
 
+
+
+@ApiTags('Monedero - ruta solo para usuarios tipo CLIENTE')
+@ApiBearerAuth('bearerAuth')
 @Controller('monedero')
+@Roles(usuario_tipo_usuario.cliente)
+@UseGuards(RolesGuard)
 export class WalletController {
-  constructor(private readonly walletService: WalletService) {}
+  constructor(private readonly WalletService: WalletService) { }
 
-  // GET /monedero/1/saldo
-  @Get(':idUsuario/saldo')
-  getSaldo(@Param('idUsuario') idUsuario: string) {
-    return this.walletService.getSaldo(+idUsuario);
-  }
-
-  // POST /monedero/recargar
-  @Post('recargar')
-  recargar(@Body() rechargeDto: RechargeDto) {
-    return this.walletService.recargarSaldo(rechargeDto);
+  @Get()
+  @ApiOperation({ summary: 'Obtener el estado del monedero del usuario autenticado' })
+  @ApiHeader({ name: 'Authorization', description: 'Bearer token' })
+  async getWallet(@ActiveUser() user: PayloadInterface) {
+    return this.WalletService.getSaldo(user);
   }
 }
+

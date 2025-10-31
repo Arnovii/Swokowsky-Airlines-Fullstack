@@ -28,6 +28,11 @@ export function FlightSearchResults() {
     returnDate: searchParams.get('returnDate') || null,
     passengers: parseInt(searchParams.get('passengers') || '1', 10),
     roundTrip: searchParams.get('roundTrip') === 'true',
+    // AGREGAR ESTOS FILTROS:
+    minimumPrice: searchParams.get('minimumPrice') || null,
+    maximumPrice: searchParams.get('maximumPrice') || null,
+    outboundInitialHour: searchParams.get('outboundInitialHour') || null,
+    outboundFinalHour: searchParams.get('outboundFinalHour') || null,
   }), [searchParams]);
 
   const showDebug = searchParams.get('debug') === 'true';

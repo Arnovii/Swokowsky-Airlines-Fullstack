@@ -1,64 +1,55 @@
-import React, { useState } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useNews } from "../hooks/useNews";
-import { usePromotions } from "../hooks/usePromotions";
-import { useFlights } from "../hooks/useFlights";
 import type { Article } from '../services/newsService';
 import HeroCarousel from "../components/HeroCarousel";
-import NewsCard from "../components/NewsCard";
-import NewsDetailModal from "../components/NewsDetailModal";
-import PromotionCard from "../components/PromotionCard";
-import FlightCard from "../components/FlightCard";
-import Carousel from "../components/Carousel";
-import FeaturedNews from "../../home/components/FeaturedNews";
-
-
+import NewsGrid from "../components/NewsGrid";
 
 export default function NewsPage() {
-  const { articles, featured, isLoading: newsLoading, error: newsError } = useNews();
-  const { promotions, isLoading: promotionsLoading, error: promotionsError } = usePromotions();
-  const { flights, isLoading: flightsLoading, error: flightsError } = useFlights();
-  
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Simulación del estado de autenticación
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { articles, featured, isLoading, error } = useNews();
+  const navigate = useNavigate();
 
   const handleReadMore = (article: Article) => {
-    setSelectedArticle(article);
-    setIsModalOpen(true);
+    // Navegar a la página de detalle del vuelo
+    navigate(`/noticias/vuelo/${article.id}`);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedArticle(null);
-  };
-
-  if (newsLoading) {
-    return <div className="text-center py-20 font-sans">Cargando contenido...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0e254d] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-sans">Cargando contenido...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (newsError) {
-    return <div className="text-center py-20 text-red-500 font-sans">Error al cargar el contenido: {newsError}</div>;
+  if (error) {
+    return (
+      <div className="text-center py-20 text-red-500 font-sans">
+        Error al cargar el contenido: {error}
+      </div>
+    );
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <main className="container mx-auto px-4 py-8 pt-28">
-        {/* Carrusel con noticias destacadas */}
-        <HeroCarousel items={featured} onCallToAction={handleReadMore} />
-
-        {/* Noticias recientes */}
-        <FeaturedNews items={featured} onCallToAction={handleReadMore}/>
+        {/* Carrusel Hero con noticias destacadas */}
+        {featured.length > 0 && (
+          <HeroCarousel 
+            items={featured} 
+            onCallToAction={handleReadMore} 
+          />
+        )}
+        
+        {/* Grid de todas las noticias */}
+        <NewsGrid 
+          items={articles} 
+          onCallToAction={handleReadMore}
+        />
       </main>
-
-      {/* Modal para ver el detalle de la noticia */}
-      <NewsDetailModal
-        article={selectedArticle}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        isAuth={isAuthenticated}
-      />
     </div>
   );
 }

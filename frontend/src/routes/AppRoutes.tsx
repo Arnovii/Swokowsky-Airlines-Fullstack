@@ -8,13 +8,14 @@ import ResetPassword from "../modules/auth/pages/ResetPassword";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
-import FlightDetailsPage from "../modules/checkout/FlightDetailsPage";
-import News from "../modules/news/pages/News";
-import DetalleOferta from "../modules/news/pages/detalleoferta";
-import DetalleVuelo from "../modules/news/pages/detallevuelo";
-import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador";
-import PrivateRoute from "./PrivateRoute";
-import AdminRoute from "./AdminRoute";
+import DetalleOferta from "../modules/news/pages/detalleoferta"
+import DetalleVuelo from "../modules/news/pages/detallevuelo"
+import PanelAdministrador from "../modules/panelAdministrador/pages/PanelAdministrador"
+import PrivateRoute from "./PrivateRoute"
+import AdminRoute from "./AdminRoute"
+import ClientRoute from "./ClientRoute" 
+import CheckoutPage from '../modules/checkout/page/CheckoutPage';
+import News from "../modules/news/pages/News"
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
@@ -25,7 +26,6 @@ import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Rutas principales con header/footer */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
 
@@ -42,9 +42,18 @@ export default function AppRoutes() {
         <Route
           path="/carrito"
           element={
-            <PrivateRoute>
+            <ClientRoute>
               <Carrito />
-            </PrivateRoute>
+            </ClientRoute>
+          }
+        />
+
+        <Route
+          path="/checkout"
+          element={
+            <ClientRoute>
+              <CheckoutPage />
+            </ClientRoute>
           }
         />
 
@@ -56,7 +65,6 @@ export default function AppRoutes() {
 
         {/* Vuelos y noticias */}
         <Route path="/buscar-vuelos" element={<FlightSearchResults />} />
-        <Route path="/detalle-vuelo/:id" element={<FlightDetailsPage />} />
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
@@ -78,7 +86,7 @@ export default function AppRoutes() {
             </AdminRoute>
           }
         />
-        <Route
+        <Route 
           path="/panelAdministrador/editar-vuelo/:id"
           element={
             <AdminRoute>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Eye, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import { NewsService } from '../services/newsService';
+import axios from 'axios';
 import { Link } from 'react-router-dom';
 
 interface NewsArticle {
@@ -17,6 +17,8 @@ interface NewsArticle {
   publishedAt?: string;
   fecha_publicacion?: string;
   createdAt?: string;
+  fecha_partida_colombia?: string;
+  hora_partida_colombia?: string;
   category?: { name?: string; color?: string };
   categoria?: { nombre?: string; color?: string };
   featured?: boolean;
@@ -24,6 +26,48 @@ interface NewsArticle {
   views?: number;
   readTime?: string;
 }
+
+/**
+ * Convierte fecha "DD/MM/YYYY" y hora "HH:MM" a objeto Date
+ */
+const parseFlightDateTime = (fecha: string, hora: string): Date => {
+  const [dia, mes, anio] = fecha.split('/').map(Number);
+  let [horas, minutos] = hora.split(':').map(Number);
+  
+  if (horas === 24) {
+    horas = 0;
+    return new Date(anio, mes - 1, dia + 1, horas, minutos);
+  }
+  
+  return new Date(anio, mes - 1, dia, horas, minutos);
+};
+
+/**
+ * Determina si una noticia debe mostrarse
+ */
+const shouldShowNews = (noticia: NewsArticle, now: Date): boolean => {
+  if (noticia.fecha_partida_colombia && noticia.hora_partida_colombia) {
+    try {
+      const flightTime = parseFlightDateTime(
+        noticia.fecha_partida_colombia,
+        noticia.hora_partida_colombia
+      );
+      
+      const oneHourBefore = new Date(flightTime.getTime() - 60 * 60 * 1000);
+      
+      if (now >= oneHourBefore) {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error parseando fecha/hora:', error);
+      return true;
+    }
+  }
+  
+  return true;
+};
 
 const FeaturedNews: React.FC = () => {
   const [news, setNews] = useState<NewsArticle[]>([]);
@@ -33,27 +77,32 @@ const FeaturedNews: React.FC = () => {
 
   useEffect(() => {
     fetchFeaturedNews();
+    
+    // Refrescar cada 5 minutos
+    const interval = setInterval(fetchFeaturedNews, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchFeaturedNews = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await NewsService.getFeaturedNews(6);
-
-      // Adaptación para manejar diferentes estructuras de respuesta
-      let newsData: NewsArticle[] = [];
-      if (Array.isArray(response)) {
-        newsData = response;
-      } else if (response.data && Array.isArray(response.data)) {
-        newsData = response.data;
-      } else if (response.articles && Array.isArray(response.articles)) {
-        newsData = response.articles;
-      } else if (response.noticias && Array.isArray(response.noticias)) {
-        newsData = response.noticias;
-      }
-
-      setNews(newsData);
+      
+      // Llamar directamente al endpoint de noticias
+      const { data } = await axios.get<NewsArticle[]>(
+        'http://localhost:3000/api/v1/news'
+      );
+      
+      const now = new Date();
+      
+      // Filtrar noticias según fecha/hora del vuelo
+      const filteredNews = data.filter(noticia => shouldShowNews(noticia, now));
+      
+      // Tomar solo las primeras 6
+      setNews(filteredNews.slice(0, 6));
+      
+      console.log(`✅ FeaturedNews: ${filteredNews.length} noticias visibles de ${data.length} totales`);
+      
     } catch (err: any) {
       setError(err.message || 'Error al cargar noticias');
       console.error('Error fetching featured news:', err);
@@ -79,29 +128,31 @@ const FeaturedNews: React.FC = () => {
   };
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % Math.ceil(news.length / 3));
+    setCurrentSlide((prev) => {
+      const totalSlides = Math.ceil(news.length / 6);
+      return (prev + 1) % totalSlides;
+    });
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + Math.ceil(news.length / 3)) % Math.ceil(news.length / 3));
+    setCurrentSlide((prev) => {
+      const totalSlides = Math.ceil(news.length / 6);
+      return (prev - 1 + totalSlides) % totalSlides;
+    });
   };
 
-  // Función para obtener la imagen de la noticia
   const getImageUrl = (article: NewsArticle) => {
     return article.imageUrl || article.url_imagen || article.image || '/default-news-image.jpg';
   };
 
-  // Función para obtener el título
   const getTitle = (article: NewsArticle) => {
     return article.title || article.titulo || 'Sin título';
   };
 
-  // Función para obtener la descripción
   const getExcerpt = (article: NewsArticle) => {
     return article.excerpt || article.descripcion_corta || article.description || '';
   };
 
-  // Función para obtener la fecha de publicación
   const getPublishedDate = (article: NewsArticle) => {
     return article.publishedAt || article.fecha_publicacion || article.createdAt || new Date().toISOString();
   };
@@ -159,8 +210,8 @@ const FeaturedNews: React.FC = () => {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8">
-            <h3 className="text-xl font-bold text-yellow-700 mb-2">No hay noticias disponibles</h3>
-            <p className="text-yellow-600">No se encontraron noticias destacadas en este momento.</p>
+            <h3 className="text-xl font-bold text-yellow-700 mb-2">No hay vuelos disponibles</h3>
+            <p className="text-yellow-600">Las promociones han finalizado o los vuelos están próximos a salir.</p>
           </div>
         </div>
       </section>
@@ -168,7 +219,7 @@ const FeaturedNews: React.FC = () => {
   }
 
   return (
-    <section  className="py-16 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
@@ -183,7 +234,7 @@ const FeaturedNews: React.FC = () => {
         {/* Grid de Noticias */}
         <div className="relative">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {news.slice(currentSlide * 3, (currentSlide * 3) + 6).map((article) => (
+            {news.slice(currentSlide * 6, (currentSlide + 1) * 6).map((article) => (
               <article
                 key={article.id || article.id_noticia}
                 className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
@@ -195,14 +246,14 @@ const FeaturedNews: React.FC = () => {
                     alt={getTitle(article)}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
-                      e.target.src = '/default-news-image.jpg';
+                      (e.target as HTMLImageElement).src = '/default-news-image.jpg';
                     }}
                   />
                   <div className="absolute top-4 left-4">
                     <span
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg"
                       style={{
-                        backgroundColor: article.category?.color || article.categoria?.color || '#3B82F6'
+                        backgroundColor: article.category?.color || article.categoria?.color || '#0e254d'
                       }}
                     >
                       {article.category?.name || article.categoria?.nombre || 'General'}
@@ -294,8 +345,9 @@ const FeaturedNews: React.FC = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
                   />
                 ))}
               </div>
@@ -312,13 +364,13 @@ const FeaturedNews: React.FC = () => {
 
         {/* Botón ver todas las noticias */}
         <div className="text-center mt-12">
-          <button
-            onClick={() => window.location.href = '/news'}
+          <Link
+            to="/news"
             className="inline-flex items-center gap-2 px-8 py-4 bg-[#0e254d] hover:bg-[#081225] text-white font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <span>Ver Todas las Noticias</span>
             <ArrowRight size={20} />
-          </button>
+          </Link>
         </div>
       </div>
     </section>
