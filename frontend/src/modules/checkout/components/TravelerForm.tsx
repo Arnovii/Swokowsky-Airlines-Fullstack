@@ -1,15 +1,25 @@
-
 import { useState } from 'react';
-import type { TravelerInfo } from '../modules/checkout/types/checkoutTypes';
+
+interface TravelerInfo {
+  documento: string;
+  nombres: string;
+  apellidos: string;
+  fechaNacimiento: string;
+  genero: 'M' | 'F' | 'Otro' | '';
+  telefono: string;
+  email: string;
+  nombreContacto: string;
+  telefonoContacto: string;
+}
 
 interface TravelerFormProps {
-  index: number; // Número del pasajero (1, 2, 3...)
-  data: TravelerInfo; // Datos actuales del viajero
-  onChange: (data: TravelerInfo) => void; // Función que se ejecuta cuando cambian los datos
+  index: number;
+  data: TravelerInfo;
+  onChange: (data: TravelerInfo) => void;
   flightInfo: {
-    origin: string; // Código del aeropuerto de origen (ej: "BOG")
-    destination: string; // Código del aeropuerto de destino (ej: "MDE")
-    date: string; // Fecha del vuelo formateada
+    origin: string;
+    destination: string;
+    date: string;
   };
 }
 
@@ -19,51 +29,98 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
   onChange, 
   flightInfo 
 }) => {
-  // Estado local para manejar errores de validación
+  const [touched, setTouched] = useState<Partial<Record<keyof TravelerInfo, boolean>>>({});
   const [errors, setErrors] = useState<Partial<Record<keyof TravelerInfo, string>>>({});
 
-  // Función para actualizar un campo específico
   const handleChange = (field: keyof TravelerInfo, value: string) => {
     onChange({ ...data, [field]: value });
     
-    // Limpiar el error del campo cuando el usuario empieza a escribir
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (touched[field]) {
+      validateField(field, value);
     }
   };
 
-  // Función para validar un campo cuando pierde el foco (onBlur)
-  const validateField = (field: keyof TravelerInfo) => {
-    const value = data[field];
+  const handleBlur = (field: keyof TravelerInfo) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, data[field]);
+  };
+
+  const validateField = (field: keyof TravelerInfo, value: string) => {
+    if (!touched[field] && !value) {
+      return;
+    }
+
+    const trimmedValue = value?.trim() || '';
     let error = '';
 
-    // Validación de campos vacíos
-    if (!value || value.trim() === '') {
+    if (!trimmedValue) {
       error = 'Este campo es obligatorio';
-    } 
-    // Validación específica de email
-    else if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      error = 'Email inválido';
-    } 
-    // Validación de teléfonos (10 dígitos)
-    else if ((field === 'telefono' || field === 'telefonoContacto') && !/^\d{10}$/.test(value)) {
-      error = 'Debe tener 10 dígitos';
-    } 
-    // Validación de documento (mínimo 6 caracteres)
-    else if (field === 'documento' && value.length < 6) {
-      error = 'Documento inválido';
+      setErrors(prev => ({ ...prev, [field]: error }));
+      return;
+    }
+
+    switch (field) {
+      case 'documento':
+        if (!/^\d{6,15}$/.test(trimmedValue)) {
+          error = 'El documento debe tener entre 6 y 15 dígitos';
+        }
+        break;
+
+      case 'nombres':
+      case 'apellidos':
+        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ]+(?:\s[A-Za-zÁÉÍÓÚáéíóúÑñ]+)*$/.test(trimmedValue)) {
+          error = 'Solo letras y espacios entre palabras';
+        }
+        break;
+
+      case 'fechaNacimiento':
+        const date = new Date(trimmedValue);
+        const now = new Date();
+        if (isNaN(date.getTime())) {
+          error = 'Fecha inválida';
+        } else if (date > now) {
+          error = 'La fecha no puede ser futura';
+        } else {
+          const age = now.getFullYear() - date.getFullYear();
+          if (age < 0 || age > 120) {
+            error = 'Edad no válida';
+          }
+        }
+        break;
+
+      case 'email':
+        if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(trimmedValue)) {
+          error = 'Correo electrónico inválido';
+        }
+        break;
+
+      case 'telefono':
+      case 'telefonoContacto':
+        if (!/^\d{10}$/.test(trimmedValue)) {
+          error = 'Debe tener 10 dígitos';
+        }
+        break;
+
+      case 'nombreContacto':
+        if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ]+(?:\s[A-Za-zÁÉÍÓÚáéíóúÑñ]+)*$/.test(trimmedValue)) {
+          error = 'Solo letras y espacios';
+        }
+        break;
+
+      case 'genero':
+        if (!['M', 'F', 'Otro'].includes(trimmedValue)) {
+          error = 'Selecciona un género válido';
+        }
+        break;
     }
 
     setErrors(prev => ({ ...prev, [field]: error }));
-    return error === '';
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-      {/* ==================== HEADER - Información del vuelo ==================== */}
       <div className="bg-gradient-to-r from-[#0F6899] to-[#39A5D8] p-6">
         <div className="flex items-center justify-between">
-          {/* Información del pasajero */}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,12 +128,10 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               </svg>
             </div>
             <div className="text-white">
-              <h3 className="text-lg font-bold">Pasajero </h3>
-              <p className="text-white/80 text-sm">{flightInfo.origin} → {flightInfo.destination}</p>
+              <h3 className="text-lg font-bold">Pasajero {index}</h3>
             </div>
           </div>
           
-          {/* Fecha del vuelo */}
           <div className="text-right text-white">
             <p className="text-sm text-white/80">Fecha de vuelo</p>
             <p className="font-semibold">{flightInfo.date}</p>
@@ -84,10 +139,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
         </div>
       </div>
 
-      {/* ==================== FORMULARIO ==================== */}
       <div className="p-6 space-y-6">
-        
-        {/* ========== SECCIÓN 1: Información Personal ========== */}
         <div>
           <h4 className="text-lg font-bold text-[#0F6899] mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,8 +149,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Campo: Documento */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Documento <span className="text-red-500">*</span>
@@ -106,14 +156,14 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               <input
                 type="text"
                 value={data.documento}
-                onChange={(e) => handleChange('documento', e.target.value)}
-                onBlur={() => validateField('documento')}
+                onChange={(e) => handleChange('documento', e.target.value.replace(/\D/g, ''))}
+                onBlur={() => handleBlur('documento')}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.documento ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.documento && errors.documento ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="123456789"
               />
-              {errors.documento && (
+              {touched.documento && errors.documento && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -123,7 +173,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Nombres */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombres <span className="text-red-500">*</span>
@@ -132,13 +181,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 type="text"
                 value={data.nombres}
                 onChange={(e) => handleChange('nombres', e.target.value)}
-                onBlur={() => validateField('nombres')}
+                onBlur={() => handleBlur('nombres')}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.nombres ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.nombres && errors.nombres ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="Juan Carlos"
               />
-              {errors.nombres && (
+              {touched.nombres && errors.nombres && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -148,7 +197,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Apellidos */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Apellidos <span className="text-red-500">*</span>
@@ -157,13 +205,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 type="text"
                 value={data.apellidos}
                 onChange={(e) => handleChange('apellidos', e.target.value)}
-                onBlur={() => validateField('apellidos')}
+                onBlur={() => handleBlur('apellidos')}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.apellidos ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.apellidos && errors.apellidos ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="Pérez García"
               />
-              {errors.apellidos && (
+              {touched.apellidos && errors.apellidos && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -173,7 +221,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Fecha de Nacimiento */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fecha de Nacimiento <span className="text-red-500">*</span>
@@ -182,13 +229,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 type="date"
                 value={data.fechaNacimiento}
                 onChange={(e) => handleChange('fechaNacimiento', e.target.value)}
-                onBlur={() => validateField('fechaNacimiento')}
-                max={new Date().toISOString().split('T')[0]} // No permite fechas futuras
+                onBlur={() => handleBlur('fechaNacimiento')}
+                max={new Date().toISOString().split('T')[0]}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.fechaNacimiento ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.fechaNacimiento && errors.fechaNacimiento ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
               />
-              {errors.fechaNacimiento && (
+              {touched.fechaNacimiento && errors.fechaNacimiento && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -198,7 +245,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Género (Radio buttons estilizados) */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Género <span className="text-red-500">*</span>
@@ -211,7 +257,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 ].map((option) => (
                   <label
                     key={option.value}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 select-none ${
                       data.genero === option.value
                         ? 'border-[#39A5D8] bg-[#39A5D8]/10 text-[#0F6899] font-semibold'
                         : 'border-gray-300 hover:border-[#39A5D8]/50'
@@ -219,29 +265,24 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                   >
                     <input
                       type="radio"
+                      name={`genero-${index}`}
                       value={option.value}
                       checked={data.genero === option.value}
-                      onChange={(e) => handleChange('genero', e.target.value as 'M' | 'F' | 'Otro')}
-                      className="sr-only" // Ocultar el radio button nativo
+                      onChange={(e) => {
+                        handleChange('genero', e.target.value);
+                        setTouched(prev => ({ ...prev, genero: true }));
+                      }}
+                      className="hidden"
                     />
                     <span className="text-xl">{option.icon}</span>
                     <span>{option.label}</span>
                   </label>
                 ))}
               </div>
-              {errors.genero && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  {errors.genero}
-                </p>
-              )}
             </div>
           </div>
         </div>
 
-        {/* ========== SECCIÓN 2: Información de Contacto ========== */}
         <div>
           <h4 className="text-lg font-bold text-[#0F6899] mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,8 +292,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Campo: Teléfono */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Teléfono <span className="text-red-500">*</span>
@@ -260,15 +299,15 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               <input
                 type="tel"
                 value={data.telefono}
-                onChange={(e) => handleChange('telefono', e.target.value.replace(/\D/g, ''))} // Solo números
-                onBlur={() => validateField('telefono')}
+                onChange={(e) => handleChange('telefono', e.target.value.replace(/\D/g, ''))}
+                onBlur={() => handleBlur('telefono')}
                 maxLength={10}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.telefono && errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="3001234567"
               />
-              {errors.telefono && (
+              {touched.telefono && errors.telefono && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -278,7 +317,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Correo Electrónico <span className="text-red-500">*</span>
@@ -287,13 +325,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 type="email"
                 value={data.email}
                 onChange={(e) => handleChange('email', e.target.value)}
-                onBlur={() => validateField('email')}
+                onBlur={() => handleBlur('email')}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.email && errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="juan.perez@email.com"
               />
-              {errors.email && (
+              {touched.email && errors.email && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -305,7 +343,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
           </div>
         </div>
 
-        {/* ========== SECCIÓN 3: Contacto de Emergencia ========== */}
         <div>
           <h4 className="text-lg font-bold text-[#0F6899] mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,8 +352,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Campo: Nombre del Contacto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre del Contacto <span className="text-red-500">*</span>
@@ -325,13 +360,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
                 type="text"
                 value={data.nombreContacto}
                 onChange={(e) => handleChange('nombreContacto', e.target.value)}
-                onBlur={() => validateField('nombreContacto')}
+                onBlur={() => handleBlur('nombreContacto')}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.nombreContacto ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.nombreContacto && errors.nombreContacto ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="María López"
               />
-              {errors.nombreContacto && (
+              {touched.nombreContacto && errors.nombreContacto && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -341,7 +376,6 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               )}
             </div>
 
-            {/* Campo: Teléfono del Contacto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Teléfono del Contacto <span className="text-red-500">*</span>
@@ -349,15 +383,15 @@ const TravelerForm: React.FC<TravelerFormProps> = ({
               <input
                 type="tel"
                 value={data.telefonoContacto}
-                onChange={(e) => handleChange('telefonoContacto', e.target.value.replace(/\D/g, ''))} // Solo números
-                onBlur={() => validateField('telefonoContacto')}
+                onChange={(e) => handleChange('telefonoContacto', e.target.value.replace(/\D/g, ''))}
+                onBlur={() => handleBlur('telefonoContacto')}
                 maxLength={10}
                 className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#39A5D8]/50 ${
-                  errors.telefonoContacto ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
+                  touched.telefonoContacto && errors.telefonoContacto ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-[#39A5D8]'
                 }`}
                 placeholder="3009876543"
               />
-              {errors.telefonoContacto && (
+              {touched.telefonoContacto && errors.telefonoContacto && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />

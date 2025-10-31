@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
@@ -10,17 +9,16 @@ import PaymentConfirmationModal from '../components/PaymentConfirmationModal';
 import { useCheckoutForm } from '../hooks/useCheckoutForm';
 import { usePaymentProcess } from '../hooks/usePaymentProcess';
 import WalletBalance from '../components/WalletBalance';
+import { checkoutService } from '../services/checkoutService';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, loading: cartLoading } = useCart();
   const { user } = useAuth();
-  const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
   
-  // Simular saldo del usuario (reemplazar con datos reales de la API)
+  const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
   const [userBalance] = useState(2500000);
 
-  // Hook personalizado para manejar formularios
   const {
     flightCheckoutData,
     updateTravelerInfo,
@@ -30,7 +28,6 @@ const CheckoutPage = () => {
     totalForms
   } = useCheckoutForm(cart);
 
-  // Hook personalizado para procesar pago
   const {
     isProcessing,
     paymentResult,
@@ -44,7 +41,7 @@ const CheckoutPage = () => {
   const totalAmount = useMemo(() => {
     return cart.reduce((total, item) => {
       const flight = item.vuelo;
-      const tarifa = flight.tarifa?.find(t => t.clase === item.clase);
+      const tarifa = flight.tarifas?.find(t => t.clase === item.clase);
       const precioUnitario = tarifa?.precio_base || 0;
       return total + (precioUnitario * item.cantidad_de_tickets);
     }, 0);
@@ -70,21 +67,51 @@ const CheckoutPage = () => {
   };
 
   const handleProceedToPayment = async () => {
+    // Verificar que todos los formularios estén completos
     if (!allFormsComplete()) {
+      alert("⚠️ Debes completar la información de todos los pasajeros antes de continuar.");
       return;
     }
 
-    const checkoutData = getCheckoutData();
-    const result = await processPayment(checkoutData, totalAmount);
-
-    if (result.success) {
-      // Limpiar carrito después de pago exitoso (opcional)
-      // await clearCart();
+    try {
+      // Preparar payload con la nueva estructura: item1, item2, item3...
+      const payload: Record<string, any> = {};
       
-      // Navegar al perfil después de 3 segundos
+      flightCheckoutData.forEach((vuelo, index) => {
+        const cartItem = cart[index];
+        payload[`item${index + 1}`] = {
+          vueloID: vuelo.id_vuelo,
+          Clase: cartItem.clase,
+          CantidadDePasajeros: vuelo.travelerInfoList.length,
+          pasajeros: vuelo.travelerInfoList.map((p) => ({
+            nombre: p.nombres,
+            apellido: p.apellidos,
+            dni: p.documento,
+            phone: p.telefono,
+            email: p.email,
+            genero: p.genero,
+            fecha_nacimiento: p.fecha_nacimiento
+          }))
+        };
+      });
+
+      console.log("📦 Enviando payload al backend:", payload);
+
+      // Llamar al servicio de checkout
+      const checkoutResponse = await checkoutService.submitCheckout(payload);
+      console.log("✅ Checkout exitoso:", checkoutResponse);
+
+      // Procesar pago (muestra modal / loading)
+      const checkoutData = getCheckoutData();
+      await processPayment(checkoutData, totalAmount);
+
+      // Redirigir al perfil tras unos segundos
       setTimeout(() => {
         navigate('/perfil');
       }, 3000);
+    } catch (error: any) {
+      console.error("❌ Error al procesar checkout:", error);
+      alert(error.message || "Ocurrió un error al procesar tu compra.");
     }
   };
 
@@ -181,21 +208,24 @@ const CheckoutPage = () => {
                     {/* Formulario expandible */}
                     {isExpanded && checkoutData && (
                       <div className="animate-fade-in">
-                        <TravelerForm
-                          index={index + 1}
-                          data={checkoutData.travelerInfo!}
-                          onChange={(data) => updateTravelerInfo(index, data)}
-                          flightInfo={{
-                            origin: item.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A',
-                            destination: item.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A',
-                            date: new Date(item.vuelo.salida_programada_utc).toLocaleDateString('es-CO', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })
-                          }}
-                        />
+                        {Array.from({ length: item.cantidad_de_tickets }).map((_, idx) => (
+                          <TravelerForm
+                            key={idx}
+                            index={idx + 1}
+                            data={checkoutData.travelerInfo?.[idx] || {}}
+                            onChange={(data) => updateTravelerInfo(index, idx, data)}
+                            flightInfo={{
+                              origin: item.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A',
+                              destination: item.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A',
+                              date: new Date(item.vuelo.salida_programada_utc).toLocaleDateString('es-CO', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              }),
+                            }}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>

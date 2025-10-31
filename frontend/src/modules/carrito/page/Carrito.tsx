@@ -57,7 +57,7 @@ const Carrito: React.FC = () => {
                 <div className="mb-6 sm:mb-8 md:mb-10">
                     {/* Botón volver */}
                     <button
-                        onClick={handleGoBack}
+                        onClick={() => navigate("/")}
                         className="group flex items-center gap-2 mb-4 sm:mb-6 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-[#123361] to-[#1180B8] text-white hover:shadow-xl transition-all duration-300 hover:scale-105 font-bold text-sm sm:text-base"
                     >
                         <svg 
@@ -69,7 +69,6 @@ const Carrito: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                         <span className="hidden sm:inline">REGRESAR</span>
-                        <span className="sm:hidden">ATRÁS</span>
                     </button>
 
                     <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[#123361] tracking-tight mb-2 sm:mb-3">
