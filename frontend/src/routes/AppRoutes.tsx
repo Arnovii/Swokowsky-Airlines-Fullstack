@@ -20,6 +20,7 @@ import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage
 import Carrito from "../modules/carrito/page/Carrito";
 import Root from "../modules/panelAdministrador/pages/Root";
 import ChangePassword from "../modules/auth/pages/ChangePassword";
+import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 
 export default function AppRoutes() {
   return (
@@ -93,6 +94,16 @@ export default function AppRoutes() {
         element={
           <AdminRoute>
             <Root />
+          </AdminRoute>
+        }
+      />
+
+      {/* ✅ Nueva ruta para crear administrador */}
+      <Route
+        path="/panelAdministrador/root/create-admin"
+        element={
+          <AdminRoute>
+            <CreateAdmin />
           </AdminRoute>
         }
       />
