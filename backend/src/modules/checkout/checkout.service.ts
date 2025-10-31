@@ -4,7 +4,7 @@ import { MailService } from '../../mail/mail.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
-import { PrismaService } from 'src/database/prisma.service';
+import { PrismaService } from '../../database/prisma.service';
 import { usuario, ticket_estado, asiento_clases } from '@prisma/client';
 import type { ticket } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
