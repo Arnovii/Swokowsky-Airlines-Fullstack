@@ -17,6 +17,11 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { RootModule } from './modules/root/root.module';
 import { CartModule } from './modules/cart/cart.module';
 
+import { TicketModule } from './modules/ticket/ticket.module';
+
+import { PasajeroModule } from './modules/pasajero/pasajero.module';
+import { CheckoutModule } from './modules/checkout/checkout.module';
+
 
 
 @Module({
@@ -37,7 +42,11 @@ import { CartModule } from './modules/cart/cart.module';
     CardsModule,
     WalletModule,
     RootModule,
-    CartModule],
+    CartModule,
+    TicketModule,
+  PasajeroModule,
+  CheckoutModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
