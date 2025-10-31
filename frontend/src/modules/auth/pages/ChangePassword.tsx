@@ -34,17 +34,16 @@
         return;
         }
 
-        // Solo visual: no llamamos al backend aún.
+        // Simulación visual sin backend
         setSubmitting(true);
         try {
-        // Simulación de éxito visual
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 500)); // pequeña pausa
         setOk(true);
 
-        // Redirección simple (simulada) tras breve pausa
+        // Redirigir al PanelAdministrador tras el cambio
         setTimeout(() => {
-            navigate("/", { replace: true });
-        }, 800);
+            navigate("/panelAdministrador", { replace: true });
+        }, 1000);
         } finally {
         setSubmitting(false);
         }
@@ -137,7 +136,7 @@
 
             {ok && !error && (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
-                ¡Contraseña actualizada! Redirigiendo…
+                ¡Contraseña actualizada! Redirigiendo al panel...
                 </div>
             )}
 
