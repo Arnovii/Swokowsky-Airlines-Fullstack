@@ -7,41 +7,73 @@ import {
   Max,
   Length,
   IsDateString,
+  IsNotEmpty,
 } from 'class-validator';
 import { tarjeta_tipo } from '@prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
 
+
+/**
+ * DTO para crear una nueva tarjeta
+ */
 export class CreateCardDto {
-  @IsInt()
-  id_usuarioFK: number;
 
-  @IsNumber()
-  saldo: number;
-
+  @ApiProperty({
+    example: 'Juan Pérez',
+    description: 'Nombre completo del titular de la tarjeta.',
+  })
   @IsString()
   @Length(5, 255)
   titular: string;
 
+  @ApiProperty({
+    example: 12,
+    description: 'Mes de vencimiento de la tarjeta (1-12).',
+  })
   @IsInt()
   @Min(1)
   @Max(12)
   vence_mes: number;
 
+  @ApiProperty({
+    example: 2028,
+    description: 'Año de vencimiento de la tarjeta.',
+  })
   @IsInt()
-  @Min(new Date().getFullYear()) // evita fechas de vencimiento pasadas
+  @Min(new Date().getFullYear())
   vence_anio: number;
 
+  @ApiProperty({
+    example: '123',
+    description: 'Código de seguridad cifrado o encriptado.',
+  })
+  @IsString()
+  @Length(3, 4)
+  cvv_ene: string;
+
+  @ApiProperty({
+    enum: tarjeta_tipo,
+    example: 'credito',
+    description: 'Tipo de tarjeta (crédito o débito).',
+  })
   @IsEnum(tarjeta_tipo)
   tipo: tarjeta_tipo;
 
-  @IsString()
-  @Length(3, 4) // CVV comúnmente 3 o 4 dígitos
-  cvv_ene: string;
-
+  @ApiProperty({
+    example: 'Banco de Bogotá',
+    description: 'Nombre del banco emisor.',
+  })
   @IsString()
   @Length(2, 255)
   banco: string;
 
+  @ApiProperty({
+    example: '2025-10-31T10:00:00.000Z',
+    description: 'Fecha de creación del registro.',
+  })
   @IsDateString()
   creado_en: Date;
 }
+
+
 
