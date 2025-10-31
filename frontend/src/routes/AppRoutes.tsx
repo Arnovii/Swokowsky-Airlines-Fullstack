@@ -9,7 +9,6 @@ import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import NotFound from "../modules/error/pages/NotFound";
 import { FlightSearchResults } from "../modules/flightsearch/pages/FlightSearchResults";
 import FlightDetailsPage from "../modules/checkout/FlightDetailsPage";
-
 import News from "../modules/news/pages/News"
 import DetalleOferta from "../modules/news/pages/detalleoferta"
 import DetalleVuelo from "../modules/news/pages/detallevuelo"
@@ -19,6 +18,8 @@ import AdminRoute from "./AdminRoute"
 import CrearVueloPage from "../modules/panelAdministrador/pages/CrearVueloPage";
 import EditarVueloPage from "../modules/panelAdministrador/pages/EditarVueloPage";
 import Carrito from "../modules/carrito/page/Carrito";
+import Root from "../modules/panelAdministrador/pages/Root";
+
 
 export default function AppRoutes() {
   return (
@@ -78,6 +79,16 @@ export default function AppRoutes() {
           }
         />
       </Route>
+      
+      <Route
+        path="/panelAdministrador/root"
+        element={
+          <AdminRoute>
+            <Root />
+          </AdminRoute>
+        }
+      />
+
 
       {/* Página 404 */}
       <Route path="*" element={<NotFound />} />

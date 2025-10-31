@@ -1,4 +1,3 @@
-// src/modules/auth/pages/Login.tsx
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
@@ -18,8 +17,30 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     try {
-      await auth.login(email, password);
+      // 🔐 Inicia sesión con tu AuthContext
+      const user = await auth.login(email, password);
+
+      // 🔍 Obtenemos el tipo de usuario (enum Prisma: root, admin, cliente)
+      const rawUser =
+        user ?? JSON.parse(localStorage.getItem("swk_user") || "{}");
+
+      const tipo = (rawUser?.tipo_usuario || "").toString().toLowerCase();
+
+      // 🚦 Redirección según tipo_usuario
+      if (tipo === "root") {
+        navigate("/panelAdministrador/root", { replace: true });
+        return;
+      }
+
+      if (tipo === "admin") {
+        navigate("/panelAdministrador", { replace: true });
+        return;
+      }
+
+      // Si es cliente u otro tipo, regresa a la ruta anterior o al home
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.message || "Error al iniciar sesión");
@@ -76,7 +97,6 @@ export default function Login() {
               >
                 Contraseña
               </label>
-              {/* 🔗 enlace a ForgotPassword */}
               <button
                 type="button"
                 onClick={() => navigate("/forgot-password")}
