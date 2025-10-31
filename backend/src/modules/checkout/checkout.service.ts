@@ -1,86 +1,414 @@
-import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger , forwardRef } from '@nestjs/common';
 import { CheckoutDto } from './dto/checkout.dto';
-import { TicketService } from '../ticket/ticket.service';
-import { PasajeroService } from '../pasajero/pasajero.service';
 import { MailService } from '../../mail/mail.service';
 import { CartService } from '../cart/cart.service';
-import { asiento_clases } from '@prisma/client';
-
+import { UsersService } from '../users/users.service';
+import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
+import { PrismaService } from 'src/database/prisma.service';
+import { usuario, ticket_estado, asiento_clases } from '@prisma/client';
+import type { ticket } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 @Injectable()
 export class CheckoutService {
+  private readonly logger = new Logger(CheckoutService.name);
+
   constructor(
-    private readonly ticketService: TicketService,
-    private readonly pasajeroService: PasajeroService,
     private readonly mailService: MailService,
     private readonly cartService: CartService,
-  ) {}
+    private readonly userService: UsersService,
+    private readonly prisma: PrismaService
+  ) { }
 
-  async processCheckout(user: any, checkoutDto: CheckoutDto) {
-    const { total, pasajeros } = checkoutDto;
-    const saldo = user.saldo;
+  /**
+   * Calcula el total del carrito consultando tarifas actuales en DB.
+   * Retorna { total, detalles: [{ id_vuelo, clase, precio_unitario, cantidad }] }
+   *
+   * Asunción: cartItemsList es un array de carrito_item tal como lo retorna cartService.getCart()
+   * Cada item: { id_item_carrito, id_vueloFK, cantidad_de_tickets, clase, fecha_limite, ... }
+   */
+  calculateTotalCart = async (cartItemsList: any[]) => {
+    let total = 0;
+    const detalles: Array<any> = [];
 
+    for (const item of cartItemsList) {
+      const vueloId = item.id_vueloFK ?? item.vueloID ?? item.vueloId;
+      const clase: asiento_clases = item.clase;
+      const cantidad = item.cantidad_de_tickets ?? item.CantidadDePasajeros ?? 0;
+
+      if (!vueloId) {
+        throw new BadRequestException('Carrito contiene item sin vueloID');
+      }
+
+      // obtener tarifa actual para ese vuelo y clase
+      const tarifa = await this.prisma.tarifa.findFirst({
+        where: { id_vueloFK: vueloId, clase: clase }
+      });
+
+      if (!tarifa) {
+        throw new BadRequestException(`No hay tarifa configurada para el vuelo ${vueloId} clase ${clase}`);
+      }
+
+      const subtotal = tarifa.precio_base * cantidad;
+      detalles.push({ id_vuelo: vueloId, clase, precio_unitario: tarifa.precio_base, cantidad, subtotal });
+      total += subtotal;
+    }
+
+    return { total, detalles };
+  }
+
+  deleteItemsCart = async (idCarrito: number | null) => {
+    if (idCarrito) {
+      await this.prisma.carrito_item.deleteMany({ where: { id_carritoFK: idCarrito } });
+    }
+    else {
+      throw new BadRequestException('Carrito no existente');
+    }
+  }
+
+  getCarritoIdByUsuarioId = async (idUsuario: number) => {
+    let carrito = await this.prisma.carrito.findUnique({ where: { id_usuarioFK: idUsuario } });
+    return carrito ? carrito.id_carrito : null;
+  }
+
+  /**
+   * processCheckout: main flow
+   * - Valida usuario y saldo
+   * - Calcula total (consulta tarifa)
+   * - Genera tickets + pasajeros (nested create), asigna asientos únicos por clase
+   * - Deduce saldo del usuario
+   * - Envía correo a cada pasajero
+   * - Elimina items del carrito
+   *
+   * Asunciones:
+   * - checkoutDto es un Record<string, CheckoutItemDto> (item1, item2, ...)
+   * - cartService.getCart(userPayload) devuelve objeto con .items (array) y .id_carrito
+   * - Se usa now() para comparar fecha_limite
+   */
+  async processCheckout(userPayload: PayloadInterface, checkoutDto: CheckoutDto) {
+    //1. Determinar usuario
+    const client: usuario | null = await this.userService.findUserByEmail(userPayload.email);
+    if (!client) throw new BadRequestException('Cliente no existente');
+
+    //2. Determinar carrito con items válidos
+    const cartItemsList = await this.cartService.getCart(userPayload);
+    if (!cartItemsList || !Array.isArray(cartItemsList.items) || cartItemsList.items.length === 0) {
+      throw new BadRequestException('Carrito vacío');
+    }
+
+    //3. Calcular total a pagar 
+    const totalCalc = await this.calculateTotalCart(cartItemsList.items);
+    const total = totalCalc.total;
+
+    //4. Saldo del usuario
+    const saldo = client.saldo ? client.saldo : 0;
+
+    //5. Validar que el saldo es suficiente
     if (saldo < total) {
-      return { success: false, message: 'Saldo insuficiente para realizar el pago.' };
+      throw new BadRequestException('Saldo insuficiente');
     }
 
-    // Obtener carrito actual del usuario
-    const carrito = await this.cartService.getCart(user);
-    if (!carrito || !carrito.items || carrito.items.length === 0) {
-      return { success: false, message: 'El carrito está vacío.' };
-    }
+    // 6. Preparar asignación de asientos y creación de tickets/pasajeros
+    const now = new Date();
 
-    // Crear tickets y pasajeros para cada item del carrito
-  const tickets: any[] = [];
-    for (let i = 0; i < carrito.items.length; i++) {
-      const item = carrito.items[i];
-      // Se asume que la cantidad de pasajeros coincide con la cantidad de tickets
-      for (let j = 0; j < item.cantidad_de_tickets; j++) {
-        const pasajeroDto = pasajeros[j] || pasajeros[0]; // fallback al primero si no hay suficientes
-        // Crear ticket
-        // Convertir clase a enum asiento_clases
-        let claseEnum: asiento_clases;
-        if (item.clase === 'economica') {
-          claseEnum = asiento_clases.economica;
-        } else if (item.clase === 'primera_clase' || item.clase === 'PrimeraClase') {
-          claseEnum = asiento_clases.primera_clase;
-        } else {
-          throw new BadRequestException('Clase de asiento inválida en el carrito');
-        }
-        const ticket = await this.ticketService.createTicket(
-          Number(user.id_usuario),
-          item.id_vueloFK,
-          claseEnum,
-          item.vuelo?.tarifas?.find(t => t.clase === item.clase)?.precio_base || 0
-        );
-        // Procesar pasajero (no se guarda en BD, solo lógica temporal)
-        await this.pasajeroService.processPasajero(pasajeroDto);
-        tickets.push(ticket);
+    // Agrupar configuraciones por aeronave para evitar consultas repetidas
+    // Pero primero necesitamos para cada vuelo consultar aeronave y configuracion de asientos
+    // Pre-cache: map vueloId -> { aeronaveId, configPorClase: { economica: n, primera_clase: m } , tarifa_por_clase }
+    const vueloCache = new Map<number, any>();
+
+    // Para evitar colisiones: obtenemos asientos ocupados por tickets pagados (por vuelo y clase)
+    // y reservas activas en carrito_item (fecha_limite > now)
+    // Pre-calc counts por vuelo/clase
+    const ocupadosMap = new Map<string, number>(); // key `${vueloId}_${clase}` -> count
+
+    // Obtener todos los vueloIds desde cartItemsList
+    const vueloIds = [...new Set(cartItemsList.items.map(it => it.id_vueloFK))];
+
+    // 6.a Cargar info por vuelo
+    for (const vid of vueloIds) {
+      const vuelo = await this.prisma.vuelo.findUnique({
+        where: { id_vuelo: vid },
+        include: { aeronave: true }
+      });
+      if (!vuelo) throw new BadRequestException(`Vuelo ${vid} no encontrado`);
+
+      // obtener configuración de asientos para esa aeronave
+      const configs = await this.prisma.configuracion_asientos.findMany({
+        where: { id_aeronaveFK: vuelo.id_aeronaveFK }
+      });
+      const configPorClase: Record<string, number> = {};
+      for (const c of configs) {
+        configPorClase[c.clase] = c.cantidad;
+      }
+
+      vueloCache.set(vid, { vuelo, configPorClase });
+
+      // contar tickets pagados existentes por clase
+      const cuentas = await this.prisma.ticket.groupBy({
+        by: ['asiento_clase'],
+        where: { id_vueloFK: vid, estado: 'pagado' },
+        _count: { asiento_clase: true }
+      });
+      for (const c of cuentas) {
+        const key = `${vid}_${c.asiento_clase}`;
+        ocupadosMap.set(key, (ocupadosMap.get(key) ?? 0) + (c._count.asiento_clase ?? 0));
+      }
+
+      // contar reservas activas en carrito_item (fecha_limite > now)
+      const reservas = await this.prisma.carrito_item.groupBy({
+        by: ['clase'],
+        where: {
+          id_vueloFK: vid,
+          fecha_limite: { gt: now }
+        },
+        _sum: { cantidad_de_tickets: true }
+      });
+      for (const r of reservas) {
+        const key = `${vid}_${r.clase}`;
+        const sumQty = (r._sum.cantidad_de_tickets ?? 0);
+        ocupadosMap.set(key, (ocupadosMap.get(key) ?? 0) + sumQty);
       }
     }
 
-    // Enviar correo de confirmación (ajusta el template y datos según tu lógica)
-    if (user.email) {
-      await this.mailService.sendMail({
-        to: user.email,
-        subject: 'Compra de tickets exitosa',
-        template: 'new-notification',
-        context: {
-          nombre: user.nombre,
-          tickets,
-        },
-      });
+    // 6.b Crear operaciones en transacción
+    //vamos a darle un type para evitar errores
+const ticketDataList: any[] = []; // <-- acumula solo los objetos data
+    const emailNotifications: Array<{ email: string, nombre: string, titulo: string, asiento: string }> = [];
+
+    // Para cada item en el checkoutDto (item1, item2, ...), localizar la correspondencia en carrito
+    // Si hay mismatch entre cart item qty y DTO CantidadDePasajeros no se bloquea (pero validamos)
+    for (const [itemKey, itemDto] of Object.entries(checkoutDto)) {
+      const vueloID = itemDto.vueloID;
+      const clase = itemDto.Clase as asiento_clases;
+      const pasajeros = itemDto.pasajeros ?? [];
+      const cantidadEsperada = itemDto.CantidadDePasajeros ?? pasajeros.length;
+
+      if (pasajeros.length !== cantidadEsperada) {
+        // permitir que frontend envíe CantidadDePasajeros y la lista, pero si no coinciden, considerar error
+        throw new BadRequestException(`Para ${itemKey} la cantidad de pasajeros no coincide con CantidadDePasajeros`);
+      }
+
+      // validar que exista item en carrito con ese vuelo y clase y cantidad suficiente
+      const carritoMatch = cartItemsList.items.find((ci) => ci.id_vueloFK === vueloID && ci.clase === clase);
+      if (!carritoMatch) {
+        throw new BadRequestException(`Carrito no contiene el vuelo ${vueloID} en clase ${clase} requerido por ${itemKey}`);
+      }
+      if (carritoMatch.cantidad_de_tickets < cantidadEsperada) {
+        throw new BadRequestException(`Carrito no tiene suficientes tickets para vuelo ${vueloID} (requeridos ${cantidadEsperada})`);
+      }
+
+      // obtener config del vuelo
+      const cache = vueloCache.get(vueloID);
+      if (!cache) throw new BadRequestException(`Información de vuelo ${vueloID} no cargada`);
+      const capacidadClase = cache.configPorClase[clase] ?? 0;
+
+      // obtener ocupados actuales para clase
+      const key = `${vueloID}_${clase}`;
+      let ocupados = ocupadosMap.get(key) ?? 0;
+
+      // obtener tarifa por unidad
+      const tarifa = await this.prisma.tarifa.findFirst({ where: { id_vueloFK: vueloID, clase } });
+      if (!tarifa) throw new BadRequestException(`Tarifa no configurada para vuelo ${vueloID} clase ${clase}`);
+
+      // Asignar asientos para cada pasajero: generar números secuenciales por clase
+      // Número inicial = ocupados + 1, pero debemos asegurarnos que no superemos capacidad
+      if (ocupados + pasajeros.length > capacidadClase) {
+        throw new BadRequestException(`No hay suficientes asientos disponibles en vuelo ${vueloID} clase ${clase}`);
+      }
+
+      // asiento prefix
+      const prefix = (clase === 'primera_clase') ? 'P' : 'E';
+      // start index
+      let seatIndex = ocupados + 1;
+
+      for (const p of pasajeros) {
+        const seatNumber = `${prefix}-${seatIndex}`;
+
+        // Crear ticket con pasajero anidado
+        const ticketData = {
+          id_usuarioFK: client.id_usuario,
+          id_vueloFK: vueloID,
+          asiento_numero: seatNumber,
+          asiento_clase: clase,
+          precio: tarifa.precio_base,
+          estado: 'pagado' as ticket_estado,
+          pasajero: {
+            create: {
+              nombre: p.nombre,
+              apellido: p.apellido,
+              dni: p.dni,
+              phone: p.phone,
+              email: p.email,
+              contact_name: p.contact_name ?? null,
+              phone_name: p.phone_name ?? null,
+              genero: p.genero,
+              fecha_nacimiento: new Date(p.fecha_nacimiento)
+            }
+          }
+        };
+
+        
+
+        // push operation
+ticketDataList.push(ticketData);
+
+
+
+        // add to email notifications
+        emailNotifications.push({
+          email: p.email,
+          nombre: `${p.nombre} ${p.apellido}`,
+          titulo: (cache.vuelo.noticia?.titulo ?? `Vuelo #${vueloID}`) as string,
+          asiento: seatNumber
+        });
+
+        seatIndex += 1;
+      }
+
+      // actualizar ocupadosMap para siguiente iteración
+      ocupadosMap.set(key, ocupados + pasajeros.length);
     }
 
-    // Vaciar carrito del usuario (elimina todos los items activos)
-    const carritoId = carrito.id_carrito;
-    if (carritoId) {
-      // Usar PrismaService directamente para vaciar el carrito
+    // Ejecutar creación de tickets + pasajeros y deducción de saldo en una transacción
+try {
+  await this.prisma.$transaction(async (tx) => {
+    // crear tickets (y pasajeros nested) dentro de la transacción usando `tx`
+    const creations = ticketDataList.map(td => tx.ticket.create({ data: td }));
+    await Promise.all(creations);
+
+    // deducir saldo del usuario dentro de la misma tx
+    await tx.usuario.update({
+      where: { id_usuario: client.id_usuario },
+      data: { saldo: { decrement: total } }
+    });
+
+    // (opcional) crear historiales de pago usando `tx` también
+  });
+
+      // 7. Enviar correo de confirmación a cada pasajero
+      for (const note of emailNotifications) {
+        try {
+          // Asumo que sendTicketEmail espera receptorEmail y un objeto con nombre, TituloNoticiaVuelo, NumeroAsiento
+          await this.mailService.sendTicketEmail(note.email, {
+            nombre: note.nombre,
+            TituloNoticiaVuelo: note.titulo,
+            NumeroAsiento: note.asiento,
+          });
+        } catch (err) {
+          this.logger.warn(`Error enviando email a ${note.email}: ${err?.message ?? err}`);
+          // No lanzamos error crítico por fallo de email; se podría reintentar/queuear en producción
+        }
+      }
+
+    } catch (err) {
+      this.logger.error('Error en transacción de checkout', err);
+      throw new BadRequestException('Error al procesar el pago y generar tickets');
+    }
+
+    // Vaciar carrito del usuario (elimina todos los items del carrito )
+    await this.deleteItemsCart(cartItemsList.id_carrito);
+
+    if (cartItemsList.id_carrito) {
+      // Usar PrismaService directamente para vaciar el carrito (por si otro flujo lo dejó)
       const prisma = (this.cartService as any).prisma;
       if (prisma && prisma.carrito_item) {
-        await prisma.carrito_item.deleteMany({ where: { id_carritoFK: carritoId } });
+        try {
+          await prisma.carrito_item.deleteMany({ where: { id_carritoFK: cartItemsList.id_carrito } });
+        } catch (err) {
+          // ya vacío o error no crítico
+          this.logger.debug('Intento adicional de vaciado de carrito: ' + (err?.message ?? err));
+        }
       }
     }
 
-    return { success: true, message: 'Pago realizado y tickets generados correctamente.', tickets };
+    return { success: true, message: 'Pago realizado y tickets generados correctamente.' };
   }
 }
+
+
+
+// @Injectable()
+// export class CheckoutService {
+//   constructor(
+//     private readonly mailService: MailService,
+//     private readonly cartService: CartService,
+//     private readonly userService: UsersService,
+//     private readonly prisma: PrismaService
+//   ) { }
+
+
+//   calculateTotalCart = (cartItemsList) => {
+//     let total = 0;
+//     for (const item of cartItemsList) {
+
+//     return total;
+//   }
+
+//   deleteItemsCart = async (idCarrito: number | null) => {
+//     if (idCarrito) {
+//       await this.prisma.carrito_item.deleteMany({ where: { id_carritoFK: idCarrito } });
+//     }
+//     else {
+//       throw new BadRequestException('Carrito no existente');
+//     }
+//   }
+
+//   getCarritoIdByUsuarioId = async (idUsuario: number) => {
+//     let carrito = await this.prisma.carrito.findUnique({ where: { id_usuarioFK: idUsuario } });
+//     return carrito ? carrito.id_carrito : null;
+//   }
+
+//   async function processCheckout(userPayload: PayloadInterface, checkoutDto: CheckoutDto) {
+
+//     //1. Determinar usuario
+//     const client: usuario | null = await this.userService.findUserByEmail(userPayload.email);
+//     if (!client) throw new BadRequestException('Cliente no existente');
+
+//     //2. Determinar carrito con items válidos
+//     const cartItemsList = await this.cartService.getCart(userPayload)
+
+//     //3. Calcular total a pagar 
+//     const total = this.calculateTotalCart(cartItemsList.items);
+
+//     //4. Saldo del usuario
+//     const saldo = client.saldo ? client.saldo : 0;
+
+
+//     //5. Validar que el saldo es suficiente
+
+//     if (saldo < total) {
+//       throw new BadRequestException('Saldo insuficiente');
+//     }
+
+//     //6. Crear tickets y pasajeros segun la información recibida del frontend
+//      //Generar Número de asiento dependiendo de la clase seleccionada (economica o  primera_clase)
+//      //a. Obtener la aeronave asociada al vuelo
+//      //b. Buscar la configuración de asientos por clase
+//      //c. Obtener asientos ya ocupados en ese vuelo y clase (ticket_estado.pagado) y carrito_item cuyo id_vueloFK es el vuelo actual y fecha_limite > hoy
+//      //d. Generar número de asiento único (no repetido) para cada pasajero (P-1, P-2, E-15, E-16, etc). Los primeros asientos del avión son de primera clase, luego los de económica
+//      //e. Crear el ticket y el pasajero asociado
+
+  
+//     //7. Enviar correo de confirmación a cada uno de los pasajeros de su ticket y su respectivo asiento
+//     let receptorEmail = ""
+//     this.mailService.sendTicketEmail(receptorEmail, {
+//       nombre: ,
+//       TituloNoticiaVuelo: ,
+//       NumeroAsiento: ,
+//     });
+
+
+
+//     // Vaciar carrito del usuario (elimina todos los items del carrito )
+//     this.deleteItemsCart(cartItemsList.id_carrito);
+
+//     if (cartItemsList.id_carrito) {
+//       // Usar PrismaService directamente para vaciar el carrito
+//       const prisma = (this.cartService as any).prisma;
+//       if (prisma && prisma.carrito_item) {
+//         await prisma.carrito_item.deleteMany({ where: { id_carritoFK: cartItemsList.id_carrito } });
+//       }
+//     }
+
+//     return { success: true, message: 'Pago realizado y tickets generados correctamente.' };
+//   }
+// }
