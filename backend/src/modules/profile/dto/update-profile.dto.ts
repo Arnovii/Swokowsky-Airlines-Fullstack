@@ -146,4 +146,14 @@ export class UpdateUserDto {
   @IsEnum(usuario_tipo_usuario)
   @IsNotEmpty()
   tipo_usuario?: usuario_tipo_usuario;
+
+  @ApiProperty({
+    example: false,
+    description: 'Indica si el usaurio debe cambiar su contraseña al momento de inicar sesión.',
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @IsNotEmpty()
+  must_change_password?: boolean;
 }

@@ -69,19 +69,19 @@ model pais {
 
 model pasajero {
   id_pasajero      Int             @id @default(autoincrement())
-  id_ticketFK      Int
+  id_ticketFK      Int             @unique                          // <- hacer UNIQUE para 1:1
   nombre           String          @db.VarChar(255)
   apellido         String          @db.VarChar(255)
   dni              String          @db.VarChar(255)
-  genero           pasajero_genero
-  fecha_nacimiento DateTime        @db.Date
-  contact_name     String          @db.VarChar(255)
-  email            String          @db.VarChar(255)
   phone            String          @db.VarChar(255)
-  phone_name       String          @db.VarChar(255)
-  ticket           ticket          @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
+  email            String          @db.VarChar(255)
+  contact_name     String?          @db.VarChar(255)
+  phone_name       String?          @db.VarChar(255)
+  genero           usuario_genero
+  fecha_nacimiento DateTime        @db.Date
 
-  @@index([id_ticketFK], map: "id_ticketFK")
+  // relación one-to-one (lado con la FK)
+  ticket           ticket          @relation("TicketPasajero", fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 }
 
 model promocion {
@@ -114,12 +114,15 @@ model ticket {
   id_ticket      Int            @id @default(autoincrement())
   id_usuarioFK   Int
   id_vueloFK     Int
+  asiento_numero String         @db.VarChar(100)
+  asiento_clase  asiento_clases
   precio         Float          @db.Float
   estado         ticket_estado
-  creado_en      DateTime       @default(now()) @db.DateTime(0)
-  asiento_clase  asiento_clases
-  asiento_numero String         @db.VarChar(100)
-  pasajero       pasajero[]
+  creado_en      DateTime       @db.DateTime(0) @default(now())
+
+  // relación one-to-one con pasajero (lado sin FK)
+  pasajero       pasajero?      @relation("TicketPasajero")
+
   usuario        usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
   vuelo          vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
 
@@ -151,6 +154,8 @@ model usuario {
   tarjeta               tarjeta[]
   ticket                ticket[]
   transacciones         transaccion[]
+  saldo                 Float?                @default(0.0) //Solo puede ser modificado con las transacciones de carga de saldo o reembolso 
+  carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
 model transaccion {
@@ -257,11 +262,6 @@ enum ticket_estado {
   cancelado
 }
 
-enum pasajero_genero {
-  M
-  F
-  X
-}
 
 enum tarjeta_tipo {
   credito
