@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsBoolean, IsISO8601, Min, Max, IsNumber, maxLength } from 'class-validator';
+import { IsInt, IsOptional, IsBoolean, IsISO8601, Min, Max, IsNumber, maxLength, Matches, isNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -8,7 +8,7 @@ export class SearchFlightsDto {
     @IsInt()
     originCityId: number;
 
-    @ApiProperty({ example: '3', description: 'Es el ID que tenga una ciudad (destino) en la base de datos' })
+    @ApiProperty({ example: '31', description: 'Es el ID que tenga una ciudad (destino) en la base de datos' })
     @Type(() => Number)
     @IsInt()
     destinationCityId: number;
@@ -34,4 +34,27 @@ export class SearchFlightsDto {
     @Min(1)
     @Max(5)
     passengers: number;
+
+    @ApiProperty({ example: '00:00', description: 'Hora inicial para filtrar vuelos de partida (formato HH:mm, hora Colombia)', required: false })
+    @IsOptional()
+    @Matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, { message: 'initialHour debe estar en formato HH:mm (00:00-23:59)' })
+    initialHour?: string;
+
+    @ApiProperty({ example: '18:00', description: 'Hora final para filtrar vuelos de partida (formato HH:mm, hora Colombia)', required: false })
+    @IsOptional()
+    @Matches(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, { message: 'finalHour debe estar en formato HH:mm (00:00-23:59)' })
+    finalHour?: string;
+    
+    @ApiProperty({ example: 0, description: 'Valor mínimo dispuesto a pagar por el cliente', required: false })
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    minimumPrice ?: number;
+    
+    @ApiProperty({ example: 999999999, description: 'Valor máximo dispuesto a pagar por el cliente', required: false })
+    @IsOptional()
+    @IsNumber()
+    @Min(1)
+    maximumPrice ?: number;
+
 }

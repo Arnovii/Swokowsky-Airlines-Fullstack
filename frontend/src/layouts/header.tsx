@@ -10,6 +10,9 @@ export default function Header() {
   const auth = useAuth();
 
   const usernameDisplay = auth.user?.username ?? auth.user?.correo ?? "Usuario";
+  
+  // ⭐ Verificar si el usuario es administrador
+  const isAdmin = auth.user?.tipo_usuario === "admin" || auth.user?.tipo_usuario === "root";
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-[#081225] via-[#0a1533] to-[#081225] backdrop-blur-md border-b border-cyan-500/20 text-white px-6 py-4 z-50 shadow-2xl font-sans">
@@ -57,6 +60,21 @@ export default function Header() {
             <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
+
+          {/* ⭐ Shopping Cart Icon - SOLO VISIBLE PARA CLIENTES */}
+          {!isAdmin && (
+            <Link
+              to="/carrito"
+              className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+              title="Carrito de compras"
+            >
+              <div className="relative w-5 h-5">
+                <ShoppingCart className="w-full h-full text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
+                <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-medium border border-[#081225]">0</div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </Link>
+          )}
 
           {auth.isAuthenticated ? (
             <>
@@ -127,6 +145,23 @@ export default function Header() {
                 Noticias
               </span>
             </Link>
+
+            {/* ⭐ Shopping Cart Link Mobile - SOLO VISIBLE PARA CLIENTES */}
+            {!isAdmin && (
+              <Link
+                to="/carrito"
+                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-cyan-500/10 hover:border-cyan-400/30 transition-all duration-300 group"
+                onClick={() => setOpen(false)}
+              >
+                <div className="relative">
+                  <ShoppingCart className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</div>
+                </div>
+                <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
+                  Carrito
+                </span>
+              </Link>
+            )}
 
             {auth.isAuthenticated ? (
               <>

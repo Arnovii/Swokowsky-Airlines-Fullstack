@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Plane, Calendar, MapPin, Tag } from "lucide-react";
+import { ArrowLeft, Plane, Calendar, MapPin, Tag, ShoppingCart } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import AddToCartButton from "@/common/AddToCartButton";
+import { ClassSelectorModal } from "@/modules/flightsearch/components/ClassSelectorModal";
+import { useCart } from "@/context/CartContext"; // 👈 Importa tu CartContext
+import { toast } from "react-toastify";
 
 export interface Noticia {
   titulo: string;
@@ -26,8 +28,8 @@ export interface Noticia {
   estado: string;
   salida_programada_utc: string;
   llegada_programada_utc: string;
-  salida_local_origen: string;
-  llegada_local_destino: string;
+  hora_salida_local_ciudad_destino: string;
+  hora_llegada_local_ciudad_destino: string;
   salida_colombia: string;
   llegada_colombia: string;
   origen: {
@@ -40,15 +42,45 @@ export interface Noticia {
   };
 }
 
-function formatDateTime(dateString: string) {
-  if (!dateString) return { fecha: '-', hora: '-' }
-  const date = new Date(dateString)
-  return {
-    // fecha completa para Colombia
-    fecha: format(date, 'dd/MM/yyyy', { locale: es }),
-    // hora con AM/PM en español
-    hora: format(date, 'hh:mm a', { locale: es })
+type FechaHora = { fecha: string; hora: string }
+
+const ISO_REGEX =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+\-]\d{2}:\d{2})?$/
+
+function pad(n: number) { return String(n).padStart(2, '0') }
+
+function formatIsoToReadable(
+  iso?: string | null,
+  opts?: { use24Hour?: boolean; spanishAmPm?: boolean }
+): FechaHora {
+  if (!iso) return { fecha: '-', hora: '-' }
+
+  const m = iso.match(ISO_REGEX)
+  if (!m) {
+    const raw = (iso || '').replace(/(Z|[+\-]\d{2}:\d{2})\s*$/, '')
+    const parts = raw.split('T')
+    if (parts.length === 2) {
+      const [datePart, timePartRaw] = parts
+      const timePart = (timePartRaw.match(/^(\d{2}:\d{2})/) || [])[0] || '-'
+      const dateMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      const fecha = dateMatch ? `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}` : datePart
+      return { fecha, hora: timePart }
+    }
+    return { fecha: iso, hora: '-' }
   }
+
+  const [, year, month, day, hrStr, min] = m
+  const hourNum = Number(hrStr)
+
+  const fecha = `${day}/${month}/${year}`
+
+  if (opts?.use24Hour) {
+    return { fecha, hora: `${pad(hourNum)}:${min}` }
+  }
+
+  const ampm = hourNum >= 12 ? (opts?.spanishAmPm ? 'p. m.' : 'PM') : (opts?.spanishAmPm ? 'a. m.' : 'AM')
+  const hour12 = hourNum % 12 === 0 ? 12 : hourNum % 12
+  return { fecha, hora: `${pad(hour12)}:${min} ${ampm}` }
 }
 
 function formatearPesos(valor: number) {
@@ -62,14 +94,16 @@ function formatearPesos(valor: number) {
 export default function DetalleVuelo() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart } = useCart(); // 👈 Obtén la función addToCart de tu context
   const [vuelo, setVuelo] = useState<Noticia | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cantidadTickets, setCantidadTickets] = useState(1); // 👈 Por si quieres permitir seleccionar cantidad
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // ✅ Usa SIEMPRE la URL completa de la API para evitar problemas de proxy
         const { data } = await axios.get<Noticia>(
           `http://localhost:3000/api/v1/news/${id}`
         );
@@ -84,20 +118,77 @@ export default function DetalleVuelo() {
     fetchData();
   }, [id]);
 
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleSelectClass = async (clase: 'economica' | 'primera_clase') => {
+    if (!vuelo || !id) return;
+    
+    try {
+      // 👇 Usa tu función addToCart del context
+      await addToCart({
+        id_vueloFK: parseInt(id), // Convierte el ID a número
+        cantidad_de_tickets: cantidadTickets, // Por ahora 1, puedes hacerlo dinámico
+        clase: clase,
+      });
+
+      // Si llegó aquí, se agregó exitosamente
+      const precio = clase === 'economica' 
+        ? vuelo.precio_economica 
+        : vuelo.precio_primera_clase;
+      
+      const descuento = vuelo.promocion?.descuento ?? 0;
+      const precioFinal = Math.round(precio * (1 - descuento));
+
+      toast.success(
+        <div>
+          <strong className="block text-lg mb-1">¡Agregado al carrito! 🎉</strong>
+          <div className="text-sm">
+            <div className="font-semibold">{vuelo.origen.ciudad} → {vuelo.destino.ciudad}</div>
+            <div className="text-gray-600">
+              Clase: {clase === 'economica' ? 'Económica' : 'Primera Clase'}
+            </div>
+            <div className="text-gray-600">
+              Tickets: {cantidadTickets}
+            </div>
+            <div className="font-bold text-green-600 mt-1">
+              {formatearPesos(precioFinal * cantidadTickets)}
+            </div>
+          </div>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: "light",
+        }
+      );
+
+      navigate('/carrito');
+      
+    } catch (error) {
+      // Los errores ya se manejan en addToCart con toasts
+      // Solo loguea para debug
+      console.error('Error al agregar al carrito desde detalle:', error);
+    }
+  };
+
   if (loading) return <p className="text-center mt-10">Cargando...</p>;
   if (error) return <p className="text-center mt-10 text-red-500">{error}</p>;
   if (!vuelo) return <p className="text-center mt-10">Vuelo no encontrado</p>;
 
-  // Helper para detectar Colombia (case-insensitive y tolerant)
-  const isColombia = (pais?: string | null) => {
+  const isColombia = (pais: string) => {
     if (!pais) return false;
     const s = String(pais).toLowerCase();
     return s === 'colombia' || s === 'co' || s.includes('col');
   };
 
-  // Determinamos si el vuelo es nacional (origen y destino en Colombia)
-  const origenPaisRaw = vuelo.origen?.pais ?? '';
-  const destinoPaisRaw = vuelo.destino?.pais ?? '';
+  const origenPaisRaw = vuelo.origen.pais;
+  const destinoPaisRaw = vuelo.destino.pais;
   const esNacional = isColombia(origenPaisRaw) && isColombia(destinoPaisRaw);
 
   return (
@@ -157,43 +248,44 @@ export default function DetalleVuelo() {
 
             {/* Datos del vuelo */}
             <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Horarios */}
               <Card
                 title="Horarios"
                 icon={<Calendar className="w-5 h-5 text-[#0e254d]" />}
               >
                 {(() => {
-                  // Construimos horarios dinámicamente: solo mostramos "local" si NO es nacional
                   const horarios: Array<{ label: string; value: string; pais?: string; tipo?: string }> = [];
 
                   if (!esNacional) {
                     horarios.push(
                       {
-                        label: 'Salida Local Origen',
-                        value: vuelo.salida_local_origen,
-                        pais: vuelo.destino?.pais,
+                        label: 'Hora Salida Local',
+                        value: vuelo.hora_salida_local_ciudad_destino,
+                        pais: vuelo.destino.pais,
                         tipo: 'local'
                       },
                       {
-                        label: 'Llegada Local Destino',
-                        value: vuelo.llegada_local_destino,
-                        pais: vuelo.destino?.pais,
+                        label: 'Hora Llegada Local',
+                        value: vuelo.hora_llegada_local_ciudad_destino,
+                        pais: vuelo.destino.pais,
                         tipo: 'local'
                       }
                     );
                   }
 
                   horarios.push(
-                    { label: 'Salida Colombia', value: vuelo.salida_programada_utc, tipo: 'colombia' },
-                    { label: 'Llegada Colombia', value: vuelo.llegada_programada_utc, tipo: 'colombia' }
+                    { label: 'Hora Salida Colombia', value: vuelo.salida_colombia, tipo: 'colombia' },
+                    { label: 'Hora Llegada Colombia', value: vuelo.llegada_colombia, tipo: 'colombia' }
                   );
 
                   return horarios.map(({ label, value, pais, tipo }) => {
-                    const { fecha, hora } = formatDateTime(value)
+                    const { fecha, hora } = formatIsoToReadable(value)
                     return (
                       <div key={label} className="mb-3">
                         <p className="text-sm font-semibold text-gray-700">
                           {label}
-                          {label === 'Llegada Local Destino' && pais ? ` (${pais})` : ''}
+                          {label === 'Hora Salida Local' && pais ? ` (${pais})` : ''}
+                          {label === 'Hora Llegada Local' && pais ? ` (${pais})` : ''}
                         </p>
 
                         {tipo === 'colombia' ? (
@@ -210,6 +302,7 @@ export default function DetalleVuelo() {
                 })()}
               </Card>
 
+              {/* Detalles del avión */}
               <Card
                 title="Detalles del Avión"
                 icon={<Plane className="w-5 h-5 text-[#0e254d]" />}
@@ -255,11 +348,32 @@ export default function DetalleVuelo() {
                   <div className="text-sm text-gray-500 mt-2">Sin promoción disponible</div>
                 )}
               </Card>
+            </section>
 
+            {/* Botón de agregar al carrito */}
+            <section className="flex justify-center mt-8">
+              <AddToCartButton onClick={handleOpenModal}>
+                <span className="flex items- gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  Agregar al carrito de compras
+                </span>
+              </AddToCartButton>
             </section>
           </div>
         </div>
       </div>
+
+      {/* Modal de selección de clase */}
+      <ClassSelectorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectClass={handleSelectClass}
+        flightInfo={{
+          origen: vuelo.origen.ciudad,
+          destino: vuelo.destino.ciudad,
+          precio: vuelo.precio_economica,
+        }}
+      />
     </div>
   );
 }
@@ -298,25 +412,16 @@ function Item({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-/**
- * Props:
- * - label: string
- * - price: number (precio original en COP)
- * - promocion: { descuento: number }  // descuento = 0.2 para 20%
- * - formatearPesos: funcion para formatear números a COP
- */
 function PrecioConDescuento({
   label,
   price,
   promocion,
   formatearPesos,
-  compact = false,
 }: {
   label: string;
   price: number;
   promocion: any;
   formatearPesos: (v: number) => string;
-  compact?: boolean;
 }) {
   const descuento = promocion?.descuento ?? 0;
   const tienePromo = descuento > 0;
@@ -324,7 +429,7 @@ function PrecioConDescuento({
   const ahorro = price - precioConDescuento;
 
   return (
-    <div className={`w-full ${compact ? "py-2" : "py-3"}`}>
+    <div className="w-full py-3">
       <div className="flex items-center justify-between">
         <div className="text-sm font-medium text-gray-700">{label}</div>
         {tienePromo ? (

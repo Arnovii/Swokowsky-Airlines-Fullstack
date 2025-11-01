@@ -8,12 +8,10 @@ datasource db {
 }
 
 model aeronave {
-  id_aeronave           Int                     @id @default(autoincrement())
-  modelo                String                  @db.VarChar(100)
-  capacidad             Int
-  asiento               asiento[]
-  vuelo                 vuelo[]
+  id_aeronave            Int                      @id @default(autoincrement())
+  modelo                 String                   @db.VarChar(100)
   configuracion_asientos configuracion_asientos[]
+  vuelo                  vuelo[]
 }
 
 model aeropuerto {
@@ -28,35 +26,22 @@ model aeropuerto {
   @@index([id_ciudadFK], map: "id_ciudadFK")
 }
 
-model asiento {
-  id_asiento    Int            @id @default(autoincrement())
-  id_aeronaveFK Int
-  numero        String         @db.VarChar(100)
-  clases        asiento_clases
-  aeronave      aeronave       @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "asiento_ibfk_1")
-  ticket        ticket[]
-
-  @@index([id_aeronaveFK], map: "id_aeronaveFK")
-}
-
 model configuracion_asientos {
   id_configuracion Int            @id @default(autoincrement())
   id_aeronaveFK    Int
   clase            asiento_clases
   cantidad         Int
-
-  aeronave aeronave @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction)
+  aeronave         aeronave       @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([id_aeronaveFK], map: "id_aeronaveFK")
 }
 
 model tarifa {
-  id_tarifa    Int            @id @default(autoincrement())
-  id_vueloFK   Int
-  clase        asiento_clases
-  precio_base  Float          @db.Float
-
-  vuelo vuelo @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
+  id_tarifa   Int            @id @default(autoincrement())
+  id_vueloFK  Int
+  clase       asiento_clases
+  precio_base Float          @db.Float
+  vuelo       vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([id_vueloFK], map: "id_vueloFK")
 }
@@ -75,20 +60,6 @@ model ciudad {
   @@index([id_gmtFK], map: "id_gmtFK")
 }
 
-model pago {
-  id_pago      Int         @id @default(autoincrement())
-  id_ticketFK  Int
-  id_tarjetaFK Int
-  monto        Float       @db.Float
-  fecha        DateTime    @db.DateTime(0)
-  estado       pago_estado
-  ticket       ticket      @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_1")
-  tarjeta      tarjeta     @relation(fields: [id_tarjetaFK], references: [id_tarjeta], onDelete: NoAction, onUpdate: NoAction, map: "pago_ibfk_2")
-
-  @@index([id_tarjetaFK], map: "id_tarjetaFK")
-  @@index([id_ticketFK], map: "id_ticketFK")
-}
-
 model pais {
   id_pais Int      @id @default(autoincrement())
   nombre  String   @db.VarChar(100)
@@ -98,59 +69,67 @@ model pais {
 
 model pasajero {
   id_pasajero      Int             @id @default(autoincrement())
-  id_ticketFK      Int
+  id_ticketFK      Int             @unique                          // <- hacer UNIQUE para 1:1
   nombre           String          @db.VarChar(255)
   apellido         String          @db.VarChar(255)
   dni              String          @db.VarChar(255)
-  genero           pasajero_genero
+  phone            String          @db.VarChar(255)
+  email            String          @db.VarChar(255)
+  contact_name     String?          @db.VarChar(255)
+  phone_name       String?          @db.VarChar(255)
+  genero           usuario_genero
   fecha_nacimiento DateTime        @db.Date
-  ticket           ticket          @relation(fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 
-  @@index([id_ticketFK], map: "id_ticketFK")
+  // relación one-to-one (lado con la FK)
+  ticket           ticket          @relation("TicketPasajero", fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 }
 
 model promocion {
-  id_promocion  Int      @id @default(autoincrement())
-  nombre        String   @db.VarChar(255)
-  descripcion   String   @db.VarChar(255)
-  descuento Float    @db.Float
-  fecha_inicio  DateTime @db.DateTime(0)
-  fecha_fin     DateTime @db.DateTime(0)
-  vuelo         vuelo[]
+  id_promocion Int      @id @default(autoincrement())
+  nombre       String   @db.VarChar(255)
+  descripcion  String   @db.VarChar(255)
+  descuento    Float    @db.Float
+  fecha_inicio DateTime @db.DateTime(0)
+  fecha_fin    DateTime @db.DateTime(0)
+  vuelo        vuelo[]
 }
 
 model tarjeta {
   id_tarjeta   Int          @id @default(autoincrement())
   id_usuarioFK Int
-  saldo        Float    @db.Float
+  saldo        Float        @db.Float
   titular      String       @db.VarChar(255)
+  num_tarjeta  String       @unique
   vence_mes    Int
   vence_anio   Int
   cvv_ene      String       @db.VarChar(255)
   tipo         tarjeta_tipo
   banco        String       @db.VarChar(255)
   creado_en    DateTime     @db.DateTime(0)
-  pago         pago[]
   usuario      usuario      @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "tarjeta_ibfk_1")
 
   @@index([id_usuarioFK], map: "id_usuarioFK")
 }
 
+//El ticket sólo se crea en el checkout (después de pago)
 model ticket {
-  id_ticket    Int           @id @default(autoincrement())
-  id_usuarioFK Int
-  id_vueloFK   Int
-  id_asientoFK Int
-  precio       Float         @db.Float
-  estado       ticket_estado
-  creado_en    DateTime      @db.DateTime(0)
-  pago         pago[]
-  pasajero     pasajero[]
-  usuario      usuario       @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
-  vuelo        vuelo         @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
-  asiento      asiento       @relation(fields: [id_asientoFK], references: [id_asiento], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_3")
+  id_ticket      Int            @id @default(autoincrement())
+  id_usuarioFK   Int
+  id_vueloFK     Int
+  asiento_numero String         @db.VarChar(100)
+  asiento_clase  asiento_clases
+  precio         Float          @db.Float
+  estado         ticket_estado
+  creado_en      DateTime       @db.DateTime(0) @default(now())
 
-  @@index([id_asientoFK], map: "id_asientoFK")
+  // relación one-to-one con pasajero (lado sin FK)
+  pasajero       pasajero?      @relation("TicketPasajero")
+
+  usuario        usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+  vuelo          vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
+
+  @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx")
+  @@index([estado, creado_en])
   @@index([id_usuarioFK], map: "id_usuarioFK")
   @@index([id_vueloFK], map: "id_vueloFK")
 }
@@ -158,13 +137,13 @@ model ticket {
 model usuario {
   id_usuario            Int                  @id @default(autoincrement())
   tipo_usuario          usuario_tipo_usuario
-  dni                   Int                  @unique  // Cambié de String a Int
+  dni                   Int?                 @unique
   nombre                String               @db.VarChar(255)
   apellido              String               @db.VarChar(255)
-  fecha_nacimiento      DateTime             @db.Date
-  nacionalidad          nationalities
-  direccion_facturacion String               @db.VarChar(255)
-  genero                usuario_genero
+  fecha_nacimiento      DateTime?            @db.Date
+  nacionalidad          nationalities?
+  direccion_facturacion String?              @db.VarChar(255)
+  genero                usuario_genero?
   correo                String               @unique @db.VarChar(255)
   username              String               @unique @db.VarChar(255)
   password_bash         String               @db.VarChar(255)
@@ -174,27 +153,28 @@ model usuario {
   must_change_password  Boolean              @default(false)
   tarjeta               tarjeta[]
   ticket                ticket[]
+  saldo                 Float?                @default(0.0) //Solo puede ser modificado cuando se agregan tarjetas o reembolso 
+  carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
 }
 
+
 model vuelo {
-  id_vuelo                Int @id @default(autoincrement())
-  id_aeronaveFK           Int
-  id_aeropuerto_origenFK  Int
-  id_aeropuerto_destinoFK Int
-
-  salida_programada_utc  DateTime @db.Timestamp(0)
-  llegada_programada_utc DateTime @db.Timestamp(0)
-
-  id_promocionFK Int?
-  promocion      promocion? @relation(fields: [id_promocionFK], references: [id_promocion], onDelete: NoAction, onUpdate: NoAction)
-
-  estado                                               vuelo_estado @default(Programado)
-  ticket                                               ticket[]
-  tarifa                                               tarifa[]
-  aeronave                                             aeronave     @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_1")
-  aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto  aeropuerto   @relation("vuelo_id_aeropuerto_origenFKToaeropuerto", fields: [id_aeropuerto_origenFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_2")
-  aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto aeropuerto   @relation("vuelo_id_aeropuerto_destinoFKToaeropuerto", fields: [id_aeropuerto_destinoFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_3")
+  id_vuelo                                             Int            @id @default(autoincrement())
+  id_aeronaveFK                                        Int
+  id_aeropuerto_origenFK                               Int
+  id_aeropuerto_destinoFK                              Int
+  salida_programada_utc                                DateTime       @db.Timestamp(0)
+  llegada_programada_utc                               DateTime       @db.Timestamp(0)
+  id_promocionFK                                       Int?
+  estado                                               vuelo_estado   @default(Programado)
+  carrito_item                                         carrito_item[]
   noticia                                              noticia?
+  tarifa                                               tarifa[]
+  ticket                                               ticket[]
+  aeronave                                             aeronave       @relation(fields: [id_aeronaveFK], references: [id_aeronave], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_1")
+  aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto  aeropuerto     @relation("vuelo_id_aeropuerto_origenFKToaeropuerto", fields: [id_aeropuerto_origenFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_2")
+  aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto aeropuerto     @relation("vuelo_id_aeropuerto_destinoFKToaeropuerto", fields: [id_aeropuerto_destinoFK], references: [id_aeropuerto], onDelete: NoAction, onUpdate: NoAction, map: "vuelo_ibfk_3")
+  promocion                                            promocion?     @relation(fields: [id_promocionFK], references: [id_promocion], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([id_aeronaveFK], map: "id_aeronaveFK")
   @@index([id_aeropuerto_destinoFK], map: "id_aeropuerto_destinoFK")
@@ -209,17 +189,50 @@ model noticia {
   descripcion_corta String @db.VarChar(512)
   descripcion_larga String @db.Text
   url_imagen        String @db.VarChar(255)
-
-  vuelo vuelo @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
+  vuelo             vuelo  @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([id_vueloFK], map: "id_vueloFK")
 }
 
 model gmt {
   id_gmt Int      @id @default(autoincrement())
-  name   String   @db.VarChar(20)                 // ejemplo: "GMT-5", "GMT+2"
-  offset Int                                     // -12 .. +12
+  name   String   @db.VarChar(20)
+  offset Int
   ciudad ciudad[]
+}
+
+model constantes {
+  id_constante Int      @id @default(autoincrement())
+  clave        String   @unique @db.VarChar(255)
+  valor        String   @db.VarChar(255)
+  descripcion  String?  @db.VarChar(512)
+  creado_en    DateTime @default(now()) @db.DateTime(0)
+}
+
+model carrito {
+  id_carrito   Int            @id @default(autoincrement())
+  id_usuarioFK Int            @unique
+  creado_en    DateTime       @default(now()) @db.DateTime(0)
+  usuario      usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  items        carrito_item[]
+
+  @@index([id_usuarioFK], map: "carrito_id_usuario_idx")
+}
+
+model carrito_item {
+  id_item_carrito     Int            @id @default(autoincrement())
+  id_carritoFK        Int
+  id_vueloFK          Int
+  cantidad_de_tickets Int
+  fecha_limite        DateTime       @db.DateTime(0)
+  clase               asiento_clases
+  creado_en           DateTime       @default(now()) @db.DateTime(0)
+  carrito             carrito        @relation(fields: [id_carritoFK], references: [id_carrito], onDelete: Cascade, onUpdate: NoAction)
+  vuelo               vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_carritoFK], map: "id_carritoFK")
+  @@index([id_vueloFK], map: "id_vueloFK")
+  @@index([fecha_limite])
 }
 
 enum usuario_tipo_usuario {
@@ -233,25 +246,12 @@ enum asiento_clases {
   primera_clase @map("primera clase")
 }
 
-enum pago_estado {
-  pendiente
-  aprobado
-  rechazado
-}
-
 enum ticket_estado {
-  reservado
   pagado
-  checkin
   usado
   cancelado
 }
 
-enum pasajero_genero {
-  M
-  F
-  X
-}
 
 enum tarjeta_tipo {
   credito

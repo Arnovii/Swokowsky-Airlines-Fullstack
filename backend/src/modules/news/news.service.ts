@@ -2,20 +2,67 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { noticia } from '@prisma/client';
-
+import { CreateNewsDto } from './dto/create-news.dto';
+import { DateTime } from 'luxon';
+import { promocion as PromocionModel } from '@prisma/client';
+import { MailService } from '../../mail/mail.service';
 
 
 @Injectable()
 export class NewsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) { }
 
 
 
-  async getAllNews(): Promise<noticia[]> {
+  async getAllNews(): Promise<Array<noticia & {
+    fecha_partida_colombia: string | null;
+    hora_partida_colombia: string | null;
+  }>> {
     try {
-      const noticias: noticia[] = await this.prisma.noticia.findMany();
-      return noticias;
-    } catch (error) { throw new BadRequestException('Error al obtener noticias'); }
+      const noticias = await this.prisma.noticia.findMany({
+        include: { vuelo: true }, // traemos el vuelo para acceder a salida_programada_utc
+      });
+
+      const formatted = noticias.map(n => {
+        const salidaUtc = n.vuelo?.salida_programada_utc ?? null;
+
+        let fecha_partida_colombia: string | null = null;
+        let hora_partida_colombia: string | null = null;
+
+        if (salidaUtc) {
+          // salidaUtc viene como Date (o string convertible). Usamos Intl para convertir a America/Bogota
+          const salidaDate = new Date(salidaUtc);
+
+          // Fecha en formato local colombiano (ej: "30/10/2025")
+          fecha_partida_colombia = salidaDate.toLocaleDateString('es-CO', {
+            timeZone: 'America/Bogota',
+          });
+
+          // Hora en formato "HH:MM" (24h) en zona Colombia
+          hora_partida_colombia = salidaDate.toLocaleTimeString('es-CO', {
+            timeZone: 'America/Bogota',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+        }
+
+        // Eliminamos la relación vuelo si no quieres devolverla; si la quieres mantener, quita el destructuring
+        const { vuelo, ...rest } = n;
+        return {
+          ...rest,
+          fecha_partida_colombia,
+          hora_partida_colombia,
+        };
+      });
+
+      return formatted;
+    } catch (error) {
+      throw new BadRequestException('Error al obtener noticias');
+    }
   }
 
   async getNewByID(id: number) {
@@ -111,9 +158,9 @@ export class NewsService {
     }
   }
 
-    /**
-   * Retorna la información de una noticia con los datos útiles para el frontend (sin ids ni llaves foráneas)
-   */
+  /**
+ * Retorna la información de una noticia con los datos útiles para el frontend (sin ids ni llaves foráneas)
+ */
   async getNewByIDClean(id: number) {
     try {
       if (isNaN(id)) throw new BadRequestException('El ID debe ser un número');
@@ -155,24 +202,43 @@ export class NewsService {
       });
       if (!noticia) throw new NotFoundException(`La noticia #${id} no existe en la base de datos`);
 
-      // Helper para calcular hora local a partir de UTC y offset en horas
+      /*---- CALCULAR HORA DE LLEGADA LOCAL*/
+
       const formatLocal = (utcDate: Date | string | null, offsetHours: number | null) => {
         if (!utcDate || offsetHours === null || offsetHours === undefined) return null;
         const dateObj = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
         const local = new Date(dateObj.getTime() + offsetHours * 60 * 60 * 1000);
         return local.toISOString();
       };
-
-      // Extraemos offsets si existen
+      // Helper para calcular hora local a partir de UTC y offset en horas
       const vuelo = noticia.vuelo;
-      let salida_local_origen: string | null = null;
-      let llegada_local_destino: string | null = null;
-      if (vuelo) {
-        const origenCiudadGmt = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
-        const destinoCiudadGmt = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
-        salida_local_origen = formatLocal(vuelo.salida_programada_utc, origenCiudadGmt);
-        llegada_local_destino = formatLocal(vuelo.llegada_programada_utc, destinoCiudadGmt);
-      }
+      const ciudadOrigen = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad.nombre
+      const ciudadDestino = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad.nombre
+      console.log(`Voy de ${ciudadOrigen}`)
+      console.log(`Hacia ${ciudadDestino}`)
+      //Extraemos offset para poder calcular hora local del destino
+      const origenCiudadGmt = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad.gmt.offset
+      const destinoCiudadGmt = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad.gmt.offset
+
+      let hora_salida_local_ciudad_destino = formatLocal(vuelo.salida_programada_utc, destinoCiudadGmt);
+      let hora_llegada_local_ciudad_destino = formatLocal(vuelo.llegada_programada_utc, destinoCiudadGmt);
+      //Si existe diferencia horaria entre el local y el destino
+
+
+
+
+      console.log("Horas UTC")
+      console.log(vuelo.salida_programada_utc)
+      console.log(vuelo.llegada_programada_utc)
+      console.log("==========")
+
+      console.log("Horas LOCAL")
+      console.log(hora_salida_local_ciudad_destino)
+      console.log(hora_llegada_local_ciudad_destino)
+      console.log("==========")
+
+
+      /*CALCULAR HORA DE LLEGADA LOCAL*/
 
       // Helper para hora en Colombia (GMT-5)
       const toColombiaTime = (utcDate: Date | string | null) => {
@@ -183,8 +249,8 @@ export class NewsService {
       };
 
       // Extraer asientos por clase
-  let asientos_economica: number | null = null;
-  let asientos_primera_clase: number | null = null;
+      let asientos_economica: number | null = null;
+      let asientos_primera_clase: number | null = null;
       if (vuelo?.aeronave?.configuracion_asientos) {
         for (const ca of vuelo.aeronave.configuracion_asientos) {
           if (ca.clase === 'economica') asientos_economica = ca.cantidad;
@@ -193,8 +259,8 @@ export class NewsService {
       }
 
       // Extraer precios por clase
-  let precio_economica: number | null = null;
-  let precio_primera_clase: number | null = null;
+      let precio_economica: number | null = null;
+      let precio_primera_clase: number | null = null;
       if (vuelo?.tarifa) {
         for (const t of vuelo.tarifa) {
           if (t.clase === 'economica') precio_economica = t.precio_base;
@@ -209,38 +275,38 @@ export class NewsService {
         descripcion_larga: noticia.descripcion_larga,
         url_imagen: noticia.url_imagen,
         modelo_aeronave: vuelo?.aeronave?.modelo ?? null,
-        capacidad_aeronave: vuelo?.aeronave?.capacidad ?? null,
+        capacidad_aeronave: (asientos_economica != null && asientos_primera_clase != null) ? asientos_economica + asientos_primera_clase : 0,
         asientos_economica,
         asientos_primera_clase,
         precio_economica,
         precio_primera_clase,
         promocion: vuelo?.promocion
           ? {
-              nombre: vuelo.promocion.nombre,
-              descripcion: vuelo.promocion.descripcion,
-              descuento: vuelo.promocion.descuento,
-              fecha_inicio: vuelo.promocion.fecha_inicio,
-              fecha_fin: vuelo.promocion.fecha_fin,
-            }
+            nombre: vuelo.promocion.nombre,
+            descripcion: vuelo.promocion.descripcion,
+            descuento: vuelo.promocion.descuento,
+            fecha_inicio: vuelo.promocion.fecha_inicio,
+            fecha_fin: vuelo.promocion.fecha_fin,
+          }
           : null,
         estado: vuelo?.estado ?? null,
         salida_programada_utc: vuelo?.salida_programada_utc ?? null,
         llegada_programada_utc: vuelo?.llegada_programada_utc ?? null,
-        salida_local_origen,
-        llegada_local_destino,
+        hora_salida_local_ciudad_destino,
+        hora_llegada_local_ciudad_destino,
         salida_colombia: toColombiaTime(vuelo?.salida_programada_utc),
         llegada_colombia: toColombiaTime(vuelo?.llegada_programada_utc),
         origen: vuelo?.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto
           ? {
-              ciudad: vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad?.nombre,
-              pais: vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad?.pais?.nombre,
-            }
+            ciudad: vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad?.nombre,
+            pais: vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad?.pais?.nombre,
+          }
           : null,
         destino: vuelo?.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto
           ? {
-              ciudad: vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad?.nombre,
-              pais: vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad?.pais?.nombre,
-            }
+            ciudad: vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad?.nombre,
+            pais: vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad?.pais?.nombre,
+          }
           : null,
       };
 
@@ -250,6 +316,290 @@ export class NewsService {
         `Hubo un problema al obtener la información de la noticia. Por favor, intente nuevamente más tarde. ${err}`,
       );
     }
+  }
+
+  async createNew(dto: CreateNewsDto) {
+    const {
+      titulo,
+      descripcion_corta,
+      descripcion_larga,
+      url_imagen,
+      precio_economica,
+      precio_primera_clase,
+      promocion,
+      salida_colombia,
+      llegada_colombia,
+      id_aeronaveFK,
+      id_aeropuerto_origenFK,
+      id_aeropuerto_destinoFK,
+    } = dto;
+
+    // 1) Validar entidades referenciadas existentes
+    const [aeropuertoOrigen, aeropuertoDestino, aeronave] = await Promise.all([
+      this.prisma.aeropuerto.findUnique({ where: { id_aeropuerto: id_aeropuerto_origenFK }, include: { ciudad: { include: { pais: true, gmt: true } } } }),
+      this.prisma.aeropuerto.findUnique({ where: { id_aeropuerto: id_aeropuerto_destinoFK }, include: { ciudad: { include: { pais: true, gmt: true } } } }),
+      this.prisma.aeronave.findUnique({ where: { id_aeronave: id_aeronaveFK } }),
+    ]);
+
+    if (!aeropuertoOrigen) throw new BadRequestException('Aeropuerto de origen no encontrado');
+    if (!aeropuertoDestino) throw new BadRequestException('Aeropuerto de destino no encontrado');
+    if (!aeronave) throw new BadRequestException('Aeronave no encontrada');
+
+    // 1b) Obtener configuracion_asientos de la aeronave (obligatoria)
+    const configAsientos = await this.prisma.configuracion_asientos.findMany({
+      where: { id_aeronaveFK }
+    });
+    // Esperamos tener al menos economica y/o primera_clase configuradas
+    const confEconomica = configAsientos.find(c => c.clase === 'economica');
+    const confPrimera = configAsientos.find(c => c.clase === 'primera_clase');
+
+    if (!confEconomica && !confPrimera) {
+      throw new BadRequestException('La aeronave no tiene configuración de asientos (economica/primera_clase).');
+    }
+
+    // 2) Parsear y validar las fechas/hora que envió el admin — son en zona America/Bogota
+    const depBog = DateTime.fromISO(salida_colombia, { zone: 'America/Bogota' });
+    const arrBog = DateTime.fromISO(llegada_colombia, { zone: 'America/Bogota' });
+    if (!depBog.isValid || !arrBog.isValid) throw new BadRequestException('Fechas/hora inválidas (deben ser ISO 8601).');
+    if (arrBog <= depBog) throw new BadRequestException('La llegada debe ser posterior a la salida.');
+
+    const departureUTCDate = depBog.toUTC().toJSDate();
+    const arrivalUTCDate = arrBog.toUTC().toJSDate();
+
+    // Zonas locales (preferimos zoneName si existe en gmt, sino usamos offset)
+    const originGmt = aeropuertoOrigen.ciudad?.gmt;
+    const destGmt = aeropuertoDestino.ciudad?.gmt;
+
+    const originZone = originGmt?.name ?? (originGmt ? `UTC${originGmt.offset >= 0 ? '+' + originGmt.offset : originGmt.offset}` : 'UTC');
+    const destZone = destGmt?.name ?? (destGmt ? `UTC${destGmt.offset >= 0 ? '+' + destGmt.offset : destGmt.offset}` : 'UTC');
+
+    const departureLocalOrigin = DateTime.fromJSDate(departureUTCDate).setZone(originZone);
+    const arrivalLocalDest = DateTime.fromJSDate(arrivalUTCDate).setZone(destZone);
+
+    // 3) Validar promoción opcional: si viene, crearla (y luego asignar id_promocionFK al vuelo)
+    // Validaciones básicas de la promo
+    let promocionCreada: PromocionModel | null = null;  // Define el tipo claramente
+    if (promocion) {
+      // Validar rango de fechas
+      const fIni = DateTime.fromISO(promocion.fecha_inicio);
+      const fFin = DateTime.fromISO(promocion.fecha_fin);
+      if (!fIni.isValid || !fFin.isValid) throw new BadRequestException('Fechas de promoción inválidas');
+      if (fFin <= fIni) throw new BadRequestException('fecha_fin debe ser posterior a fecha_inicio en la promoción');
+
+      // Crear promoción
+      promocionCreada = await this.prisma.promocion.create({
+        data: {
+          nombre: promocion.nombre,
+          descripcion: promocion.descripcion,
+          descuento: promocion.descuento,
+          fecha_inicio: fIni.toJSDate(),
+          fecha_fin: fFin.toJSDate(),
+        }
+      });
+
+
+
+    }
+
+    // 4) Transacción: crear vuelo -> tarifas -> (configuracion_asientos opcional si quieres duplicar) -> noticia
+    const result = await this.prisma.$transaction(async (tx) => {
+      const nuevoVuelo = await tx.vuelo.create({
+        data: {
+          id_aeronaveFK,
+          id_aeropuerto_origenFK,
+          id_aeropuerto_destinoFK,
+          salida_programada_utc: departureUTCDate,
+          llegada_programada_utc: arrivalUTCDate,
+          id_promocionFK: promocionCreada ? promocionCreada.id_promocion : null,
+          estado: 'Programado',
+        }
+      });
+
+      // crear tarifas para las 2 clases con los precios que envía el admin
+      const tarifasToCreate = [
+        tx.tarifa.create({
+          data: {
+            id_vueloFK: nuevoVuelo.id_vuelo,
+            clase: 'economica',
+            precio_base: precio_economica,
+          }
+        }),
+        tx.tarifa.create({
+          data: {
+            id_vueloFK: nuevoVuelo.id_vuelo,
+            clase: 'primera_clase',
+            precio_base: precio_primera_clase,
+          }
+        })
+      ];
+      await Promise.all(tarifasToCreate);
+
+      // NOTA: no duplicamos configuracion_asientos (ya existe para aeronave); si quieres crear registros por vuelo,
+      // puedes crear entradas copy aquí. Por ahora vamos a usar la config existente para devolver los números.
+      // crear noticia vinculada al vuelo
+      const noticia = await tx.noticia.create({
+        data: {
+          id_vueloFK: nuevoVuelo.id_vuelo,
+          titulo,
+          descripcion_corta,
+          descripcion_larga,
+          url_imagen,
+        },
+        include: {
+          vuelo: {
+            include: {
+              aeronave: true,
+              promocion: true,
+              tarifa: true,
+              aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: { include: { ciudad: { include: { pais: true, gmt: true } } } },
+              aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: { include: { ciudad: { include: { pais: true, gmt: true } } } },
+            }
+          }
+        }
+      });
+
+      return { noticia, nuevoVueloId: nuevoVuelo.id_vuelo };
+    });
+
+    // 5) Preparar respuesta que necesita el frontend (Noticia)
+    const created = result.noticia;
+    const vuelo = created.vuelo;
+
+    // extraer configuración de asientos desde la config que consultamos antes
+    const asientos_economica = confEconomica ? confEconomica.cantidad : null;
+    const asientos_primera_clase = confPrimera ? confPrimera.cantidad : null;
+
+    // precios por clase que creamos
+    const precioEconomica = precio_economica;
+    const precioPrimera = precio_primera_clase;
+
+    // 6)Enviamos correo
+
+    // Helper: formatear moneda (ajusta locale/currency si lo deseas)
+    const CURRENCY_LOCALE = process.env.CURRENCY_LOCALE ?? 'es-CO'; // ejemplo 'es-CO'
+    const CURRENCY_CODE = process.env.CURRENCY_CODE ?? 'COP'; // ejemplo 'COP'
+    const formatterCurrency = new Intl.NumberFormat(CURRENCY_LOCALE, {
+      style: 'currency',
+      currency: CURRENCY_CODE,
+      maximumFractionDigits: 0, // sin decimales si manejas pesos
+    });
+
+    // Helper: formatea fecha/hora legible
+    function formatDateTimeISOtoReadable(isoOrDate: string | Date | null | undefined, zone = 'America/Bogota') {
+      if (!isoOrDate) return '';
+      const dt = typeof isoOrDate === 'string' ? DateTime.fromISO(isoOrDate, { zone: 'utc' }).setZone(zone) : DateTime.fromJSDate(new Date(isoOrDate)).setZone(zone);
+      if (!dt.isValid) return String(isoOrDate);
+      // Ejemplo: "mié, 5 nov 2025 · 09:00"
+      return dt.toLocaleString(DateTime.DATETIME_MED); // p. ej. "Nov 5, 2025, 9:00 AM" (según locale)
+    }
+
+    // Si salida_colombia y llegada_colombia ya eran strings ISO en zona Colombia, convertimos con zone America/Bogota
+    const salidaColombiaReadable = salida_colombia
+      ? DateTime.fromISO(salida_colombia, { zone: 'America/Bogota' }).toLocaleString(DateTime.DATETIME_MED)
+      : (vuelo.salida_programada_utc ? DateTime.fromJSDate(new Date(vuelo.salida_programada_utc)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED) : '');
+
+    const llegadaColombiaReadable = llegada_colombia
+      ? DateTime.fromISO(llegada_colombia, { zone: 'America/Bogota' }).toLocaleString(DateTime.DATETIME_MED)
+      : (vuelo.llegada_programada_utc ? DateTime.fromJSDate(new Date(vuelo.llegada_programada_utc)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED) : '');
+
+    // Formatear precios (ejemplo COP sin decimales)
+    const precioEconomicaFormatted = precioEconomica != null ? formatterCurrency.format(Number(precioEconomica)) : '';
+    const precioPrimeraFormatted = precioPrimera != null ? formatterCurrency.format(Number(precioPrimera)) : '';
+
+    // Formatear promoción fechas (si existe)
+    let promocionFormatted: { nombre: string; descripcion: string; descuento: number; fecha_inicio: string; fecha_fin: string; periodo_lectura: string; } | null = null;
+    if (vuelo?.promocion) {
+      try {
+        const p = vuelo.promocion;
+        const inicio = DateTime.fromJSDate(new Date(p.fecha_inicio)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED);
+        const fin = DateTime.fromJSDate(new Date(p.fecha_fin)).setZone('America/Bogota').toLocaleString(DateTime.DATETIME_MED);
+        promocionFormatted = {
+          nombre: p.nombre,
+          descripcion: p.descripcion,
+          descuento: (typeof p.descuento === 'number') ? (p.descuento * 100) : 0,
+          fecha_inicio: inicio,
+          fecha_fin: fin,
+          periodo_lectura: `${inicio} → ${fin}`, // campo amigable para mostrar directo
+        };
+      } catch (err) {
+        // por si vienen en un formato raro
+        promocionFormatted = {
+          nombre: vuelo.promocion.nombre,
+          descripcion: vuelo.promocion.descripcion,
+          descuento: vuelo.promocion.descuento * 100,
+          fecha_inicio: String(vuelo.promocion.fecha_inicio),
+          fecha_fin: String(vuelo.promocion.fecha_fin),
+          periodo_lectura: `${String(vuelo.promocion.fecha_inicio)} → ${String(vuelo.promocion.fecha_fin)}`,
+        };
+      }
+    }
+
+    // Construimos el contexto final que vamos a enviar al template (todo ya legible y formateado)
+    const emailContext = {
+      titulo: created.titulo,
+      descripcion_corta: created.descripcion_corta,
+      descripcion_larga: created.descripcion_larga,
+      precio_economica: precioEconomicaFormatted,
+      precio_primera: precioPrimeraFormatted,
+      fecha_hora_salida: salidaColombiaReadable,
+      fecha_hora_llegada: llegadaColombiaReadable,
+      bannerImageUrl: created.url_imagen,
+      estado: vuelo?.estado ?? 'Programado',
+      promocion: promocionFormatted, // puede ser null
+      frontendUrl: process.env.FRONTEND_URL,
+      newsId: created.id_noticia,
+    };
+
+    // obtener lista de correos suscritos
+    const subscribers = await this.prisma.usuario.findMany({
+      where: { suscrito_noticias: true },
+      select: { correo: true },
+    });
+    const emails = subscribers.map(s => s.correo);
+
+    try {
+      // Fire-and-forget (recomendado para endpoints HTTP)
+      this.mailService.sendBulkNotifications(emails, emailContext, { concurrency: 10, delayBetweenChunksMs: 200, awaitAll: false });
+    } catch (e) {
+      console.log(`Error al momento de enviar notificación de noticia para los usuarios ${e}`)
+    }
+
+
+
+    return {
+      titulo: created.titulo,
+      descripcion_corta: created.descripcion_corta,
+      descripcion_larga: created.descripcion_larga,
+      url_imagen: created.url_imagen,
+      modelo_aeronave: aeronave.modelo,
+      capacidad_aeronave: (asientos_economica != null && asientos_primera_clase != null) ? asientos_economica + asientos_primera_clase : 0,
+      asientos_economica,
+      asientos_primera_clase,
+      precio_economica: precioEconomica,
+      precio_primera_clase: precioPrimera,
+      promocion: vuelo.promocion ? {
+        nombre: vuelo.promocion.nombre,
+        descripcion: vuelo.promocion.descripcion,
+        descuento: vuelo.promocion.descuento ?? null,
+        fecha_inicio: vuelo.promocion.fecha_inicio.toISOString(),
+        fecha_fin: vuelo.promocion.fecha_fin.toISOString(),
+      } : null,
+      estado: String(vuelo.estado),
+      salida_programada_utc: new Date(vuelo.salida_programada_utc).toISOString(),
+      llegada_programada_utc: new Date(vuelo.llegada_programada_utc).toISOString(),
+      salida_local_origen: departureLocalOrigin.toISO(),
+      llegada_local_destino: arrivalLocalDest.toISO(),
+      salida_colombia: depBog.toISO(),
+      llegada_colombia: arrBog.toISO(),
+      origen: {
+        ciudad: aeropuertoOrigen.ciudad?.nombre ?? null,
+        pais: aeropuertoOrigen.ciudad?.pais?.nombre ?? null,
+      },
+      destino: {
+        ciudad: aeropuertoDestino.ciudad?.nombre ?? null,
+        pais: aeropuertoDestino.ciudad?.pais?.nombre ?? null,
+      },
+    };
   }
 
 

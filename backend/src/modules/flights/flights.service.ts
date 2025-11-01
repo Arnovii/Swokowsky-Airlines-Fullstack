@@ -35,17 +35,18 @@ export class FlightsService {
       where: { id_aeronaveFK: aeronaveId },
       select: { cantidad: true },
     });
-    const totalConfigured = configs.reduce((s, c) => s + c.cantidad, 0);
+    const totalConfigured = configs.reduce((s, c) => s + (c.cantidad ?? 0), 0);
 
-    // Contamos tickets ocupados (no cancelados) para el vuelo
+    // Contamos tickets ocupados (todos los tickets que no estén 'cancelado')
     const occupied = await this.prisma.ticket.count({
       where: {
         id_vueloFK: id_vuelo,
-        estado: { not: 'cancelado' },
+        estado: { not: 'cancelado' }, // tus estados válidos: pagado, usado, cancelado
       },
     });
 
-    return Math.max(0, totalConfigured - occupied);
+    const availableSeats = Math.max(0, totalConfigured - occupied);
+    return { availableSeats, totalConfigured };
   }
 
   private formatLocalFromUtc(utcDate: Date | string, offsetHours: number | null) {
@@ -73,7 +74,7 @@ export class FlightsService {
       },
       include: {
         aeronave: {
-          select: { id_aeronave: true, modelo: true, capacidad: true },
+          select: { id_aeronave: true, modelo: true },
         },
         tarifa: true,
         promocion: true,
@@ -90,7 +91,7 @@ export class FlightsService {
     // Mapear resultados y calcular available_seats + horas locales
     const results: FlightResultDto[] = [];
     for (const v of vuelos) {
-      const available_seats = await this.computeAvailableSeatsForAeronave(v.id_aeronaveFK, v.id_vuelo);
+      const { availableSeats, totalConfigured } = await this.computeAvailableSeatsForAeronave(v.id_aeronaveFK, v.id_vuelo);
 
       const origenGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
       const destinoGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
@@ -108,7 +109,7 @@ export class FlightsService {
         aeronave: {
           id_aeronave: v.aeronave.id_aeronave,
           modelo: v.aeronave.modelo,
-          capacidad: v.aeronave.capacidad,
+          capacidad: totalConfigured,
         },
         tarifas: v.tarifa.map((t) => ({ clase: t.clase, precio_base: t.precio_base })),
         promocion: v.promocion ? { id_promocion: v.promocion.id_promocion, nombre: v.promocion.nombre, descuento: v.promocion.descuento } : null,
@@ -146,7 +147,7 @@ export class FlightsService {
             },
           },
         },
-        available_seats,
+        available_seats: availableSeats,
       });
     }
 
@@ -203,40 +204,126 @@ export class FlightsService {
     };
   }
 
-    /**
-   * Versión limpia para frontend: retorna solo los datos útiles de los vuelos
-   */
+  /**
+ * Versión limpia para frontend: retorna solo los datos útiles de los vuelos
+ */
   async searchFlightsClean(filters: SearchFlightsDto) {
-    const { originCityId, destinationCityId, departureDate, roundTrip, returnDate, passengers } = filters;
+    const {
+      originCityId,
+      destinationCityId,
+      departureDate,
+      roundTrip,
+      returnDate,
+      passengers,
+      initialHour,
+      finalHour,
+      minimumPrice,
+      maximumPrice,
+    } = filters;
+
     if (passengers > 5) {
       throw new BadRequestException('El número máximo de pasajeros permitido por búsqueda es 5.');
     }
+
+    // Validación simple de precios (ya vienen como number según DTO)
+    const minPrice = (minimumPrice !== undefined && minimumPrice !== null) ? minimumPrice : null;
+    const maxPrice = (maximumPrice !== undefined && maximumPrice !== null) ? maximumPrice : null;
+
+    if (minPrice !== null && typeof minPrice !== 'number') {
+      throw new BadRequestException('minimumPrice inválido');
+    }
+    if (maxPrice !== null && typeof maxPrice !== 'number') {
+      throw new BadRequestException('maximumPrice inválido');
+    }
+    if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+      throw new BadRequestException('minimumPrice no puede ser mayor que maximumPrice.');
+    }
+
     // Buscamos vuelos ida
     const outbound = await this.findFlightsForDay(originCityId, destinationCityId, departureDate);
     // Filtramos por disponibilidad >= passengers
     const outboundAvailable = outbound.filter((f) => f.available_seats >= passengers);
 
-    // Helper para limpiar cada vuelo y separar fecha/hora
+    // Helpers
     const formatDate = (iso: string | Date | null) => {
       if (!iso) return null;
       const d = typeof iso === 'string' ? new Date(iso) : iso;
-      // yyyy-mm-dd
       return d.toISOString().slice(0, 10);
     };
     const formatHour = (iso: string | Date | null) => {
       if (!iso) return null;
       const d = typeof iso === 'string' ? new Date(iso) : iso;
-      // HH:mm (24h)
       return d.toISOString().slice(11, 16);
     };
     const toColombiaTime = (iso: string | Date | null) => {
       if (!iso) return null;
       const d = typeof iso === 'string' ? new Date(iso) : iso;
+      // Colombia = UTC-5 => restamos 5 horas
       const colombia = new Date(d.getTime() + (-5) * 60 * 60 * 1000);
       return colombia;
     };
+
+    // utilidades para filtrar por hora (solo para outbound)
+    const toMinutes = (hhmm: string) => {
+      const [hh, mm] = hhmm.split(':').map(Number);
+      return hh * 60 + mm;
+    };
+    const isInHourRange = (timeHHMM: string | null) => {
+      if (!timeHHMM) return false;
+      if (!initialHour && !finalHour) return true;
+      const mins = toMinutes(timeHHMM);
+      if (initialHour && finalHour) {
+        const start = toMinutes(initialHour);
+        const end = toMinutes(finalHour);
+        if (start <= end) {
+          // intervalo normal
+          return mins >= start && mins <= end;
+        } else {
+          // cruza medianoche
+          return mins >= start || mins <= end;
+        }
+      }
+      if (initialHour) return mins >= toMinutes(initialHour);
+      return mins <= toMinutes(finalHour!);
+    };
+
+    // Nuevo: comprobar si alguna de las dos clases (precio_base) está dentro del rango
+    const classPriceMatchesRange = (v): boolean => {
+      // Si no hay filtros de precio, todo pasa
+      if (minPrice === null && maxPrice === null) return true;
+
+      if (!v.tarifas || !Array.isArray(v.tarifas) || v.tarifas.length === 0) {
+        // No hay tarifas para comparar -> excluir si hay filtro de precio
+        return false;
+      }
+
+      // Buscamos precio_base de 'economica' y 'primera_clase' (si existen)
+      let precioEconomica: number | null = null;
+      let precioPrimera: number | null = null;
+      for (const t of v.tarifas) {
+        if (t.clase === 'economica' && t.precio_base != null) {
+          const n = Number(t.precio_base);
+          if (!Number.isNaN(n)) precioEconomica = n;
+        }
+        if (t.clase === 'primera_clase' && t.precio_base != null) {
+          const n = Number(t.precio_base);
+          if (!Number.isNaN(n)) precioPrimera = n;
+        }
+      }
+
+      const check = (price: number | null) => {
+        if (price === null) return false;
+        if (minPrice !== null && price < minPrice) return false;
+        if (maxPrice !== null && price > maxPrice) return false;
+        return true;
+      };
+
+      // Si cualquiera de las dos clases cumple, devolvemos true
+      return check(precioEconomica) || check(precioPrimera);
+    };
+
     const cleanFlight = (v) => {
-      // Extraer precios por clase
+      // Extraer precios por clase (sin tocar promociones)
       let precio_economica = null;
       let precio_primera_clase = null;
       if (v.tarifas) {
@@ -248,7 +335,9 @@ export class FlightsService {
       // Horas locales y Colombia
       const salidaColombia = toColombiaTime(v.salida_programada_utc);
       const llegadaColombia = toColombiaTime(v.llegada_programada_utc);
+
       return {
+        id_vuelo: v.id_vuelo,
         estado: v.estado,
         modelo_aeronave: v.aeronave?.modelo ?? null,
         capacidad_aeronave: v.aeronave?.capacidad ?? null,
@@ -256,55 +345,74 @@ export class FlightsService {
         precio_primera_clase,
         promocion: v.promocion
           ? {
-              nombre: v.promocion.nombre,
-              descuento: v.promocion.descuento,
-            }
+            nombre: v.promocion.nombre,
+            descuento: v.promocion.descuento,
+          }
           : null,
         fecha_salida_programada: formatDate(v.salida_programada_utc),
         fecha_llegada_programada: formatDate(v.llegada_programada_utc),
         hora_salida_utc: formatHour(v.salida_programada_utc),
         hora_llegada_utc: formatHour(v.llegada_programada_utc),
         hora_salida_local_destino: formatHour(v.llegada_local),
-        hora_llegada_local_destino: formatHour(v.llegada_local),
+        hora_llegada_local_destino: formatHour(v.salida_local),
         hora_salida_colombia: salidaColombia ? formatHour(salidaColombia) : null,
         hora_llegada_colombia: llegadaColombia ? formatHour(llegadaColombia) : null,
         available_seats: v.available_seats,
         origen: v.aeropuerto_origen
           ? {
-              nombre: v.aeropuerto_origen.nombre,
-              codigo_iata: v.aeropuerto_origen.codigo_iata,
-              ciudad: v.aeropuerto_origen.ciudad?.nombre,
-              pais: v.aeropuerto_origen.ciudad?.pais?.nombre,
-            }
+            nombre: v.aeropuerto_origen.nombre,
+            codigo_iata: v.aeropuerto_origen.codigo_iata,
+            ciudad: v.aeropuerto_origen.ciudad?.nombre,
+            pais: v.aeropuerto_origen.ciudad?.pais?.nombre,
+          }
           : null,
         destino: v.aeropuerto_destino
           ? {
-              nombre: v.aeropuerto_destino.nombre,
-              codigo_iata: v.aeropuerto_destino.codigo_iata,
-              ciudad: v.aeropuerto_destino.ciudad?.nombre,
-              pais: v.aeropuerto_destino.ciudad?.pais?.nombre,
-            }
+            nombre: v.aeropuerto_destino.nombre,
+            codigo_iata: v.aeropuerto_destino.codigo_iata,
+            ciudad: v.aeropuerto_destino.ciudad?.nombre,
+            pais: v.aeropuerto_destino.ciudad?.pais?.nombre,
+          }
           : null,
       };
     };
 
+    // Aplicar filtro por hora sobre vuelos de IDA (outbound) y por precio (según nueva regla)
+    const outboundAvailableFiltered = outboundAvailable.filter((v) => {
+      // Hora en Colombia
+      const salidaCol = toColombiaTime(v.salida_programada_utc);
+      const horaCol = salidaCol ? formatHour(salidaCol) : null;
+      const hourOk = isInHourRange(horaCol);
+
+      // Precio (comparamos precio_base de economica o primera_clase, sin promociones)
+      const priceOk = classPriceMatchesRange(v);
+
+      return hourOk && priceOk;
+    });
+
     if (!roundTrip) {
-      return { type: 'oneway', results: outboundAvailable.map(cleanFlight) };
+      return { type: 'oneway', results: outboundAvailableFiltered.map(cleanFlight) };
     }
+
     // Round trip => returnDate required
     if (!returnDate) {
       throw new BadRequestException('Para búsqueda ida y vuelta se requiere returnDate.');
     }
+
     // Buscamos vuelos de vuelta (origen/destino invertidos)
     const inbound = await this.findFlightsForDay(destinationCityId, originCityId, returnDate);
     const inboundAvailable = inbound.filter((f) => f.available_seats >= passengers);
 
+    // Para inbound aplicamos filtro de precio (mismo criterio), no filtramos por hora
+    const inboundAvailableFiltered = inboundAvailable.filter((v) => classPriceMatchesRange(v));
+
     return {
       type: 'roundtrip',
-      outbound: outboundAvailable.map(cleanFlight),
-      inbound: inboundAvailable.map(cleanFlight),
+      outbound: outboundAvailableFiltered.map(cleanFlight),
+      inbound: inboundAvailableFiltered.map(cleanFlight),
     };
   }
+
 
 }
 

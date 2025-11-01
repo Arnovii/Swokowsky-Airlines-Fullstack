@@ -3,7 +3,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../database/prisma.service';
 import { usuario, usuario_tipo_usuario } from '@prisma/client';
-import * as bcryptjs from 'bcryptjs'
 
 
 

@@ -1,26 +1,8 @@
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
 import CalendarioRango from "@/modules/home/components/CalendarioRango";
 import { useFlightSearch } from "@/modules/home/hooks/useFlightSearch";
-
+import { TimeFilter } from "@/modules/home/components/TimeFilter";
 // ================== ICONOS SVG ==================
-const PlaneDepartureIcon = () => (
-  <svg
-    className="w-6 h-6 text-[#0e254d]"
-    aria-hidden="true"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M12 18.5A2.5 2.5 0 0 1 7.5 20a2.5 2.5 0 0 1-2.5 2.5M12 18.5A2.5 2.5 0 0 0 16.5 20a2.5 2.5 0 0 0 2.5 2.5M8 12h8m-8 3h8m-8-6h8M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
-    />
-  </svg>
-);
-
 const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
   <svg
     className={`w-5 h-5 text-gray-400 ${className}`}
@@ -109,42 +91,96 @@ const PlusIcon = () => (
   </svg>
 );
 
+const DollarIcon = () => (
+  <svg
+    className="w-5 h-5 text-[#0e254d]"
+    aria-hidden="true"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 6v13m0-13c-2.8-.8-4.7-1-6-1v13c1.3 0 3.2.2 6 1m0-13c2.8-.8 4.7-1 6-1v13c-1.3 0-3.2.2-6 1"
+    />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg
+    className="w-5 h-5 text-[#0e254d]"
+    aria-hidden="true"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <path
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  </svg>
+);
+
+
+
 // ================== COMPONENTE PRINCIPAL ==================
 export default function FilterSearchBar() {
   const {
-    modo,
-    origen,
-    destino,
-    ida,
-    vuelta,
-    pasajeros,
-    mensaje,
-    loading,
-    ciudadesLoaded,
-    camposInvalidos,
-    sugerenciasOrigen,
-    sugerenciasDestino,
-    mostrarCalendario,
-    mostrarPasajeros,
-    origenBloqueado,
-    destinoBloqueado,
-    totalPasajeros,
-    origenRef,
-    destinoRef,
-    setModo,
-    setMostrarCalendario,
-    setMostrarPasajeros,
-    filtrarOrigen,
-    filtrarDestino,
-    seleccionarOrigen,
-    seleccionarDestino,
-    resetearOrigen,
-    resetearDestino,
-    cambiarPasajeros,
-    actualizarFechas,
-    validarYBuscarVuelo,
-    limpiarErrorCampo,
-  } = useFlightSearch();
+  modo,
+  origen,
+  destino,
+  ida,
+  vuelta,
+  pasajeros,
+  mensaje,
+  loading,
+  ciudadesLoaded,
+  camposInvalidos,
+  sugerenciasOrigen,
+  sugerenciasDestino,
+  mostrarCalendario,
+  mostrarPasajeros,
+  origenBloqueado,
+  destinoBloqueado,
+  totalPasajeros,
+  precioMin,
+  precioMax,
+  horaIdaInicio,           
+  horaIdaFin,             
+  horaVueltaInicio,        
+  horaVueltaFin,          
+  mostrarHorarios,
+  origenRef,
+  destinoRef,
+  setModo,
+  setMostrarCalendario,
+  setMostrarPasajeros,
+  setMostrarHorarios,
+  filtrarOrigen,
+  filtrarDestino,
+  seleccionarOrigen,
+  seleccionarDestino,
+  resetearOrigen,
+  resetearDestino,
+  cambiarPasajeros,
+  actualizarFechas,
+  validarYBuscarVuelo,
+  limpiarErrorCampo,
+  formatearPrecio,
+  handlePrecioChange,
+  setHoraIdaInicio,        
+  setHoraIdaFin,           
+  setHoraVueltaInicio,   
+  setHoraVueltaFin,       
+  setPrecioMin,
+  setPrecioMax,
+} = useFlightSearch();
 
   return (
     <div className="sticky top-[80px] z-40 w-full max-w-6xl mx-auto px-6 font-sans">
@@ -176,7 +212,49 @@ export default function FilterSearchBar() {
             </button>
           </div>
 
-          {/* Formulario */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
+            {/* Filtro de Precio */}
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                Rango de precio
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Mínimo</div>
+                  <input
+                    type="text"
+                    placeholder="0"
+                    value={formatearPrecio(precioMin)}
+                    onChange={(e) => handlePrecioChange(setPrecioMin, e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
+                  />
+                </div>
+                <div className="flex items-center text-gray-400">-</div>
+                <div className="flex-1 border border-gray-300 bg-white rounded-xl p-2 sm:p-3 h-14 shadow-sm flex flex-col justify-center">
+                  <div className="text-xs text-gray-500">Máximo</div>
+                  <input
+                    type="text"
+                    placeholder="Sin límite"
+                    value={formatearPrecio(precioMax)}
+                    onChange={(e) => handlePrecioChange(setPrecioMax, e.target.value)}
+                    className="w-full bg-transparent outline-none text-sm font-sans text-gray-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Filtro de Horario */}
+            <TimeFilter
+              mostrarHorarios={mostrarHorarios}
+              setMostrarHorarios={setMostrarHorarios}
+              horaIdaInicio={horaIdaInicio}
+              horaIdaFin={horaIdaFin}
+              setHoraIdaInicio={setHoraIdaInicio}
+              setHoraIdaFin={setHoraIdaFin}
+            />
+
+          </div>
+          {/* Formulario Principal */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.2fr_1.2fr_1.5fr_1fr_0.8fr] gap-4 items-end text-lg">
             {/* Origen */}
             <div className="flex flex-col relative" ref={origenRef}>
