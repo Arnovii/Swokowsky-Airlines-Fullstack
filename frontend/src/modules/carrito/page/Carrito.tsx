@@ -36,7 +36,7 @@ const Carrito: React.FC = () => {
 
     // ⭐ MODIFICADO: Handler para cuando se actualiza cantidad (reinicio de timer)
     const handleTimerReset = (itemId: number) => {
-        console.log(`🔄 Actualizando timer para item ${itemId}...`);
+        console.log(` Actualizando timer para item ${itemId}...`);
         if (updateSingleItem) {
             updateSingleItem(itemId); // Solo actualizar el item específico
         }
@@ -48,6 +48,14 @@ const Carrito: React.FC = () => {
 
     const handleGoBack = () => {
         navigate(-1);
+    };
+
+    const handleQtyChange = async (itemId: number, newQty: number) => {
+        setQuantities(q => ({ ...q, [itemId]: newQty }));
+        if (updateSingleItem) {
+            await updateSingleItem(itemId, newQty);
+            if (refreshCart) refreshCart(); // <-- Fuerza la recarga del carrito global
+        }
     };
 
     return (
@@ -111,7 +119,7 @@ const Carrito: React.FC = () => {
                                         key={it.id_item_carrito}
                                         item={it}
                                         onRemove={handleRemove}
-                                        onLocalQtyChange={qty => setQuantities(q => ({ ...q, [it.id_item_carrito]: qty }))}
+                                        onQtyChange={handleQtyChange} // 
                                         onTimerReset={handleTimerReset} // ⭐ Pasar callback mejorado
                                     />
                                 ))}

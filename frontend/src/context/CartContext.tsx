@@ -14,6 +14,7 @@ interface CartContextType {
   removeFromCart: (itemId: number) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
+  updateSingleItem: (itemId: number, newQty: number) => Promise<void>; // <-- Agregado aquí
   loading: boolean;
 }
 
@@ -33,9 +34,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // ⭐ NO cargar carrito si es administrador
     const isAdmin = user?.tipo_usuario === "admin" || user?.tipo_usuario === "root";
-    
     if (isAuthenticated && user && !isAdmin) {
       refreshCart();
     } else {
@@ -48,14 +47,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       setCart([]);
       return;
     }
-
-    // ⭐ NO intentar cargar carrito si es administrador
     const isAdmin = user?.tipo_usuario === "admin" || user?.tipo_usuario === "root";
     if (isAdmin) {
       setCart([]);
       return;
     }
-
     setLoading(true);
     try {
       const data = await cartService.getCart();
@@ -74,7 +70,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     clase: 'economica' | 'primera_clase';
   }) => {
     try {
-      // Calcular tickets totales del mismo vuelo (todas las clases combinadas)
       const existingTicketsForFlight = cart.reduce((total, cartItem) => {
         if (cartItem.id_vueloFK === item.id_vueloFK) {
           return total + cartItem.cantidad_de_tickets;
@@ -84,10 +79,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
       const totalTicketsAfterAdd = existingTicketsForFlight + item.cantidad_de_tickets;
 
-      // Si excede 5 tickets en total para este vuelo
       if (totalTicketsAfterAdd > 5) {
         const available = 5 - existingTicketsForFlight;
-        
         if (available > 0) {
           toast.error(
             `⚠️ Solo puedes agregar ${available} ticket${available > 1 ? 's' : ''} más. Ya tienes ${existingTicketsForFlight} en tu carrito para este vuelo.`,
@@ -113,17 +106,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
             }
           );
         }
-        
         throw new Error('Límite de tickets excedido');
       }
 
       setLoading(true);
       await cartService.addItem(item);
       await refreshCart();
-      
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
-      
       if (error instanceof Error && error.message !== 'Límite de tickets excedido') {
         toast.error(
           'Hubo un problema al agregar los tickets. Intenta de nuevo.',
@@ -133,9 +123,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           }
         );
       }
-      
       throw error;
-      
     } finally {
       setLoading(false);
     }
@@ -165,6 +153,19 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
   };
 
+  // NUEVO: Actualizar cantidad de un ítem
+  const updateSingleItem = async (itemId: number, newQty: number) => {
+    setLoading(true);
+    try {
+      await cartService.updateItem(itemId, newQty);
+      await refreshCart();
+    } catch (error) {
+      console.error('Error al actualizar cantidad:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <CartContext.Provider 
       value={{ 
@@ -173,6 +174,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         removeFromCart, 
         clearCart, 
         refreshCart, 
+        updateSingleItem, // <-- Agregado aquí
         loading 
       }}
     >
