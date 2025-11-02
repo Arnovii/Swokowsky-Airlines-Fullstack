@@ -95,8 +95,12 @@ export class TicketService {
         id_usuarioFK: idUsuario,
         estado: ticket_estado.pagado, // 🔥 solo pagados
       },
-      include: { vuelo: true },
+      include: {
+        vuelo: true,
+        pasajero: true,   // ✅ se agrega aquí
+      },
       orderBy: { creado_en: 'desc' },
     });
   }
+
 }
