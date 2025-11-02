@@ -1,9 +1,7 @@
-// src/modules/checkout/services/checkoutService.ts
-
-import type { PaymentResult } from '../../../types/checkout';
 import api from '../../../api/axios';
 
-interface Pasajero {
+// Interfaces
+export interface Pasajero {
   nombre: string;
   apellido: string;
   dni: string;
@@ -11,121 +9,66 @@ interface Pasajero {
   email: string;
   contact_name: string | null;
   phone_name: string | null;
-  genero: 'M' | 'F' | 'O';
+  genero: 'M' | 'F' | 'Otro';
   fecha_nacimiento: string; // formato: YYYY-MM-DD
 }
 
-interface CheckoutItem {
+export interface CheckoutItem {
   vueloID: number;
-  Clase: string;
+  Clase: 'economica' | 'primera_clase';
   CantidadDePasajeros: number;
   pasajeros: Pasajero[];
 }
 
-interface CheckoutPayload {
+export interface CheckoutPayload {
   [key: `item${number}`]: CheckoutItem;
 }
 
-interface CheckoutPaymentData {
-  items: Array<{
-    cartItemId: number;
-    flightId: number;
-    clase: string;
-    cantidadTickets: number;
-    travelerInfo: any;
-  }>;
-  totalAmount: number;
+export interface PaymentResult {
+  success: boolean;
+  message: string;
+  transactionId?: string;
+  remainingBalance?: number;
+  orderId?: string;
 }
 
 class CheckoutService {
   /**
-   * Enviar datos de checkout al backend
-   * Transforma los datos del carrito al formato esperado por el endpoint
+   * Procesar checkout completo
+   * Envía los datos al endpoint POST /api/v1/checkout
    */
-  async submitCheckout(cartItems: any[]): Promise<any> {
+  async processCheckout(payload: CheckoutPayload): Promise<PaymentResult> {
     try {
-      // Transformar los datos del carrito al formato del backend
-      const payload: CheckoutPayload = {};
+      console.log('📤 Enviando checkout:', JSON.stringify(payload, null, 2));
       
-      cartItems.forEach((item, index) => {
-        payload[`item${index + 1}`] = {
-          vueloID: item.flightId || item.vueloID,
-          Clase: item.clase || item.Clase,
-          CantidadDePasajeros: item.pasajeros?.length || item.CantidadDePasajeros || 0,
-          pasajeros: item.pasajeros || []
-        };
-      });
+      // Validar payload antes de enviar
+      const validationResult = this.validateCheckoutPayload(payload);
+      if (!validationResult.valid) {
+        throw new Error(validationResult.errors.join(', '));
+      }
 
-      console.log('📤 Enviando checkout:', payload);
-      
       const response = await api.post('/checkout', payload);
       
       console.log('✅ Respuesta del checkout:', response.data);
-      return response.data;
       
-    } catch (error: any) {
-      console.error('❌ Error en submitCheckout:', error.response?.data || error);
-      throw new Error(
-        error.response?.data?.message || 
-        'Error al procesar el checkout. Por favor intenta nuevamente.'
-      );
-    }
-  }
-
-  /**
-   * Procesar pago completo (validar pasajeros y enviar checkout)
-   */
-  async processPayment(data: CheckoutPaymentData): Promise<PaymentResult> {
-    try {
-      // Validar que todos los items tengan información completa de pasajeros
-      const incompleteItems = data.items.filter(
-        item => !item.travelerInfo || item.travelerInfo.length === 0
-      );
-
-      if (incompleteItems.length > 0) {
-        return {
-          success: false,
-          message: 'Por favor completa la información de todos los pasajeros antes de continuar.'
-        };
-      }
-
-      // Transformar los datos al formato del backend
-      const cartItems = data.items.map(item => ({
-        flightId: item.flightId,
-        clase: item.clase,
-        pasajeros: item.travelerInfo
-      }));
-
-      // Enviar el checkout al backend
-      const checkoutResponse = await this.submitCheckout(cartItems);
-
-      // Si el checkout fue exitoso, retornar resultado positivo
-      if (checkoutResponse) {
-        const transactionId = checkoutResponse.transactionId || 
-                            checkoutResponse.orderId || 
-                            this.generateTransactionId();
-        
-        return {
-          success: true,
-          message: 'Tu pago ha sido procesado exitosamente. ¡Buen viaje!',
-          transactionId,
-          remainingBalance: checkoutResponse.remainingBalance
-        };
-      }
-
       return {
-        success: false,
-        message: 'El pago no pudo ser procesado. Por favor intenta nuevamente.'
+        success: true,
+        message: response.data.message || 'Tu reserva ha sido procesada exitosamente. ¡Buen viaje!',
+        transactionId: response.data.transactionId || response.data.orderId || this.generateTransactionId(),
+        remainingBalance: response.data.remainingBalance,
+        orderId: response.data.orderId
       };
       
     } catch (error: any) {
-      console.error('❌ Error en processPayment:', error);
+      console.error('❌ Error en processCheckout:', error.response?.data || error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Error al procesar el checkout. Por favor intenta nuevamente.';
       
       return {
         success: false,
-        message: error.message || 
-                error.response?.data?.message || 
-                'Error al procesar el pago. Intenta nuevamente.'
+        message: errorMessage
       };
     }
   }
@@ -135,32 +78,36 @@ class CheckoutService {
    */
   async getUserBalance(): Promise<number> {
     try {
-      const response = await api.get('/user/balance');
-      return response.data.balance;
+      const response = await api.get('/monedero');
+      return response.data.saldoActual || 0;
     } catch (error) {
-      console.error('⚠️ Error al obtener saldo (usando mock):', error);
-      // Retornar un saldo simulado si falla
-      return 500000 + Math.random() * 4500000;
+      console.error('⚠️ Error al obtener saldo:', error);
+      throw new Error('No se pudo obtener el saldo de la billetera');
     }
-  }
-
-  /**
-   * Generar ID de transacción único
-   */
-  private generateTransactionId(): string {
-    return `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
   }
 
   /**
    * Validar estructura de pasajero
    */
-  validatePasajero(pasajero: any): boolean {
-    const requiredFields = ['nombre', 'apellido', 'dni', 'phone', 'email', 'genero', 'fecha_nacimiento'];
-    return requiredFields.every(field => pasajero[field] && pasajero[field] !== '');
+  validatePasajero(pasajero: Pasajero): boolean {
+    const requiredFields: (keyof Pasajero)[] = [
+      'nombre', 
+      'apellido', 
+      'dni', 
+      'phone', 
+      'email', 
+      'genero', 
+      'fecha_nacimiento'
+    ];
+    
+    return requiredFields.every(field => {
+      const value = pasajero[field];
+      return value !== null && value !== undefined && value !== '';
+    });
   }
 
   /**
-   * Validar todos los pasajeros de un item
+   * Validar un item de checkout
    */
   validateCheckoutItem(item: CheckoutItem): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -169,8 +116,8 @@ class CheckoutService {
       errors.push('ID de vuelo inválido');
     }
 
-    if (!item.Clase || item.Clase.trim() === '') {
-      errors.push('Clase de vuelo no especificada');
+    if (!item.Clase || (item.Clase !== 'economica' && item.Clase !== 'primera_clase')) {
+      errors.push('Clase de vuelo no válida (debe ser "economica" o "primera_clase")');
     }
 
     if (!item.pasajeros || item.pasajeros.length === 0) {
@@ -178,7 +125,9 @@ class CheckoutService {
     }
 
     if (item.CantidadDePasajeros !== item.pasajeros.length) {
-      errors.push(`Cantidad de pasajeros (${item.CantidadDePasajeros}) no coincide con pasajeros proporcionados (${item.pasajeros.length})`);
+      errors.push(
+        `Cantidad de pasajeros (${item.CantidadDePasajeros}) no coincide con pasajeros proporcionados (${item.pasajeros.length})`
+      );
     }
 
     item.pasajeros.forEach((pasajero, idx) => {
@@ -192,6 +141,41 @@ class CheckoutService {
       errors
     };
   }
+
+  /**
+   * Validar todo el payload de checkout
+   */
+  validateCheckoutPayload(payload: CheckoutPayload): { valid: boolean; errors: string[] } {
+    const allErrors: string[] = [];
+
+    const itemKeys = Object.keys(payload) as Array<keyof CheckoutPayload>;
+    
+    if (itemKeys.length === 0) {
+      allErrors.push('El payload está vacío');
+      return { valid: false, errors: allErrors };
+    }
+
+    itemKeys.forEach(key => {
+      const item = payload[key];
+      const validation = this.validateCheckoutItem(item);
+      
+      if (!validation.valid) {
+        allErrors.push(`${key}: ${validation.errors.join(', ')}`);
+      }
+    });
+
+    return {
+      valid: allErrors.length === 0,
+      errors: allErrors
+    };
+  }
+
+  /**
+   * Generar ID de transacción único
+   */
+  private generateTransactionId(): string {
+    return `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+  }
 }
 
-export const checkoutService = new CheckoutService();
+export default new CheckoutService();

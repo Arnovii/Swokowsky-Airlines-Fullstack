@@ -59,7 +59,11 @@ export function CartItemCard({ item, onRemove, onQtyChange, onTimerReset }: Prop
         return planeImages[modelo] || 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=400&fit=crop';
     };
 
-    const precio = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase)?.precio_base || 0;
+    
+    const tarifa = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase);
+    const precioBase = tarifa?.precio_base || 0;
+    const descuento = item.vuelo?.promocion?.descuento ?? 0;
+    const precio = Math.round(precioBase * (1 - descuento));
 
     // Obtener nombres de ciudades
     const ciudadOrigen = item.vuelo?.aeropuerto_origen?.ciudad || item.vuelo?.aeropuerto_origen?.codigo_iata || 'Origen';

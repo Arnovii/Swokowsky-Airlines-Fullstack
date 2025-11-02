@@ -1,7 +1,7 @@
-// src/modules/checkout/hooks/usePaymentProcess.ts
-
 import { useState, useCallback } from 'react';
-import type { PaymentResult } from '../../../types/checkout';
+import checkoutService from '../services/checkoutService';
+import type { PaymentResult, CheckoutPayload } from '../types/checkout';
+import { toast } from 'react-toastify';
 
 export const usePaymentProcess = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -9,63 +9,90 @@ export const usePaymentProcess = () => {
   const [showModal, setShowModal] = useState(false);
 
   /**
-   * Procesar pago - Ahora solo maneja el estado del modal
-   * La lógica de checkout real se maneja en CheckoutPage con checkoutService.submitCheckout()
+   * Procesar pago completo con el servicio de checkout
    */
   const processPayment = useCallback(async (
-    checkoutData: any[],
-    totalAmount: number
+    checkoutPayload: CheckoutPayload
   ): Promise<PaymentResult> => {
     setIsProcessing(true);
     
     try {
-      // Simular delay de procesamiento para mostrar loading (1-2 segundos)
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+      console.log('🔄 Iniciando proceso de pago...');
       
-      // Este resultado será sobrescrito por CheckoutPage después de la llamada real al backend
-      // Solo lo usamos como placeholder mientras se procesa
-      const result: PaymentResult = {
-        success: true,
-        message: 'Procesando tu pago...'
-      };
-
+      // Llamar al servicio de checkout
+      const result = await checkoutService.processCheckout(checkoutPayload);
+      
       setPaymentResult(result);
       setShowModal(true);
       
+      if (result.success) {
+        console.log('✅ Pago procesado exitosamente:', result);
+        toast.success(result.message || '¡Reserva realizada con éxito!', {
+          position: 'top-center',
+          autoClose: 3000
+        });
+      } else {
+        console.error('❌ Error en el pago:', result.message);
+        toast.error(result.message || 'Error al procesar el pago', {
+          position: 'top-center',
+          autoClose: 5000
+        });
+      }
+      
       return result;
-    } catch (error) {
+      
+    } catch (error: any) {
+      console.error('❌ Error inesperado en processPayment:', error);
+      
       const errorResult: PaymentResult = {
         success: false,
-        message: 'Error al procesar el pago. Por favor intenta nuevamente.'
+        message: error.message || 'Error al procesar el pago. Por favor intenta nuevamente.'
       };
       
       setPaymentResult(errorResult);
       setShowModal(true);
       
+      toast.error(errorResult.message, {
+        position: 'top-center',
+        autoClose: 5000
+      });
+      
       return errorResult;
+      
     } finally {
       setIsProcessing(false);
     }
   }, []);
 
   /**
-   * Actualizar el resultado del pago después de la respuesta del backend
+   * Actualizar el resultado del pago manualmente (para casos especiales)
    */
   const setPaymentSuccess = useCallback((result: PaymentResult) => {
     setPaymentResult(result);
     setShowModal(true);
+    
+    toast.success(result.message || '¡Operación exitosa!', {
+      position: 'top-center',
+      autoClose: 3000
+    });
   }, []);
 
   /**
-   * Actualizar el resultado con un error
+   * Actualizar el resultado con un error manualmente
    */
   const setPaymentError = useCallback((errorMessage: string) => {
     const errorResult: PaymentResult = {
       success: false,
       message: errorMessage
     };
+    
     setPaymentResult(errorResult);
     setShowModal(true);
+    
+    toast.error(errorMessage, {
+      position: 'top-center',
+      autoClose: 5000
+    });
   }, []);
 
   /**
@@ -73,6 +100,7 @@ export const usePaymentProcess = () => {
    */
   const closeModal = useCallback(() => {
     setShowModal(false);
+    // No limpiar paymentResult aquí para mantener el estado
   }, []);
 
   /**
@@ -84,6 +112,13 @@ export const usePaymentProcess = () => {
     setIsProcessing(false);
   }, []);
 
+  /**
+   * Verificar si el pago fue exitoso
+   */
+  const isPaymentSuccessful = useCallback(() => {
+    return paymentResult?.success === true;
+  }, [paymentResult]);
+
   return {
     isProcessing,
     paymentResult,
@@ -92,6 +127,7 @@ export const usePaymentProcess = () => {
     setPaymentSuccess,
     setPaymentError,
     closeModal,
-    resetPayment
+    resetPayment,
+    isPaymentSuccessful
   };
 };

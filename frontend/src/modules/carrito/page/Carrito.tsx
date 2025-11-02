@@ -9,36 +9,60 @@ const Carrito: React.FC = () => {
     const navigate = useNavigate();
     const { cart, removeFromCart, clearCart, refreshCart, updateSingleItem } = useCart();
 
-    // Estado local para cantidades de tickets por item
     const [quantities, setQuantities] = useState<{ [id: number]: number }>({});
 
-    // Sincroniza cantidades locales con el carrito global
     React.useEffect(() => {
         const q: { [id: number]: number } = {};
         cart.forEach(it => { q[it.id_item_carrito] = it.cantidad_de_tickets; });
         setQuantities(q);
     }, [cart]);
 
-    // Totales en tiempo real
+    // Subtotal: suma de precios base * cantidad
     const subtotal = useMemo(
         () => cart.reduce(
-            (acc: number, it: CartItem) => acc + ((it.vuelo?.tarifas?.find((t: any) => t.clase === it.clase)?.precio_base || 0) * (quantities[it.id_item_carrito] ?? it.cantidad_de_tickets)),
+            (acc: number, it: CartItem) => {
+                const tarifa = it.vuelo?.tarifas?.find((t: any) => t.clase === it.clase);
+                const precioBase = tarifa?.precio_base || 0;
+                return acc + (precioBase * (quantities[it.id_item_carrito] ?? it.cantidad_de_tickets));
+            },
             0
         ),
         [cart, quantities]
     );
-    const tax = 0;
-    const total = useMemo(() => Math.max(0, subtotal + tax), [subtotal]);
 
-    // Acciones carrito reales
+    // Total con promoción aplicada
+    const total = useMemo(
+        () => cart.reduce(
+            (acc: number, it: CartItem) => {
+                const tarifa = it.vuelo?.tarifas?.find((t: any) => t.clase === it.clase);
+                const precioBase = tarifa?.precio_base || 0;
+                const descuento = it.vuelo?.promocion?.descuento ?? 0;
+                const precioPromo = Math.round(precioBase * (1 - descuento));
+                return acc + (precioPromo * (quantities[it.id_item_carrito] ?? it.cantidad_de_tickets));
+            },
+            0
+        ),
+        [cart, quantities]
+    );
+
+
+    // Calcula el mayor descuento aplicado en el carrito
+    const maxDescuento = useMemo(() => {
+        const descuentos = cart
+            .map(it => it.vuelo?.promocion?.descuento ?? 0)
+            .filter(d => d > 0);
+        if (descuentos.length === 0) return 0;
+        return Math.max(...descuentos);
+    }, [cart]);
+
+    const tax = 0;
+
     const handleRemove = (id: number) => removeFromCart(id);
     const handleClear = () => clearCart();
 
-    // ⭐ MODIFICADO: Handler para cuando se actualiza cantidad (reinicio de timer)
     const handleTimerReset = (itemId: number) => {
-        console.log(` Actualizando timer para item ${itemId}...`);
         if (updateSingleItem) {
-            updateSingleItem(itemId); // Solo actualizar el item específico
+            updateSingleItem(itemId);
         }
     };
 
@@ -54,7 +78,7 @@ const Carrito: React.FC = () => {
         setQuantities(q => ({ ...q, [itemId]: newQty }));
         if (updateSingleItem) {
             await updateSingleItem(itemId, newQty);
-            if (refreshCart) refreshCart(); // <-- Fuerza la recarga del carrito global
+            if (refreshCart) refreshCart();
         }
     };
 
@@ -149,7 +173,6 @@ const Carrito: React.FC = () => {
                                 </h3>
                                 <div className="h-0.5 sm:h-1 w-16 sm:w-20 bg-white/40 rounded-full"></div>
                             </div>
-
                             <div className="space-y-3 sm:space-y-4 md:space-y-5 mb-5 sm:mb-6 md:mb-8">
                                 <div className="flex justify-between items-baseline py-2 sm:py-3 border-b border-white/20">
                                     <span className="text-sm sm:text-base md:text-lg text-white/80 font-medium">SUBTOTAL</span>
@@ -158,6 +181,23 @@ const Carrito: React.FC = () => {
                                     </span>
                                 </div>
 
+                                <span className="text-sm sm:text-base md:text-lg text-white/80 font-medium">DESCUENTOS</span>
+                                
+                                {cart.map((it: CartItem) => {
+                                    const descuento = it.vuelo?.promocion?.descuento ?? 0;
+                                    const tarifa = it.vuelo?.tarifas?.find((t: any) => t.clase === it.clase);
+                                    return (
+                                        
+                                        <div key={it.id_item_carrito} className="flex justify-between items-baseline py-1">
+                                            <span className="text-xs sm:text-sm text-white/80 font-medium">
+                                                {it.vuelo?.aeropuerto_origen?.codigo_iata || 'Origen'} → {it.vuelo?.aeropuerto_destino?.codigo_iata || 'Destino'} ({it.clase})
+                                            </span>
+                                            <span className="text-sm sm:text-base font-bold text-green-200">
+                                                {descuento > 0 ? `-${(descuento * 100).toFixed(0)}%` : '—'}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                                 {tax > 0 && (
                                     <div className="flex justify-between items-baseline py-2 sm:py-3 border-b border-white/20">
                                         <span className="text-sm sm:text-base md:text-lg text-white/80 font-medium">IMPUESTOS</span>
@@ -166,7 +206,6 @@ const Carrito: React.FC = () => {
                                         </span>
                                     </div>
                                 )}
-
                                 <div className="flex justify-between items-baseline pt-3 sm:pt-4 md:pt-5">
                                     <span className="text-lg sm:text-xl md:text-2xl text-white font-bold">TOTAL</span>
                                     <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
