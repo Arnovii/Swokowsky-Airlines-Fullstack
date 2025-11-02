@@ -1,4 +1,48 @@
 import type { Pasajero } from '../services/checkoutService';
+import type { TravelerFormData } from '../components/TravelerForm';
+
+/**
+ * Validar formulario de pasajero (TravelerFormData)
+ */
+export const validateTravelerForm = (data: TravelerFormData): boolean => {
+  return (
+    !!data.numero_documento &&
+    data.numero_documento.trim() !== '' &&
+    /^\d{10}$/.test(data.numero_documento.trim()) &&
+    !!data.primer_nombre &&
+    data.primer_nombre.trim() !== '' &&
+    !!data.primer_apellido &&
+    data.primer_apellido.trim() !== '' &&
+    !!data.fecha_nacimiento &&
+    data.fecha_nacimiento.trim() !== '' &&
+    !!data.genero &&
+    !!data.email &&
+    data.email.trim() !== '' &&
+    !!data.telefono &&
+    data.telefono.trim() !== '' &&
+    !!data.contacto_nombre &&
+    data.contacto_nombre.trim() !== '' &&
+    !!data.contacto_telefono &&
+    data.contacto_telefono.trim() !== ''
+  );
+};
+
+/**
+ * Mapear TravelerFormData al formato de la API (Pasajero)
+ */
+export const mapTravelerToApi = (data: TravelerFormData): Pasajero => {
+  return {
+    nombre: data.primer_nombre,
+    apellido: data.primer_apellido,
+    dni: data.numero_documento,
+    phone: data.telefono || '',
+    email: data.email,
+    contact_name: data.contacto_nombre,
+    phone_name: data.contacto_telefono,
+    genero: data.genero === 'O' ? 'X' : data.genero, // 'O' del form → 'X' de la DB
+    fecha_nacimiento: data.fecha_nacimiento
+  };
+};
 
 /**
  * Validar información completa de un pasajero
@@ -70,14 +114,14 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
 
   switch (field) {
     case 'dni': // Documento
-      if (!/^\d{6,15}$/.test(trimmedValue)) {
-        return 'El documento debe tener entre 6 y 15 dígitos';
+      if (!/^\d{10}$/.test(trimmedValue)) {
+        return 'El documento debe tener exactamente 10 dígitos';
       }
       break;
 
-    case 'nombre': // Nombres
-      if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(trimmedValue)) {
-        return 'Solo se permiten letras y espacios';
+    case 'nombre': // Nombres (sin espacios, solo letras)
+      if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$/.test(trimmedValue)) {
+        return 'Solo se permiten letras, sin números ni espacios';
       }
       if (trimmedValue.length < 2) {
         return 'Debe tener al menos 2 caracteres';
@@ -87,9 +131,9 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
       }
       break;
 
-    case 'apellido': // Apellidos
-      if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(trimmedValue)) {
-        return 'Solo se permiten letras y espacios';
+    case 'apellido': // Apellidos (sin espacios, solo letras)
+      if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$/.test(trimmedValue)) {
+        return 'Solo se permiten letras, sin números ni espacios';
       }
       if (trimmedValue.length < 2) {
         return 'Debe tener al menos 2 caracteres';
@@ -99,16 +143,16 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
       }
       break;
 
-    case 'contact_name': // Nombre de un contacto (opcional)
-      if (trimmedValue && !/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(trimmedValue)) {
-        return 'Solo se permiten letras y espacios';
+    case 'contact_name': // Nombre de contacto (sin espacios, solo letras)
+      if (trimmedValue && !/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$/.test(trimmedValue)) {
+        return 'Solo se permiten letras, sin números ni espacios';
       }
       if (trimmedValue && trimmedValue.length < 2) {
         return 'Debe tener al menos 2 caracteres';
       }
       break;
 
-    case 'fecha_nacimiento': // Fecha de nacimiento
+    case 'fecha_nacimiento': { // Fecha de nacimiento
       const date = new Date(trimmedValue);
       const now = new Date();
       
@@ -132,6 +176,7 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
         return 'Edad no válida (máximo 120 años)';
       }
       break;
+    }
 
     case 'email': // Correo electrónico
       if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(trimmedValue)) {
@@ -139,22 +184,24 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
       }
       break;
 
-    case 'phone': // Teléfono
-      // Aceptar formato: +573001234567 o 3001234567
+    case 'phone': { // Teléfono
+      // Formato colombiano: exactamente 10 dígitos
       const cleanPhone = trimmedValue.replace(/\s/g, '');
-      if (!/^(\+\d{1,3})?\d{10,15}$/.test(cleanPhone)) {
-        return 'Formato: +573001234567 o 3001234567 (10-15 dígitos)';
+      if (!/^\d{10}$/.test(cleanPhone)) {
+        return 'El teléfono debe tener exactamente 10 dígitos';
       }
       break;
+    }
 
-    case 'phone_name': // Teléfono del contacto (opcional)
+    case 'phone_name': { // Teléfono del contacto (opcional)
       if (trimmedValue) {
         const cleanContactPhone = trimmedValue.replace(/\s/g, '');
-        if (!/^(\+\d{1,3})?\d{10,15}$/.test(cleanContactPhone)) {
-          return 'Formato: +573001234567 o 3001234567';
+        if (!/^\d{10}$/.test(cleanContactPhone)) {
+          return 'El teléfono debe tener exactamente 10 dígitos';
         }
       }
       break;
+    }
 
     case 'genero': // Género
       if (!['M', 'F', 'Otro'].includes(trimmedValue)) {

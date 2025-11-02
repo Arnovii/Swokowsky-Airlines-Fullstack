@@ -40,13 +40,28 @@ const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
         {/* Detalles por vuelo */}
         <div className="space-y-3 mb-4">
           {cart.map((item, index) => {
-            const tarifa = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase);
+            // Debug: ver estructura del vuelo
+            console.log('🔍 Estructura del item del carrito:', item);
+            console.log('🔍 Estructura del vuelo:', item.vuelo);
+            
+            const tarifa = item.vuelo?.tarifas?.find((t: { clase: string }) => t.clase === item.clase);
             const precioUnitario = tarifa?.precio_base || 0;
             const descuento = item.vuelo?.promocion?.descuento ?? 0;
             const precioFinal = descuento > 0
               ? Math.round(precioUnitario * (1 - descuento))
               : precioUnitario;
             const subtotal = precioFinal * item.cantidad_de_tickets;
+            
+            // Intentar múltiples formas de acceder a los aeropuertos
+            const origenCodigo = item.vuelo?.origen?.codigo_iata 
+              || item.vuelo?.aeropuerto_origen?.codigo_iata
+              || item.vuelo?.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata
+              || 'N/A';
+              
+            const destinoCodigo = item.vuelo?.destino?.codigo_iata
+              || item.vuelo?.aeropuerto_destino?.codigo_iata
+              || item.vuelo?.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata
+              || 'N/A';
 
             return (
               <div key={item.id_item_carrito} className="bg-gray-50 rounded-lg p-3">
@@ -56,8 +71,7 @@ const CheckoutSummary: React.FC<CheckoutSummaryProps> = ({
                       Vuelo {index + 1}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {item.vuelo?.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A'} →{' '}
-                      {item.vuelo?.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A'}
+                      {origenCodigo} → {destinoCodigo}
                     </p>
                     <p className="text-xs text-gray-500 capitalize">
                       {item.clase} · {item.cantidad_de_tickets} {item.cantidad_de_tickets === 1 ? 'pasajero' : 'pasajeros'}

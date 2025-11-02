@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
 export interface TravelerFormData {
-  id_tipo_documento: number;
   numero_documento: string;
   primer_nombre: string;
   segundo_nombre?: string;
@@ -24,7 +23,6 @@ interface TravelerFormProps {
 
 const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, onUpdate }) => {
   const [formData, setFormData] = useState<TravelerFormData>({
-    id_tipo_documento: initialData.id_tipo_documento || 0,
     numero_documento: initialData.numero_documento || '',
     primer_nombre: initialData.primer_nombre || '',
     segundo_nombre: initialData.segundo_nombre || '',
@@ -41,44 +39,72 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Tipos de documento
-  const documentTypes = [
-    { id: 1, nombre: 'Cédula de Ciudadanía' },
-    { id: 2, nombre: 'Cédula de Extranjería' },
-    { id: 3, nombre: 'Pasaporte' },
-    { id: 4, nombre: 'Tarjeta de Identidad' }
-  ];
-
   // Validar campo individual
-  const validateField = (name: string, value: any): string => {
+  const validateField = (name: string, value: unknown): string => {
     switch (name) {
-      case 'id_tipo_documento':
-        return !value || value === 0 ? 'Selecciona un tipo de documento' : '';
       case 'numero_documento':
-        return !value || value.trim() === '' ? 'El número de documento es requerido' : '';
+        if (!value || String(value).trim() === '') return 'El número de documento es requerido';
+        if (!/^\d{10}$/.test(String(value))) return 'El documento debe tener exactamente 10 dígitos';
+        return '';
       case 'primer_nombre':
-        return !value || value.trim() === '' ? 'El primer nombre es requerido' : '';
+        return !value || String(value).trim() === '' ? 'El primer nombre es requerido' : '';
       case 'primer_apellido':
-        return !value || value.trim() === '' ? 'El primer apellido es requerido' : '';
-      case 'fecha_nacimiento':
+        return !value || String(value).trim() === '' ? 'El primer apellido es requerido' : '';
+      case 'fecha_nacimiento': {
         if (!value) return 'La fecha de nacimiento es requerida';
-        const birthDate = new Date(value);
+        const birthDate = new Date(String(value));
         const today = new Date();
         const age = today.getFullYear() - birthDate.getFullYear();
         if (age < 0 || age > 120) return 'Fecha de nacimiento inválida';
         return '';
+      }
       case 'genero':
         return !value ? 'Selecciona un género' : '';
       case 'email':
-        if (!value || value.trim() === '') return 'El correo electrónico es requerido';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Correo electrónico inválido';
+        if (!value || String(value).trim() === '') return 'El correo electrónico es requerido';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) return 'Correo electrónico inválido';
         return '';
       case 'contacto_nombre':
-        return !value || value.trim() === '' ? 'El nombre del contacto es requerido' : '';
+        return !value || String(value).trim() === '' ? 'El nombre del contacto es requerido' : '';
+      case 'telefono':
+        if (!value || String(value).trim() === '') return 'El teléfono es requerido';
+        if (!/^\d{10}$/.test(String(value))) return 'El teléfono debe tener exactamente 10 dígitos';
+        return '';
       case 'contacto_telefono':
-        return !value || value.trim() === '' ? 'El teléfono del contacto es requerido' : '';
+        if (!value || String(value).trim() === '') return 'El teléfono del contacto es requerido';
+        if (!/^\d{10}$/.test(String(value))) return 'El teléfono debe tener exactamente 10 dígitos';
+        return '';
       default:
         return '';
+    }
+  };
+
+  // Sanitizar entrada según el tipo de campo
+  const sanitizeInput = (name: string, value: string): string => {
+    switch (name) {
+      case 'primer_nombre':
+      case 'segundo_nombre':
+      case 'primer_apellido':
+      case 'segundo_apellido':
+      case 'contacto_nombre':
+        // Solo letras (incluye letras con tildes y ñ), sin números ni caracteres especiales
+        return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
+      
+      case 'numero_documento':
+        // Solo números, sin letras ni caracteres especiales (máximo 10)
+        return value.replace(/[^0-9]/g, '').slice(0, 10);
+      
+      case 'telefono':
+      case 'contacto_telefono':
+        // Solo números, sin + ni otros caracteres (máximo 10 dígitos)
+        return value.replace(/[^0-9]/g, '').slice(0, 10);
+      
+      case 'email':
+        // Permitir letras, números, @ . _ - (caracteres válidos en email)
+        return value.replace(/[^a-zA-Z0-9@._-]/g, '');
+      
+      default:
+        return value;
     }
   };
 
@@ -86,11 +112,14 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    // Sanitizar el valor según el tipo de campo
+    const sanitizedValue = sanitizeInput(name, value);
+    
     setFormData(prev => {
-      const newData = { ...prev, [name]: value };
+      const newData = { ...prev, [name]: sanitizedValue };
       
       // Validar el campo
-      const error = validateField(name, value);
+      const error = validateField(name, sanitizedValue);
       setErrors(prevErrors => ({
         ...prevErrors,
         [name]: error
@@ -114,7 +143,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
 
   const isFieldComplete = (fieldName: keyof TravelerFormData): boolean => {
     const value = formData[fieldName];
-    return value !== '' && value !== 0 && value !== null && value !== undefined;
+    return value !== '' && value !== null && value !== undefined;
   };
 
   return (
@@ -136,44 +165,18 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
 
       {/* Formulario */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Tipo de Documento */}
-        <div className="relative">
-          <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Tipo de Documento *
-          </label>
-          <select
-            name="id_tipo_documento"
-            value={formData.id_tipo_documento}
-            onChange={handleChange}
-            className={`w-full px-4 py-3 rounded-xl border-2 ${
-              errors.id_tipo_documento 
-                ? 'border-red-400 focus:border-red-500' 
-                : isFieldComplete('id_tipo_documento')
-                ? 'border-green-400 focus:border-green-500'
-                : 'border-gray-300 focus:border-[#39A5D8]'
-            } focus:outline-none transition-all duration-300`}
-          >
-            <option value={0}>Selecciona...</option>
-            {documentTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.nombre}</option>
-            ))}
-          </select>
-          {errors.id_tipo_documento && (
-            <p className="text-red-500 text-xs mt-1">{errors.id_tipo_documento}</p>
-          )}
-        </div>
-
         {/* Número de Documento */}
         <div className="relative">
           <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Número de Documento *
+            Número de Documento (10 dígitos) *
           </label>
           <input
             type="text"
             name="numero_documento"
             value={formData.numero_documento}
             onChange={handleChange}
-            placeholder="123456789"
+            placeholder="1234567890"
+            maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
               errors.numero_documento 
                 ? 'border-red-400 focus:border-red-500' 
@@ -342,14 +345,15 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         {/* Teléfono */}
         <div className="relative">
           <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Teléfono *
+            Teléfono (10 dígitos) *
           </label>
           <input
             type="tel"
             name="telefono"
             value={formData.telefono}
             onChange={handleChange}
-            placeholder="+57 300 123 4567"
+            placeholder="3001234567"
+            maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
               errors.telefono 
                 ? 'border-red-400 focus:border-red-500' 
@@ -390,14 +394,15 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         {/* Teléfono de contacto de emergencia */}
         <div className="relative">
           <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Teléfono de Contacto de Emergencia *
+            Teléfono de Contacto de Emergencia (10 dígitos) *
           </label>
           <input
             type="tel"
             name="contacto_telefono"
             value={formData.contacto_telefono}
             onChange={handleChange}
-            placeholder="+57 300 987 6543"
+            placeholder="3009876543"
+            maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
               errors.contacto_telefono 
                 ? 'border-red-400 focus:border-red-500' 

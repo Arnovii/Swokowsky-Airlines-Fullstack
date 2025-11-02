@@ -144,16 +144,28 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const clearCart = async () => {
     setLoading(true);
     try {
-      await Promise.all(cart.map((item) => cartService.removeItem(item.id_item_carrito)));
+      // Intentar borrar cada item, ignorando errores 404 (items ya borrados)
+      await Promise.all(
+        cart.map((item) => 
+          cartService.removeItem(item.id_item_carrito).catch((err) => {
+            // Ignorar errores 404 (item ya no existe)
+            if (err?.response?.status !== 404) {
+              console.warn(`Error al borrar item ${item.id_item_carrito}:`, err);
+            }
+          })
+        )
+      );
       await refreshCart();
     } catch (error) {
       console.error('Error al limpiar carrito:', error);
+      // Refrescar de todos modos para actualizar el estado
+      await refreshCart();
     } finally {
       setLoading(false);
     }
   };
 
-  // NUEVO: Actualizar cantidad de un ítem
+ 
   const updateSingleItem = async (itemId: number, newQty: number) => {
     setLoading(true);
     try {

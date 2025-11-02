@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useWalletBalance } from '../hooks/useWalletBalance';
 
@@ -8,13 +7,11 @@ interface WalletBalanceProps {
 }
 
 const WalletBalance: React.FC<WalletBalanceProps> = ({ totalAmount }) => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Usa el hook para obtener el saldo real
-  const token = user?.token || localStorage.getItem('token');
-  const { saldo, loading } = useWalletBalance(token);
+  const { saldo, loading } = useWalletBalance();
 
   const balance = saldo ?? 0;
   const hasEnoughBalance = balance >= totalAmount;
@@ -22,7 +19,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({ totalAmount }) => {
   const usagePercentage = balance > 0 ? Math.min((totalAmount / balance) * 100, 100) : 0;
 
   const handleRecharge = () => {
-    navigate('/profile/wallet');
+    navigate('/perfil?tab=wallet');
   };
 
   if (loading) {
@@ -158,7 +155,7 @@ const WalletBalance: React.FC<WalletBalanceProps> = ({ totalAmount }) => {
                     </svg>
                   </div>
                   <p className="text-sm font-semibold text-[#39A5D8]">
-                    ✅ ¡Tienes saldo suficiente para completar la compra!
+                    ¡Tienes saldo suficiente para completar la compra!
                   </p>
                 </div>
               </div>

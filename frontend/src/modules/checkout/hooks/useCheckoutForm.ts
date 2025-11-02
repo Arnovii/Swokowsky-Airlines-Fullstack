@@ -1,35 +1,39 @@
 import { useState, useCallback, useMemo , useEffect} from 'react';
 import type { CartItem } from '../../carrito/service/cartService';
 import type { Pasajero, CheckoutPayload } from '../types/checkout';
-import { validatePasajero } from '../utils/validations';
+import type { TravelerFormData } from '../components/TravelerForm';
+import { validateTravelerForm, mapTravelerToApi } from '../utils/validations';
 
 /**
- * Crear un objeto Pasajero vacío
+ * Crear un objeto TravelerFormData vacío
  */
-const createEmptyPasajero = (): Pasajero => ({
-  nombre: '',
-  apellido: '',
-  dni: '',
-  phone: '',
-  email: '',
-  contact_name: null,
-  phone_name: null,
+const createEmptyTraveler = (): TravelerFormData => ({
+  numero_documento: '',
+  primer_nombre: '',
+  segundo_nombre: '',
+  primer_apellido: '',
+  segundo_apellido: '',
+  fecha_nacimiento: '',
   genero: 'M',
-  fecha_nacimiento: ''
+  nacionalidad: '',
+  email: '',
+  telefono: '',
+  contacto_nombre: '',
+  contacto_telefono: ''
 });
 
 export const useCheckoutForm = (cart: CartItem[]) => {
   // Estado: objeto con claves únicas por pasajero
-  // Formato: { "itemId-passengerIndex": Pasajero }
-  const [travelers, setTravelers] = useState<Record<string, Pasajero>>({});
+  // Formato: { "itemId-passengerIndex": TravelerFormData }
+  const [travelers, setTravelers] = useState<Record<string, TravelerFormData>>({});
 
   useEffect(() => {
     if (cart && cart.length > 0) {
-      const initialTravelers: Record<string, Pasajero> = {};
+      const initialTravelers: Record<string, TravelerFormData> = {};
       cart.forEach(item => {
         for (let i = 0; i < item.cantidad_de_tickets; i++) {
           const key = `${item.id_item_carrito}-${i}`;
-          initialTravelers[key] = createEmptyPasajero();
+          initialTravelers[key] = createEmptyTraveler();
         }
       });
       setTravelers(initialTravelers);
@@ -46,7 +50,7 @@ export const useCheckoutForm = (cart: CartItem[]) => {
   /**
    * Actualizar información de un pasajero específico
    */
-  const updateTravelerInfo = useCallback((key: string, data: Pasajero) => {
+  const updateTravelerInfo = useCallback((key: string, data: TravelerFormData) => {
     setTravelers(prev => ({
       ...prev,
       [key]: data
@@ -58,7 +62,7 @@ export const useCheckoutForm = (cart: CartItem[]) => {
    */
   const allFormsComplete = useMemo(() => {
     const completedForms = Object.values(travelers).filter(traveler => 
-      validatePasajero(traveler)
+      validateTravelerForm(traveler)
     ).length;
     
     return completedForms === totalForms && totalForms > 0;
@@ -69,7 +73,7 @@ export const useCheckoutForm = (cart: CartItem[]) => {
    */
   const getCompletedCount = useCallback(() => {
     return Object.values(travelers).filter(traveler => 
-      validatePasajero(traveler)
+      validateTravelerForm(traveler)
     ).length;
   }, [travelers]);
 
@@ -87,9 +91,10 @@ export const useCheckoutForm = (cart: CartItem[]) => {
         key.startsWith(`${cartItem.id_item_carrito}-`)
       );
 
+      // Mapear TravelerFormData a Pasajero (formato API)
       const pasajeros: Pasajero[] = passengerKeys
         .sort() // Ordenar para mantener consistencia
-        .map(key => travelers[key]);
+        .map(key => mapTravelerToApi(travelers[key]));
 
       // Solo agregar si hay pasajeros
       if (pasajeros.length > 0) {
@@ -118,14 +123,14 @@ export const useCheckoutForm = (cart: CartItem[]) => {
       return false;
     }
 
-    return passengerKeys.every(key => validatePasajero(travelers[key]));
+    return passengerKeys.every(key => validateTravelerForm(travelers[key]));
   }, [travelers]);
 
   /**
    * Obtener un pasajero específico
    */
-  const getTraveler = useCallback((key: string): Pasajero => {
-    return travelers[key] || createEmptyPasajero();
+  const getTraveler = useCallback((key: string): TravelerFormData => {
+    return travelers[key] || createEmptyTraveler();
   }, [travelers]);
 
   /**
@@ -139,16 +144,8 @@ export const useCheckoutForm = (cart: CartItem[]) => {
    * Validar si el payload está listo para enviar
    */
   const isReadyForCheckout = useCallback((): boolean => {
-    const payload = getCheckoutData();
-    const itemKeys = Object.keys(payload) as Array<keyof CheckoutPayload>;
-    
-    if (itemKeys.length === 0) return false;
-
-    return itemKeys.every(key => {
-      const item = payload[key];
-      return item.pasajeros.every(p => validatePasajero(p));
-    });
-  }, [getCheckoutData]);
+    return allFormsComplete;
+  }, [allFormsComplete]);
 
   return {
     travelers,

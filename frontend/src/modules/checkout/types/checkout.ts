@@ -9,7 +9,7 @@ export interface Pasajero {
   email: string;
   contact_name: string | null;
   phone_name: string | null;
-  genero: 'M' | 'F' | 'Otro';
+  genero: 'M' | 'F' | 'X';
   fecha_nacimiento: string; // formato: YYYY-MM-DD
 }
 

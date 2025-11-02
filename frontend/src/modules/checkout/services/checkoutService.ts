@@ -9,7 +9,7 @@ export interface Pasajero {
   email: string;
   contact_name: string | null;
   phone_name: string | null;
-  genero: 'M' | 'F' | 'Otro';
+  genero: 'M' | 'F' | 'X';
   fecha_nacimiento: string; // formato: YYYY-MM-DD
 }
 
@@ -59,12 +59,15 @@ class CheckoutService {
         orderId: response.data.orderId
       };
       
-    } catch (error: any) {
-      console.error('❌ Error en processCheckout:', error.response?.data || error);
+    } catch (error) {
+      console.error('❌ Error en processCheckout:', error);
       
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Error al procesar el checkout. Por favor intenta nuevamente.';
+      let errorMessage = 'Error al procesar el checkout. Por favor intenta nuevamente.';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.message || axiosError.message || errorMessage;
+      }
       
       return {
         success: false,

@@ -16,9 +16,7 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, loading: cartLoading, clearCart } = useCart();
   const { user } = useAuth();
-  const token = user?.token || localStorage.getItem('token'); // Ajusta según tu auth
-
-  const { saldo, loading: saldoLoading } = useWalletBalance(token);
+  const { saldo } = useWalletBalance();
   
   const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
 
@@ -43,7 +41,7 @@ const CheckoutPage = () => {
   // Calcular total con descuentos de promociones
   const totalAmount = useMemo(() => {
     return cart.reduce((total, item) => {
-      const tarifa = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase);
+      const tarifa = item.vuelo?.tarifas?.find((t: { clase: string }) => t.clase === item.clase);
       const precioUnitario = tarifa?.precio_base || 0;
       const descuento = item.vuelo?.promocion?.descuento || 0;
       const precioConDescuento = precioUnitario * (1 - descuento);
@@ -61,8 +59,7 @@ const CheckoutPage = () => {
       const formKey = `${cartItemId}-${i}`;
       const travelerData = travelers[formKey];
       
-      if (!travelerData?.id_tipo_documento || 
-          !travelerData?.numero_documento || 
+      if (!travelerData?.numero_documento || 
           !travelerData?.primer_nombre || 
           !travelerData?.primer_apellido || 
           !travelerData?.fecha_nacimiento || 
@@ -76,9 +73,15 @@ const CheckoutPage = () => {
 
   // Redirigir si el carrito está vacío
   useEffect(() => {
+    // Solo redirigir si terminó de cargar Y está vacío
+    // Agregamos un pequeño delay para evitar falsos positivos
     if (!cartLoading && cart.length === 0) {
-      toast.info('Tu carrito está vacío', { position: 'top-center' });
-      navigate('/carrito');
+      const timer = setTimeout(() => {
+        toast.info('Tu carrito está vacío', { position: 'top-center' });
+        navigate('/carrito');
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [cart.length, cartLoading, navigate]);
 
@@ -101,7 +104,7 @@ const CheckoutPage = () => {
   // Handler para proceder al pago
   const handleProceedToPayment = async () => {
     // Validar saldo suficiente
-    const userBalance = user?.billetera || 0;
+    const userBalance = saldo || 0;
     if (userBalance < totalAmount) {
       toast.error('❌ Saldo insuficiente. Por favor recarga tu billetera.', {
         position: 'top-center',
@@ -140,11 +143,25 @@ const CheckoutPage = () => {
 
     try {
       console.log('🔄 Iniciando proceso de pago...');
+      console.log('📊 Estado de travelers:', travelers);
+      console.log('🛒 Items del carrito:', cart);
       
       // Obtener datos de checkout en el formato correcto
       const checkoutPayload = getCheckoutData();
       
       console.log('📦 Payload generado:', JSON.stringify(checkoutPayload, null, 2));
+      
+      // Verificar que cada item tenga pasajeros
+      Object.keys(checkoutPayload).forEach(key => {
+        const item = checkoutPayload[key as keyof typeof checkoutPayload];
+        console.log(`✈️ ${key}:`, {
+          vueloID: item.vueloID,
+          Clase: item.Clase,
+          CantidadDePasajeros: item.CantidadDePasajeros,
+          pasajeros: item.pasajeros.length,
+          primerPasajero: item.pasajeros[0]
+        });
+      });
 
       // Procesar pago
       const result = await processPayment(checkoutPayload);
@@ -153,17 +170,18 @@ const CheckoutPage = () => {
       if (result.success) {
         console.log('✅ Pago exitoso, limpiando carrito...');
         
-        // Esperar 3 segundos antes de redirigir (tiempo para ver el modal)
+        // Esperar 1 segundo antes de redirigir (tiempo para ver el modal)
         setTimeout(async () => {
           await clearCart();
-          navigate('/profile/reservations');
-        }, 3000);
+          navigate('/');
+        }, 1000);
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error en handleProceedToPayment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al procesar el pago. Por favor intenta nuevamente.';
       toast.error(
-        error.message || 'Error al procesar el pago. Por favor intenta nuevamente.',
+        errorMessage,
         { position: 'top-center', autoClose: 5000 }
       );
     }
@@ -173,10 +191,10 @@ const CheckoutPage = () => {
   const handleModalClose = () => {
     closeModal();
     
-    // Si el pago fue exitoso, redirigir inmediatamente
+    // Si el pago fue exitoso, redirigir inmediatamente al home
     if (paymentResult?.success) {
       clearCart();
-      navigate('/profile/reservations');
+      navigate('/');
     }
   };
 
@@ -237,8 +255,6 @@ const CheckoutPage = () => {
             {/* Wallet Balance */}
             <WalletBalance
               totalAmount={totalAmount}
-              saldo={saldo}
-              loading={saldoLoading}
             />
 
             {/* Sección de pasajeros */}
