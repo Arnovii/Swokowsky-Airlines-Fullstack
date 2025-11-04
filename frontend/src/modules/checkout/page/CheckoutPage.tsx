@@ -6,26 +6,28 @@ import FlightCheckoutCard from '../components/FlightCheckoutCard';
 import TravelerForm from '../components/TravelerForm';
 import CheckoutSummary from '../components/CheckoutSummary';
 import PaymentConfirmationModal from '../components/PaymentConfirmationModal';
+import WalletBalance from '../components/WalletBalance';
 import { useCheckoutForm } from '../hooks/useCheckoutForm';
 import { usePaymentProcess } from '../hooks/usePaymentProcess';
-import WalletBalance from '../components/WalletBalance';
-import { checkoutService } from '../services/checkoutService';
+import { toast } from 'react-toastify';
+import { useWalletBalance } from '../hooks/useWalletBalance';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { cart, loading: cartLoading } = useCart();
+  const { cart, loading: cartLoading, clearCart } = useCart();
   const { user } = useAuth();
+  const { saldo } = useWalletBalance();
   
   const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
-  const [userBalance] = useState(2500000);
 
   const {
-    flightCheckoutData,
     updateTravelerInfo,
     allFormsComplete,
     getCompletedCount,
     getCheckoutData,
-    totalForms
+    totalForms,
+    isReadyForCheckout,
+    travelers // <-- Cambiado aquí
   } = useCheckoutForm(cart);
 
   const {
@@ -33,95 +35,170 @@ const CheckoutPage = () => {
     paymentResult,
     showModal,
     processPayment,
-    closeModal,
-    resetPayment
+    closeModal
   } = usePaymentProcess();
 
-  // Calcular total
+  // Calcular total con descuentos de promociones
   const totalAmount = useMemo(() => {
     return cart.reduce((total, item) => {
-      const flight = item.vuelo;
-      const tarifa = flight.tarifas?.find(t => t.clase === item.clase);
+      const tarifa = item.vuelo?.tarifas?.find((t: { clase: string }) => t.clase === item.clase);
       const precioUnitario = tarifa?.precio_base || 0;
-      return total + (precioUnitario * item.cantidad_de_tickets);
+      const descuento = item.vuelo?.promocion?.descuento || 0;
+      const precioConDescuento = precioUnitario * (1 - descuento);
+      return total + (precioConDescuento * item.cantidad_de_tickets);
     }, 0);
   }, [cart]);
 
+  // Verificar si un vuelo específico está completo
+  const isFlightComplete = (cartItemId: number, ticketCount: number): boolean => {
+    if (!travelers || Object.keys(travelers).length === 0) {
+      return false;
+    }
+
+    for (let i = 0; i < ticketCount; i++) {
+      const formKey = `${cartItemId}-${i}`;
+      const travelerData = travelers[formKey];
+      
+      if (!travelerData?.numero_documento || 
+          !travelerData?.primer_nombre || 
+          !travelerData?.primer_apellido || 
+          !travelerData?.fecha_nacimiento || 
+          !travelerData?.genero || 
+          !travelerData?.email) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   // Redirigir si el carrito está vacío
   useEffect(() => {
+    // Solo redirigir si terminó de cargar Y está vacío
+    // Agregamos un pequeño delay para evitar falsos positivos
     if (!cartLoading && cart.length === 0) {
-      navigate('/carrito');
+      const timer = setTimeout(() => {
+        toast.info('Tu carrito está vacío', { position: 'top-center' });
+        navigate('/carrito');
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [cart.length, cartLoading, navigate]);
 
   // Verificar si es administrador
   useEffect(() => {
+    if (!user) return;
+    
     const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
     if (isAdmin) {
+      toast.error('Los administradores no pueden realizar reservas');
       navigate('/');
     }
   }, [user, navigate]);
 
+  // Handler para expandir/colapsar vuelo
   const handleExpandFlight = (index: number) => {
     setExpandedFlightIndex(expandedFlightIndex === index ? null : index);
   };
 
+  // Handler para proceder al pago
   const handleProceedToPayment = async () => {
-    // Verificar que todos los formularios estén completos
-    if (!allFormsComplete()) {
-      alert("⚠️ Debes completar la información de todos los pasajeros antes de continuar.");
+    // Validar saldo suficiente
+    const userBalance = saldo || 0;
+    if (userBalance < totalAmount) {
+      toast.error('❌ Saldo insuficiente. Por favor recarga tu billetera.', {
+        position: 'top-center',
+        autoClose: 5000
+      });
+      return;
+    }
+
+    // Validar formularios completos
+    if (!allFormsComplete) {
+      toast.warning('⚠️ Por favor completa la información de todos los pasajeros', {
+        position: 'top-center',
+        autoClose: 4000
+      });
+      
+      // Encontrar el primer vuelo incompleto y expandirlo
+      const firstIncompleteIndex = cart.findIndex((item) => 
+        !isFlightComplete(item.id_item_carrito, item.cantidad_de_tickets)
+      );
+      
+      if (firstIncompleteIndex !== -1) {
+        setExpandedFlightIndex(firstIncompleteIndex);
+      }
+      
+      return;
+    }
+
+    // Validar que el payload esté listo
+    if (!isReadyForCheckout()) {
+      toast.error('⚠️ Hay errores en la información de los pasajeros. Por favor revisa los formularios.', {
+        position: 'top-center',
+        autoClose: 5000
+      });
       return;
     }
 
     try {
-      // Preparar payload con la nueva estructura: item1, item2, item3...
-      const payload: Record<string, any> = {};
+      console.log('🔄 Iniciando proceso de pago...');
+      console.log('📊 Estado de travelers:', travelers);
+      console.log('🛒 Items del carrito:', cart);
       
-      flightCheckoutData.forEach((vuelo, index) => {
-        const cartItem = cart[index];
-        payload[`item${index + 1}`] = {
-          vueloID: vuelo.id_vuelo,
-          Clase: cartItem.clase,
-          CantidadDePasajeros: vuelo.travelerInfoList.length,
-          pasajeros: vuelo.travelerInfoList.map((p) => ({
-            nombre: p.nombres,
-            apellido: p.apellidos,
-            dni: p.documento,
-            phone: p.telefono,
-            email: p.email,
-            genero: p.genero,
-            fecha_nacimiento: p.fecha_nacimiento
-          }))
-        };
+      // Obtener datos de checkout en el formato correcto
+      const checkoutPayload = getCheckoutData();
+      
+      console.log('📦 Payload generado:', JSON.stringify(checkoutPayload, null, 2));
+      
+      // Verificar que cada item tenga pasajeros
+      Object.keys(checkoutPayload).forEach(key => {
+        const item = checkoutPayload[key as keyof typeof checkoutPayload];
+        console.log(`✈️ ${key}:`, {
+          vueloID: item.vueloID,
+          Clase: item.Clase,
+          CantidadDePasajeros: item.CantidadDePasajeros,
+          pasajeros: item.pasajeros.length,
+          primerPasajero: item.pasajeros[0]
+        });
       });
 
-      console.log("📦 Enviando payload al backend:", payload);
+      // Procesar pago
+      const result = await processPayment(checkoutPayload);
 
-      // Llamar al servicio de checkout
-      const checkoutResponse = await checkoutService.submitCheckout(payload);
-      console.log("✅ Checkout exitoso:", checkoutResponse);
+      // Si el pago fue exitoso, limpiar carrito y redirigir
+      if (result.success) {
+        console.log('✅ Pago exitoso, limpiando carrito...');
+        
+        // Esperar 1 segundo antes de redirigir (tiempo para ver el modal)
+        setTimeout(async () => {
+          await clearCart();
+          navigate('/');
+        }, 1000);
+      }
 
-      // Procesar pago (muestra modal / loading)
-      const checkoutData = getCheckoutData();
-      await processPayment(checkoutData, totalAmount);
-
-      // Redirigir al perfil tras unos segundos
-      setTimeout(() => {
-        navigate('/perfil');
-      }, 3000);
-    } catch (error: any) {
-      console.error("❌ Error al procesar checkout:", error);
-      alert(error.message || "Ocurrió un error al procesar tu compra.");
+    } catch (error) {
+      console.error('❌ Error en handleProceedToPayment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al procesar el pago. Por favor intenta nuevamente.';
+      toast.error(
+        errorMessage,
+        { position: 'top-center', autoClose: 5000 }
+      );
     }
   };
 
+  // Handler para cerrar modal
   const handleModalClose = () => {
     closeModal();
+    
+    // Si el pago fue exitoso, redirigir inmediatamente al home
     if (paymentResult?.success) {
-      navigate('/perfil');
+      clearCart();
+      navigate('/');
     }
   };
 
+  // Loading state
   if (cartLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#39A5D8] flex items-center justify-center p-4">
@@ -134,12 +211,13 @@ const CheckoutPage = () => {
     );
   }
 
-  if (cart.length === 0) {
+  // Empty cart
+  if (!cartLoading && cart.length === 0) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -170,62 +248,76 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        {/* Contenido principal */}
+        {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna izquierda - Formularios */}
+          {/* Formularios de pasajeros */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Saldo del monedero */}
-            <WalletBalance 
+            {/* Wallet Balance */}
+            <WalletBalance
               totalAmount={totalAmount}
             />
 
-            {/* Lista de vuelos con formularios */}
+            {/* Sección de pasajeros */}
             <div className="space-y-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] rounded-xl flex items-center justify-center shadow-lg shadow-[#39A5D8]/20">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] bg-clip-text text-transparent">
-                  INFORMACIÓN DE PASAJEROS ({cart.length} {cart.length === 1 ? 'vuelo' : 'vuelos'})
-                </h2>
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-br from-[#123361] via-[#1180B8] to-[#39A5D8] bg-clip-text text-transparent">
+                    INFORMACIÓN DE PASAJEROS
+                  </h2>
+                  <p className="text-sm text-gray-600 font-medium">
+                    {getCompletedCount()} de {totalForms} pasajeros completados
+                  </p>
+                </div>
               </div>
 
-              {cart.map((item, index) => {
-                const checkoutData = flightCheckoutData[index];
-                const isExpanded = expandedFlightIndex === index;
+              {/* Vuelos y formularios */}
+              {cart.map((item, flightIndex) => {
+                const isExpanded = expandedFlightIndex === flightIndex;
+                const isComplete = travelers ? isFlightComplete(item.id_item_carrito, item.cantidad_de_tickets) : false;
 
                 return (
                   <div key={item.id_item_carrito} className="space-y-4">
-                    {/* Tarjeta de vuelo */}
                     <FlightCheckoutCard
                       cartItem={item}
-                      isComplete={checkoutData?.isComplete || false}
-                      onEditClick={() => handleExpandFlight(index)}
+                      isComplete={isComplete}
+                      onEditClick={() => handleExpandFlight(flightIndex)}
                     />
 
-                    {/* Formulario expandible */}
-                    {isExpanded && checkoutData && (
-                      <div className="animate-fade-in">
-                        {Array.from({ length: item.cantidad_de_tickets }).map((_, idx) => (
-                          <TravelerForm
-                            key={idx}
-                            index={idx + 1}
-                            data={checkoutData.travelerInfo?.[idx] || {}}
-                            onChange={(data) => updateTravelerInfo(index, idx, data)}
-                            flightInfo={{
-                              origin: item.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.codigo_iata || 'N/A',
-                              destination: item.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.codigo_iata || 'N/A',
-                              date: new Date(item.vuelo.salida_programada_utc).toLocaleDateString('es-CO', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              }),
-                            }}
-                          />
-                        ))}
+                    {isExpanded && (
+                      <div className="animate-fade-in space-y-4 pl-4 border-l-4 border-[#39A5D8]/30 bg-gradient-to-br from-blue-50/50 to-transparent rounded-r-2xl py-4 pr-4">
+                        <div className="mb-4 px-4 py-3 bg-gradient-to-r from-[#39A5D8]/10 to-[#1180B8]/5 rounded-xl border-l-4 border-[#39A5D8]">
+                          <p className="text-base font-bold text-[#123361] flex items-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Complete los datos de {item.cantidad_de_tickets} {item.cantidad_de_tickets === 1 ? 'pasajero' : 'pasajeros'}
+                          </p>
+                        </div>
+                        {travelers ? (
+                          Array.from({ length: item.cantidad_de_tickets }).map((_, passengerIndex) => {
+                            const formKey = `${item.id_item_carrito}-${passengerIndex}`;
+                            const initialData = travelers[formKey] || {};
+
+                            return (
+                              <TravelerForm
+                                key={formKey}
+                                index={passengerIndex + 1}
+                                initialData={initialData}
+                                onUpdate={(data) => updateTravelerInfo(formKey, data)}
+                              />
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#39A5D8] mx-auto mb-2"></div>
+                            <p className="text-gray-600 text-sm">Cargando formularios...</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -234,28 +326,46 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Columna derecha - Resumen */}
+          {/* Resumen */}
           <div className="lg:col-span-1">
             <CheckoutSummary
+              cart={cart}
               totalAmount={totalAmount}
-              itemCount={totalForms}
-              completedCount={getCompletedCount()}
-              onProceedToPayment={handleProceedToPayment}
               isProcessing={isProcessing}
-              canProceed={allFormsComplete() && userBalance >= totalAmount}
+              allFormsComplete={allFormsComplete}
+              onPayment={handleProceedToPayment}
             />
           </div>
         </div>
       </div>
 
-      {/* Modal de confirmación de pago */}
-      <PaymentConfirmationModal
-        isOpen={showModal}
-        isSuccess={paymentResult?.success || false}
-        message={paymentResult?.message || ''}
-        transactionId={paymentResult?.transactionId}
-        onClose={handleModalClose}
-      />
+      {/* Modal de confirmación */}
+      {showModal && paymentResult && (
+        <PaymentConfirmationModal
+          success={paymentResult.success}
+          message={paymentResult.message}
+          transactionId={paymentResult.transactionId}
+          onClose={handleModalClose}
+        />
+      )}
+
+      {/* Estilos para animaciones */}
+      <style>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+z
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };

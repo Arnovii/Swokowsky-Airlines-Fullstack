@@ -6,39 +6,37 @@ import { useCountdown } from '../hooks/useCountdown';
 type Props = {
     item: CartItem;
     onRemove: (id: number) => void;
-    onLocalQtyChange?: (qty: number) => void;
-    onTimerReset?: () => void; // ⭐ SIMPLICADO: Solo notificar sin pasar ID
+    onQtyChange?: (itemId: number, qty: number) => void;
+    onTimerReset?: () => void;
 };
 
-export function CartItemCard({ item, onRemove, onLocalQtyChange, onTimerReset }: Props) {
+export function CartItemCard({ item, onRemove, onQtyChange, onTimerReset }: Props) {
     const [currentDeadline, setCurrentDeadline] = useState(item.fecha_limite);
     const { hours, minutes, seconds, expired } = useCountdown(currentDeadline);
     const [updating, setUpdating] = useState(false);
     const [localQty, setLocalQty] = useState(item.cantidad_de_tickets);
 
-    // Actualizar deadline cuando cambie el item desde el servidor
     useEffect(() => {
         setCurrentDeadline(item.fecha_limite);
     }, [item.fecha_limite]);
 
     const handleUpdate = async (newQty: number, isIncrement: boolean = false) => {
         if (newQty < 1 || newQty > 5 || newQty === localQty) return;
-        
+
         setLocalQty(newQty);
-        if (onLocalQtyChange) onLocalQtyChange(newQty);
+        if (onQtyChange) onQtyChange(item.id_item_carrito, newQty); // <-- Cambiado aquí
         setUpdating(true);
-        
+
         try {
             await cartService.updateItem(item.id_item_carrito, newQty);
-            
-            // ⭐ SOLO REINICIAR TIMER SI ES INCREMENTO (+)
+
             if (isIncrement && onTimerReset) {
                 onTimerReset();
             }
         } catch (error) {
             console.error('Error al actualizar cantidad:', error);
             setLocalQty(item.cantidad_de_tickets);
-            if (onLocalQtyChange) onLocalQtyChange(item.cantidad_de_tickets);
+            if (onQtyChange) onQtyChange(item.id_item_carrito, item.cantidad_de_tickets);
         } finally {
             setUpdating(false);
         }
@@ -61,7 +59,11 @@ export function CartItemCard({ item, onRemove, onLocalQtyChange, onTimerReset }:
         return planeImages[modelo] || 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=400&fit=crop';
     };
 
-    const precio = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase)?.precio_base || 0;
+    
+    const tarifa = item.vuelo?.tarifas?.find((t: any) => t.clase === item.clase);
+    const precioBase = tarifa?.precio_base || 0;
+    const descuento = item.vuelo?.promocion?.descuento ?? 0;
+    const precio = Math.round(precioBase * (1 - descuento));
 
     // Obtener nombres de ciudades
     const ciudadOrigen = item.vuelo?.aeropuerto_origen?.ciudad || item.vuelo?.aeropuerto_origen?.codigo_iata || 'Origen';
