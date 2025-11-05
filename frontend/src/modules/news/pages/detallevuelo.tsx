@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import AddToCartButton from "@/common/AddToCartButton";
 import { ClassSelectorModal } from "@/modules/flightsearch/components/ClassSelectorModal";
-import { useCart } from "@/context/CartContext"; // 👈 Importa tu CartContext
+import { useCart } from "../../../context/CartContext";
 import { toast } from "react-toastify";
 
 export interface Noticia {

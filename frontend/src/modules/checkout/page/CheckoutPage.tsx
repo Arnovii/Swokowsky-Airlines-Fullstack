@@ -28,7 +28,9 @@ const CheckoutPage = () => {
     totalForms,
     isReadyForCheckout,
     travelers,
-    hasMinorsWithoutAdult
+    hasMinorsWithoutAdult,
+    hasDuplicateDocument,
+    duplicateDocuments
   } = useCheckoutForm(cart);
 
   const {
@@ -104,6 +106,16 @@ const CheckoutPage = () => {
 
   // Handler para proceder al pago
   const handleProceedToPayment = async () => {
+
+
+    // Validar cédulas duplicadas
+    if (hasDuplicateDocument) {
+      toast.error('❌ No se permite ingresar dos pasajeros con la misma cédula. Cada pasajero debe tener un número de documento único.', {
+        position: 'top-center',
+        autoClose: 6000
+      });
+      return;
+    }
 
     // Validar menores sin adultos
     if (hasMinorsWithoutAdult) {
@@ -321,6 +333,7 @@ const CheckoutPage = () => {
                                 index={passengerIndex + 1}
                                 initialData={initialData}
                                 onUpdate={(data) => updateTravelerInfo(formKey, data)}
+                                duplicateDocuments={duplicateDocuments}
                               />
                             );
                           })
@@ -344,7 +357,7 @@ const CheckoutPage = () => {
               cart={cart}
               totalAmount={totalAmount}
               isProcessing={isProcessing}
-              allFormsComplete={allFormsComplete}
+              allFormsComplete={allFormsComplete && !hasDuplicateDocument}
               onPayment={handleProceedToPayment}
             />
           </div>
