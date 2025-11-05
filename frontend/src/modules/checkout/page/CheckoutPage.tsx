@@ -132,6 +132,7 @@ const CheckoutPage = () => {
       return;
     }
 
+
     // Validar que el payload esté listo
     if (!isReadyForCheckout()) {
       toast.error('⚠️ Hay errores en la información de los pasajeros. Por favor revisa los formularios.', {
@@ -174,7 +175,7 @@ const CheckoutPage = () => {
         setTimeout(async () => {
           await clearCart();
           navigate('/');
-        }, 1000);
+        }, 5000);
       }
 
     } catch (error) {
@@ -197,6 +198,25 @@ const CheckoutPage = () => {
       navigate('/');
     }
   };
+
+  const isMinorSoloTraveler = useMemo(() => {
+  if (totalForms !== 1) return false;
+
+  const travelerKeys = Object.keys(travelers || {});
+  if (travelerKeys.length !== 1) return false;
+
+  const traveler = travelers[travelerKeys[0]];
+  if (!traveler?.fecha_nacimiento) return false;
+
+  const birthDate = new Date(traveler.fecha_nacimiento);
+  const today = new Date();
+  const age =
+    today.getFullYear() -
+    birthDate.getFullYear() -
+    (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
+
+  return age < 18;
+}, [travelers, totalForms]);
 
   // Loading state
   if (cartLoading) {
@@ -334,6 +354,7 @@ const CheckoutPage = () => {
               isProcessing={isProcessing}
               allFormsComplete={allFormsComplete}
               onPayment={handleProceedToPayment}
+              isMinorSoloTraveler={isMinorSoloTraveler}
             />
           </div>
         </div>
