@@ -5,7 +5,7 @@ import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
 
 @Injectable()
 export class CardsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // 📋 Obtener todas las tarjetas del usuario + saldo total
   async getCard(user: PayloadInterface) {
@@ -97,24 +97,29 @@ export class CardsService {
       throw new NotFoundException('Tarjeta no encontrada o no pertenece al usuario');
     }
 
-    await this.prisma.tarjeta.delete({ where: { id_tarjeta: cardId } });
+    // 💳 Eliminar la tarjeta
+    await this.prisma.tarjeta.delete({
+      where: { id_tarjeta: cardId },
+    });
 
-    // 🔄 Recalcular saldo total después de eliminar
-    const tarjetasRestantes = await this.prisma.tarjeta.findMany({
-      where: { id_usuarioFK: Number(user.id_usuario) },
+    // 🧮 Obtener el saldo actual del usuario
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario: Number(user.id_usuario) },
       select: { saldo: true },
     });
 
-    const saldoTotal = tarjetasRestantes.reduce((acc, t) => acc + t.saldo, 0);
+    // 📉 Calcular nuevo saldo (sin valores negativos)
+    const nuevoSaldo = Math.max((usuario?.saldo ?? 0) - tarjeta.saldo, 0);
 
     await this.prisma.usuario.update({
       where: { id_usuario: Number(user.id_usuario) },
-      data: { saldo: saldoTotal },
+      data: { saldo: nuevoSaldo },
     });
 
     return {
       message: 'Tarjeta eliminada correctamente',
-      saldoTotalUsuario: saldoTotal,
+      saldoRestado: tarjeta.saldo,
+      saldoTotalUsuario: nuevoSaldo,
     };
   }
 }
