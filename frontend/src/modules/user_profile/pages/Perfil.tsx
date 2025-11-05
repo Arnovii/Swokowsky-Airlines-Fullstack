@@ -103,9 +103,7 @@ export default function Perfil() {
   const [walletError, setWalletError] = useState<string | null>(null);
 
   // UI local de métodos
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   // Modal añadir tarjeta
   const [showAddCard, setShowAddCard] = useState(false);
@@ -180,17 +178,20 @@ export default function Perfil() {
   })();
 
   // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
-  const fetchWallet = async () => {
+const fetchWallet = async () => {
     setWalletError(null);
     setWalletLoading(true);
     try {
-      const res = await api.get("/tarjetas");
-      const total = Number(res?.data?.saldoTotalUsuario ?? 0);
+      // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
+      const res = await api.get("/profile");
+      // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
+      const total = Number(res?.data?.saldo ?? 0);
       setWalletBalance(Number.isFinite(total) ? total : 0);
+      // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
-      console.error("GET /tarjetas error:", err?.response?.data || err);
+      console.error("GET /tarjetas error:", err?.response?.data,  err);
       const msg =
-        err?.response?.data?.message ||
+        err?.response?.data?.message 
         err?.response?.data?.error ||
         "No se pudo obtener el saldo.";
       setWalletError(msg);
