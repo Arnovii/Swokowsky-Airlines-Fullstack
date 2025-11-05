@@ -617,6 +617,7 @@ export default function Perfil() {
                     value={contactForm.correo || ""}
                     disabled={true}
                     onChange={(e) => setContactForm({ ...contactForm, correo: e.target.value })}
+                    maxLength={50}
                   />
                 </div>
                 <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
