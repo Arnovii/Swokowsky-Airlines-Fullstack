@@ -70,6 +70,9 @@ const formatCOP = (n: number) => {
   }
 };
 
+// ✅ Mensaje genérico solicitado
+const GENERIC_CARD_ERROR = "No pudimos validar la validez de esta tarjeta";
+
 export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
     NATIONALITIES.find((c) => c.value === val)?.label ?? val ?? "-";
@@ -185,8 +188,9 @@ export default function Perfil() {
     setAddCardError(null);
     setAddCardOk(null);
 
+    // ❗ Si faltan datos válidos, muestra el mensaje genérico
     if (!canSubmitCard) {
-      setAddCardError("Por favor completa los campos correctamente.");
+      setAddCardError(GENERIC_CARD_ERROR);
       return;
     }
 
@@ -199,8 +203,9 @@ export default function Perfil() {
       const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
       const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
 
+      // ❗ Si número de tarjeta es corto, mensaje genérico
       if (digitsOnly.length < 16) {
-        setAddCardError("El número de tarjeta debe tener al menos 16 dígitos.");
+        setAddCardError(GENERIC_CARD_ERROR);
         return;
       }
 
@@ -247,11 +252,10 @@ export default function Perfil() {
       });
     } catch (err: any) {
       console.error("Crear tarjeta error:", err?.response?.data || err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "❌ No se pudo guardar la tarjeta.";
-      setAddCardError(msg);
+
+      // ❗ Para cualquier error de validación del backend, usa el mensaje genérico
+      // (igual aplica si el backend devuelve mensajes como "must be a string", "should not be empty", etc.)
+      setAddCardError(GENERIC_CARD_ERROR);
     } finally {
       setSavingCard(false);
     }
@@ -353,7 +357,7 @@ export default function Perfil() {
               <button
                 type="button"
                 onClick={() => navigate("/panelAdministrador/root")}
-                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duración-300 font-medium"
               >
                 Ir al Panel Root
               </button>
@@ -389,7 +393,7 @@ export default function Perfil() {
 
           {/* Contenido tabs */}
           <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-            {/* PERSONAL (se conserva igual que tenías) */}
+            {/* PERSONAL (igual que lo tenías) */}
             {activeTab === "personal" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -416,7 +420,7 @@ export default function Perfil() {
                   }
                 }}
               >
-                {/* ... (tus campos de personal tal como los tenías) */}
+                {/* ...campos personales... */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
                   <input
@@ -563,7 +567,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT (igual que lo tenías) */}
+            {/* CONTACT (con checkbox que parchea inmediatamente) */}
             {activeTab === "contact" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -609,36 +613,34 @@ export default function Perfil() {
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-<div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
-    Suscrito a noticias
-  </label>
-
-        <input
-          type="checkbox"
-          checked={!!contactForm.suscrito_noticias}
-          onChange={async (e) => {
-            const nuevoValor = e.target.checked;
-            setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
-
-            try {
-              await api.patch("/profile", { suscrito_noticias: nuevoValor });
-              setUpdateMessage(
-                nuevoValor
-                  ? "✅ Te has suscrito correctamente a las noticias."
-                  : "❌ Has cancelado la suscripción a las noticias."
-              );
-            } catch (err: any) {
-              console.error("Error al actualizar suscripción:", err);
-              setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-              // Revertir visualmente el cambio si falla
-              setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
-            }
-          }}
-          className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
-        />
-      </div>
-                      </div>
+                  <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2 mt-4">
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      Suscrito a noticias
+                    </label>
+                    <input
+                      type="checkbox"
+                      checked={!!contactForm.suscrito_noticias}
+                      onChange={async (e) => {
+                        const nuevoValor = e.target.checked;
+                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+                        try {
+                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
+                          setUpdateMessage(
+                            nuevoValor
+                              ? "✅ Te has suscrito correctamente a las noticias."
+                              : "❌ Has cancelado la suscripción a las noticias."
+                          );
+                        } catch (err: any) {
+                          console.error("Error al actualizar suscripción:", err);
+                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
+                          // revertir visualmente si falla
+                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+                        }
+                      }}
+                      className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
+                    />
+                  </div>
+                </div>
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -746,7 +748,7 @@ export default function Perfil() {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duration-300"
+                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duración-300"
                         required
                       />
                     </div>
@@ -859,10 +861,6 @@ export default function Perfil() {
                     </ul>
                   )}
                 </div>
-
-                <p className="text-xs text-gray-500">
-                  * El saldo mostrado corresponde a <strong>saldoTotalUsuario</strong> de <code>GET /tarjetas</code>.
-                </p>
               </div>
             )}
           </div>
@@ -956,41 +954,36 @@ export default function Perfil() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
-<input
-    type="text"
-    inputMode="text"
-    autoComplete="off"
-    // HTML pattern por si usas validación nativa del form:
-    pattern="^[A-Za-zÀ-ÿ\s]+$"
-    value={addCardForm.banco}
-    onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
-      // Evita inyectar caracteres inválidos antes de que entren al input
-      const data = (e as unknown as InputEvent).data ?? "";
-      if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
-        (e.nativeEvent as InputEvent).preventDefault();
-      }
-    }}
-    onKeyDown={(e) => {
-      // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
-      const allowedKeys = [
-        "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
-      ];
-      if (allowedKeys.includes(e.key)) return;
-      if (/^\d$/.test(e.key)) e.preventDefault();
-    }}
-    onPaste={(e) => {
-      // Valida pegado: solo letras y espacios
-      const text = e.clipboardData.getData("text");
-      if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
-    }}
-    onChange={(e) => {
-      // Filtro definitivo por si algo se cuela (ej. autocompletar)
-      const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
-      setAddCardForm((s) => ({ ...s, banco: limpio }));
-    }}
-    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-    placeholder="Banco de Bogotá"
-  />
+                    <input
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      pattern="^[A-Za-zÀ-ÿ\s]+$"
+                      value={addCardForm.banco}
+                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
+                        const data = (e as unknown as InputEvent).data ?? "";
+                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
+                          (e.nativeEvent as InputEvent).preventDefault();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        const allowedKeys = [
+                          "Backspace","Delete","Tab","Enter","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"
+                        ];
+                        if (allowedKeys.includes(e.key)) return;
+                        if (/^\d$/.test(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData("text");
+                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
+                      }}
+                      onChange={(e) => {
+                        const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+                        setAddCardForm((s) => ({ ...s, banco: limpio }));
+                      }}
+                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      placeholder="Banco de Bogotá"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Tipo</label>
@@ -1004,15 +997,13 @@ export default function Perfil() {
                     </select>
                   </div>
                 </div>
-
-
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddCard(false)}
-                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
                 >
                   Cancelar
                 </button>
