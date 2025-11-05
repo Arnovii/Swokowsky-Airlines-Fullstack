@@ -3,7 +3,7 @@ import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-// Lista de nacionalidades (recortada por brevedad; usa tu lista completa)
+// Lista de nacionalidades (recortada por brevedad)
 const NATIONALITIES = [
   { label: "Colombia", value: "Colombia" },
   { label: "Argentina", value: "Argentina" },
@@ -25,7 +25,7 @@ interface Profile {
   suscrito_noticias: boolean;
   creado_en: string;
   must_change_password: boolean;
-  tipo_usuario?: string;
+  tipo_usuario?: string; // "admin" | "root" | otro
 }
 
 type ActiveTab = "personal" | "contact" | "security" | "wallet";
@@ -82,20 +82,7 @@ export default function Perfil() {
 
   // Sincronizar tabs con query params
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") as ActiveTab | null;
-
-  useEffect(() => {
-    if (tabFromUrl && ["personal", "contact", "security", "wallet"].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-    } else {
-      setSearchParams({ tab: "personal" });
-    }
-  }, [tabFromUrl, setSearchParams]);
-
-  const handleTabChange = (newTab: ActiveTab) => {
-    setActiveTab(newTab);
-    setSearchParams({ tab: newTab });
-  };
+  const tabFromUrl = (searchParams.get("tab") as ActiveTab | null) ?? null;
 
   // Seguridad
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -110,7 +97,7 @@ export default function Perfil() {
   const [contactForm, setContactForm] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monedero (solo saldoTotalUsuario) y métodos (UI local)
+  // ---------- Monedero (saldoTotalUsuario desde /tarjetas) ----------
   const [walletBalance, setWalletBalance] = useState<number>(0); // saldoTotalUsuario
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -132,6 +119,40 @@ export default function Perfil() {
   });
   const [addCardError, setAddCardError] = useState<string | null>(null);
   const [addCardOk, setAddCardOk] = useState<string | null>(null);
+
+  // Sólo usuarios con monedero:
+  const hasWallet = !(profile?.tipo_usuario === "admin" || profile?.tipo_usuario === "root");
+
+  // Tabs permitidos según rol
+  const availableTabs: { id: ActiveTab; label: string; icon: string }[] = [
+    { id: "personal", label: "Información personal", icon: "👤" },
+    { id: "contact", label: "Información de contacto", icon: "📧" },
+    { id: "security", label: "Seguridad", icon: "🔒" },
+    ...(hasWallet ? [{ id: "wallet", label: "Monedero", icon: "💳" } as const] : []),
+  ];
+
+  // Efecto inicial: si la URL trae un tab inválido o wallet para roles sin monedero, forzar "personal"
+  useEffect(() => {
+    const ids = availableTabs.map(t => t.id);
+    if (tabFromUrl && ids.includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    } else {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
+
+  const handleTabChange = (newTab: ActiveTab) => {
+    // Evitar navegar a wallet si no tiene monedero
+    if (newTab === "wallet" && !hasWallet) {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+      return;
+    }
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
 
   // Parse exp "MM/YY"
   const parseExp = (exp: string) => {
@@ -156,20 +177,20 @@ export default function Perfil() {
   })();
 
   // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
-  const fetchWallet = async () => {
+const fetchWallet = async () => {
     setWalletError(null);
     setWalletLoading(true);
     try {
       // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
-      const res = await api.get("/tarjetas");
+      const res = await api.get("/profile");
       // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
-      const total = Number(res?.data?.saldoTotalUsuario ?? 0);
+      const total = Number(res?.data?.saldo ?? 0);
       setWalletBalance(Number.isFinite(total) ? total : 0);
       // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
-      console.error("GET /tarjetas error:", err?.response?.data || err);
+      console.error("GET /tarjetas error:", err?.response?.data,  err);
       const msg =
-        err?.response?.data?.message ||
+        err?.response?.data?.message 
         err?.response?.data?.error ||
         "No se pudo obtener el saldo.";
       setWalletError(msg);
@@ -186,21 +207,26 @@ export default function Perfil() {
     setAddCardOk(null);
 
     if (!canSubmitCard) {
-      setAddCardError("Por favor completa los campos correctamente.");
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
       return;
     }
 
     try {
       setSavingCard(true);
 
-      const { month, year } = parseExp(addCardForm.exp)!;
+      const parsed = parseExp(addCardForm.exp);
+      if (!parsed) {
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
+        return;
+      }
+      const { month, year } = parsed;
       const titular = addCardForm.holder.trim();
       const banco = addCardForm.banco.trim();
       const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
       const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
 
       if (digitsOnly.length < 16) {
-        setAddCardError("El número de tarjeta debe tener al menos 16 dígitos.");
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
         return;
       }
 
@@ -259,11 +285,8 @@ export default function Perfil() {
       });
     } catch (err: any) {
       console.error("Crear tarjeta error:", err?.response?.data || err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "❌ No se pudo guardar la tarjeta.";
-      setAddCardError(msg);
+      // Mensaje unificado de validez
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
     } finally {
       setSavingCard(false);
     }
@@ -328,6 +351,7 @@ export default function Perfil() {
   };
 
 
+  // Cargar perfil y saldo inicial
   useEffect(() => {
     const getProfileInfo = async () => {
       try {
@@ -347,14 +371,17 @@ export default function Perfil() {
           suscrito_noticias: res.data.suscrito_noticias,
         });
 
-        // ✅ Traer saldo y tarjetas reales
-        fetchWallet();
-        fetchCards();  // 👈 agrega esta línea
+        // Traer saldo (solo si tiene monedero)
+        if (!(res.data?.tipo_usuario === "admin" || res.data?.tipo_usuario === "root")) {
+          fetchWallet(); // paralelo
+          fetchCards();
+        }
       } catch (err) {
         console.error(err);
       }
     };
     getProfileInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -588,6 +615,8 @@ return (
                     className="mt-2 w-full p-2 border rounded-lg disabled:bg-gray-200 text-sm sm:text-base"
                     value={contactForm.correo || ""}
                     disabled={true}
+                    onChange={(e) => setContactForm({ ...contactForm, correo: e.target.value })}
+                    maxLength={50}
                   />
                 </div>
                 <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
@@ -599,17 +628,33 @@ return (
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-                </div>
-                <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
-                    Suscrito a noticias
-                  </label>
-                  <input
-                    type="checkbox"
-                    checked={!!contactForm.suscrito_noticias}
-                    onChange={(e) => setContactForm({ ...contactForm, suscrito_noticias: e.target.checked })}
-                    className="w-5 h-5 accent-[#3B82F6] cursor-pointer"
-                  />
+                  <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      Suscrito a noticias
+                    </label>
+                    <input
+                      type="checkbox"
+                      checked={!!contactForm.suscrito_noticias}
+                      onChange={async (e) => {
+                        const nuevoValor = e.target.checked;
+                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+                        try {
+                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
+                          setUpdateMessage(
+                            nuevoValor
+                              ? "✅ Te has suscrito correctamente a las noticias."
+                              : "❌ Has cancelado la suscripción a las noticias."
+                          );
+                        } catch (err: any) {
+                          console.error("Error al actualizar suscripción:", err);
+                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
+                          // Revertir visualmente el cambio si falla
+                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+                        }
+                      }}
+                      className="w-5 h-5 accent-[#3B82F6] cursor-pointer"
+                    />
+                  </div>
                 </div>
 
                 <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
@@ -730,8 +775,8 @@ return (
               </form>
             )}
 
-            {/* WALLET */}
-            {activeTab === "wallet" && (
+            {/* WALLET — solo si el usuario tiene monedero */}
+            {activeTab === "wallet" && hasWallet && (
               <div className="space-y-4 sm:space-y-6">
                 {/* Saldo */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -821,7 +866,7 @@ return (
       </div>
 
       {/* MODAL AÑADIR TARJETA */}
-      {showAddCard && (
+      {showAddCard && hasWallet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
@@ -910,7 +955,27 @@ return (
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
                     <input
                       type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      pattern="^[A-Za-zÀ-ÿ\s]+$"
                       value={addCardForm.banco}
+                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
+                        const data = (e as unknown as InputEvent).data ?? "";
+                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
+                          (e.nativeEvent as InputEvent).preventDefault();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        const allowedKeys = [
+                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+                        ];
+                        if (allowedKeys.includes(e.key)) return;
+                        if (/^\d$/.test(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData("text");
+                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
+                      }}
                       onChange={(e) => {
                         const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
                         setAddCardForm((s) => ({ ...s, banco: limpio }));
