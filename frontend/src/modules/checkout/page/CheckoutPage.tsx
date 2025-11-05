@@ -27,7 +27,8 @@ const CheckoutPage = () => {
     getCheckoutData,
     totalForms,
     isReadyForCheckout,
-    travelers // <-- Cambiado aquí
+    travelers,
+    hasMinorsWithoutAdult
   } = useCheckoutForm(cart);
 
   const {
@@ -103,6 +104,16 @@ const CheckoutPage = () => {
 
   // Handler para proceder al pago
   const handleProceedToPayment = async () => {
+
+    // Validar menores sin adultos
+    if (hasMinorsWithoutAdult) {
+      toast.error('❌ No se permite la compra solo para menores de edad. Debe haber al menos un adulto (18+) en la reserva.', {
+        position: 'top-center',
+        autoClose: 6000
+      });
+      return;
+    }
+
     // Validar saldo suficiente
     const userBalance = saldo || 0;
     if (userBalance < totalAmount) {
@@ -198,25 +209,6 @@ const CheckoutPage = () => {
       navigate('/');
     }
   };
-
-  const isMinorSoloTraveler = useMemo(() => {
-  if (totalForms !== 1) return false;
-
-  const travelerKeys = Object.keys(travelers || {});
-  if (travelerKeys.length !== 1) return false;
-
-  const traveler = travelers[travelerKeys[0]];
-  if (!traveler?.fecha_nacimiento) return false;
-
-  const birthDate = new Date(traveler.fecha_nacimiento);
-  const today = new Date();
-  const age =
-    today.getFullYear() -
-    birthDate.getFullYear() -
-    (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
-
-  return age < 18;
-}, [travelers, totalForms]);
 
   // Loading state
   if (cartLoading) {
@@ -354,7 +346,6 @@ const CheckoutPage = () => {
               isProcessing={isProcessing}
               allFormsComplete={allFormsComplete}
               onPayment={handleProceedToPayment}
-              isMinorSoloTraveler={isMinorSoloTraveler}
             />
           </div>
         </div>
