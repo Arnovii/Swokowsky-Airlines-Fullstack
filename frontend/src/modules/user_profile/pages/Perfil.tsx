@@ -834,9 +834,6 @@ return (
                             </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
-                            {pm.isDefault && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
-                            )}
                             <button
                               type="button"
                               onClick={() => removeMethod(pm.id)}
