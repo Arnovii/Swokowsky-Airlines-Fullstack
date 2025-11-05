@@ -857,15 +857,6 @@ const fetchWallet = async () => {
                             {pm.isDefault && (
                               <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
                             )}
-                            {!pm.isDefault && (
-                              <button
-                                type="button"
-                                onClick={() => setAsDefault(pm.id)}
-                                className="text-xs px-2 py-1 rounded border text-gray-700 hover:bg-gray-50"
-                              >
-                                Hacer predeterminada
-                              </button>
-                            )}
                             <button
                               type="button"
                               onClick={() => removeMethod(pm.id)}

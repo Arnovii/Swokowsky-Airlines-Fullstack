@@ -174,7 +174,7 @@ const CheckoutPage = () => {
         setTimeout(async () => {
           await clearCart();
           navigate('/');
-        }, 1000);
+        }, 5000);
       }
 
     } catch (error) {
