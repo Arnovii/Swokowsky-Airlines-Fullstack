@@ -115,9 +115,7 @@ export default function Perfil() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]); // UI local
 
   // Modal añadir tarjeta
   const [showAddCard, setShowAddCard] = useState(false);
@@ -181,6 +179,8 @@ export default function Perfil() {
   };
 
   // POST /api/v1/tarjetas/cards
+
+
   const handleAddCard = async () => {
     setAddCardError(null);
     setAddCardOk(null);
@@ -215,23 +215,35 @@ export default function Perfil() {
         creado_en: new Date().toISOString(),
       };
 
-      await api.post("/tarjetas/cards", payload);
+      // 🟢 Crea la tarjeta
+      const res = await api.post("/tarjetas/cards", payload);
+      console.log("Respuesta creación tarjeta:", res.data);
 
-      // ✅ Re-consultar saldoTotalUsuario inmediatamente
+      // 🧩 Ajuste importante: a veces el backend devuelve directamente el objeto
+      // y otras veces dentro de res.data.tarjeta
+      const tarjeta = res.data?.tarjeta ?? res.data ?? null;
+
+      // 🔁 Refresca el saldo
       await fetchWallet();
 
-      // UI local de métodos (opcional)
-      const last4 = digitsOnly.slice(-4);
-      const newPm: PaymentMethod = {
-        id: `pm_${Date.now()}`,
-        brand: addCardForm.brand,
-        last4,
-        holder: titular,
-        expMonth: String(month).padStart(2, "0"),
-        expYear: String(year),
-        isDefault: addCardForm.makeDefault || paymentMethods.length === 0,
-      };
-      setPaymentMethods((prev) => [newPm, ...prev]);
+      if (tarjeta && tarjeta.id_tarjeta) {
+        // 🆔 Usa el ID real devuelto
+        const newPm: PaymentMethod = {
+          id: String(tarjeta.id_tarjeta),
+          brand: "visa", // 👈 detecta automáticamente
+          last4: String(tarjeta.num_tarjeta).slice(-4),
+          holder: tarjeta.titular,
+          expMonth: String(tarjeta.vence_mes).padStart(2, "0"),
+          expYear: String(tarjeta.vence_anio),
+          isDefault: addCardForm.makeDefault || paymentMethods.length === 0,
+        };
+
+        // Agrega la tarjeta localmente
+        setPaymentMethods((prev) => [newPm, ...prev]);
+      } else {
+        // Si no devuelve la tarjeta, vuelve a pedirlas
+        await fetchCards();
+      }
 
       setAddCardOk("✅ Tarjeta guardada correctamente.");
       setShowAddCard(false);
@@ -257,13 +269,31 @@ export default function Perfil() {
     }
   };
 
+
+
+
   const setAsDefault = (id: string) => {
     setPaymentMethods((prev) => prev.map((p) => ({ ...p, isDefault: p.id === id })));
   };
 
-  const removeMethod = (id: string) => {
-    setPaymentMethods((prev) => prev.filter((p) => p.id !== id));
+  const removeMethod = async (id: string) => {
+    try {
+      // llama directamente al backend con axios
+      const res = await api.delete(`/tarjetas/cards/${id}`);
+      console.log("Tarjeta borrada:", res.data);
+
+      // actualiza estado local
+      setPaymentMethods(prev => prev.filter(p => String(p.id) !== String(id)));
+
+      // actualiza el saldo en pantalla
+      await fetchWallet();
+    } catch (err: any) {
+      console.error("Error al eliminar tarjeta:", err?.response?.data || err);
+      alert(err?.response?.data?.message || "No se pudo eliminar la tarjeta");
+    }
   };
+
+
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
@@ -278,6 +308,25 @@ export default function Perfil() {
   };
 
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+
+  const fetchCards = async () => {
+    try {
+      const res = await api.get("/tarjetas");
+      const tarjetas = (res.data.tarjetas || []).map((t: any) => ({
+        id: String(t.id_tarjeta),
+        brand: "visa", // 👈 detecta automáticamente
+        last4: t.num_tarjeta.slice(-4),
+        holder: t.titular,
+        expMonth: String(t.vence_mes).padStart(2, "0"),
+        expYear: String(t.vence_anio),
+      }));
+
+      setPaymentMethods(tarjetas);
+    } catch (err: any) {
+      console.error("Error obteniendo tarjetas:", err?.response?.data || err);
+    }
+  };
+
 
   useEffect(() => {
     const getProfileInfo = async () => {
@@ -298,14 +347,16 @@ export default function Perfil() {
           suscrito_noticias: res.data.suscrito_noticias,
         });
 
-        // ✅ Traer saldo (saldoTotalUsuario)
-        fetchWallet(); // no await; paralelo
+        // ✅ Traer saldo y tarjetas reales
+        fetchWallet();
+        fetchCards();  // 👈 agrega esta línea
       } catch (err) {
         console.error(err);
       }
     };
     getProfileInfo();
   }, []);
+
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
 
@@ -375,11 +426,10 @@ export default function Perfil() {
                   setShowPasswordForm(false);
                   setPasswordMessage(null);
                 }}
-                className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${
-                  activeTab === (tab.id as ActiveTab)
-                    ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
-                    : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
-                }`}
+                className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${activeTab === (tab.id as ActiveTab)
+                  ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
+                  : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
+                  }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -609,36 +659,36 @@ export default function Perfil() {
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-<div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
-    Suscrito a noticias
-  </label>
+                  <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      Suscrito a noticias
+                    </label>
 
-        <input
-          type="checkbox"
-          checked={!!contactForm.suscrito_noticias}
-          onChange={async (e) => {
-            const nuevoValor = e.target.checked;
-            setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+                    <input
+                      type="checkbox"
+                      checked={!!contactForm.suscrito_noticias}
+                      onChange={async (e) => {
+                        const nuevoValor = e.target.checked;
+                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
 
-            try {
-              await api.patch("/profile", { suscrito_noticias: nuevoValor });
-              setUpdateMessage(
-                nuevoValor
-                  ? "✅ Te has suscrito correctamente a las noticias."
-                  : "❌ Has cancelado la suscripción a las noticias."
-              );
-            } catch (err: any) {
-              console.error("Error al actualizar suscripción:", err);
-              setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-              // Revertir visualmente el cambio si falla
-              setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
-            }
-          }}
-          className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
-        />
-      </div>
-                      </div>
+                        try {
+                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
+                          setUpdateMessage(
+                            nuevoValor
+                              ? "✅ Te has suscrito correctamente a las noticias."
+                              : "❌ Has cancelado la suscripción a las noticias."
+                          );
+                        } catch (err: any) {
+                          console.error("Error al actualizar suscripción:", err);
+                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
+                          // Revertir visualmente el cambio si falla
+                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+                        }
+                      }}
+                      className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
+                    />
+                  </div>
+                </div>
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -721,11 +771,10 @@ export default function Perfil() {
                   <>
                     {passwordMessage && (
                       <div
-                        className={`p-4 rounded-lg text-sm text-center ${
-                          passwordMessage.startsWith("✅")
-                            ? "bg-green-50 text-green-600 border border-green-200"
-                            : "bg-red-50 text-red-600 border border-red-200"
-                        }`}
+                        className={`p-4 rounded-lg text-sm text-center ${passwordMessage.startsWith("✅")
+                          ? "bg-green-50 text-green-600 border border-green-200"
+                          : "bg-red-50 text-red-600 border border-red-200"
+                          }`}
                       >
                         {passwordMessage}
                       </div>
@@ -860,9 +909,6 @@ export default function Perfil() {
                   )}
                 </div>
 
-                <p className="text-xs text-gray-500">
-                  * El saldo mostrado corresponde a <strong>saldoTotalUsuario</strong> de <code>GET /tarjetas</code>.
-                </p>
               </div>
             )}
           </div>
@@ -956,41 +1002,41 @@ export default function Perfil() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
-<input
-    type="text"
-    inputMode="text"
-    autoComplete="off"
-    // HTML pattern por si usas validación nativa del form:
-    pattern="^[A-Za-zÀ-ÿ\s]+$"
-    value={addCardForm.banco}
-    onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
-      // Evita inyectar caracteres inválidos antes de que entren al input
-      const data = (e as unknown as InputEvent).data ?? "";
-      if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
-        (e.nativeEvent as InputEvent).preventDefault();
-      }
-    }}
-    onKeyDown={(e) => {
-      // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
-      const allowedKeys = [
-        "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
-      ];
-      if (allowedKeys.includes(e.key)) return;
-      if (/^\d$/.test(e.key)) e.preventDefault();
-    }}
-    onPaste={(e) => {
-      // Valida pegado: solo letras y espacios
-      const text = e.clipboardData.getData("text");
-      if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
-    }}
-    onChange={(e) => {
-      // Filtro definitivo por si algo se cuela (ej. autocompletar)
-      const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
-      setAddCardForm((s) => ({ ...s, banco: limpio }));
-    }}
-    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-    placeholder="Banco de Bogotá"
-  />
+                    <input
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      // HTML pattern por si usas validación nativa del form:
+                      pattern="^[A-Za-zÀ-ÿ\s]+$"
+                      value={addCardForm.banco}
+                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
+                        // Evita inyectar caracteres inválidos antes de que entren al input
+                        const data = (e as unknown as InputEvent).data ?? "";
+                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
+                          (e.nativeEvent as InputEvent).preventDefault();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
+                        const allowedKeys = [
+                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+                        ];
+                        if (allowedKeys.includes(e.key)) return;
+                        if (/^\d$/.test(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        // Valida pegado: solo letras y espacios
+                        const text = e.clipboardData.getData("text");
+                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
+                      }}
+                      onChange={(e) => {
+                        // Filtro definitivo por si algo se cuela (ej. autocompletar)
+                        const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+                        setAddCardForm((s) => ({ ...s, banco: limpio }));
+                      }}
+                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      placeholder="Banco de Bogotá"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Tipo</label>
@@ -1012,7 +1058,7 @@ export default function Perfil() {
                 <button
                   type="button"
                   onClick={() => setShowAddCard(false)}
-                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
                 >
                   Cancelar
                 </button>
@@ -1020,11 +1066,10 @@ export default function Perfil() {
                   type="button"
                   disabled={!canSubmitCard || savingCard}
                   onClick={handleAddCard}
-                  className={`px-4 py-2 rounded-lg text-white transition ${
-                    !canSubmitCard || savingCard
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-white transition ${!canSubmitCard || savingCard
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
+                    }`}
                 >
                   {savingCard ? "Guardando…" : "Guardar tarjeta"}
                 </button>
