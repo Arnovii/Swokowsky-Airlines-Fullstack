@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo , useEffect} from 'react';
+
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { CartItem } from '../../carrito/service/cartService';
 import type { Pasajero, CheckoutPayload } from '../types/checkout';
 import type { TravelerFormData } from '../components/TravelerForm';
@@ -23,9 +24,24 @@ const createEmptyTraveler = (): TravelerFormData => ({
 });
 
 export const useCheckoutForm = (cart: CartItem[]) => {
+
   // Estado: objeto con claves únicas por pasajero
   // Formato: { "itemId-passengerIndex": TravelerFormData }
   const [travelers, setTravelers] = useState<Record<string, TravelerFormData>>({});
+
+  // Devuelve true si hay algún documento repetido y la lista de duplicados
+  const duplicateDocuments = useMemo(() => {
+    const docs = Object.values(travelers)
+      .map((t: TravelerFormData) => t.numero_documento?.trim())
+      .filter(Boolean);
+    const count: Record<string, number> = {};
+    docs.forEach(doc => {
+      if (doc) count[doc] = (count[doc] || 0) + 1;
+    });
+    return Object.keys(count).filter(doc => count[doc] > 1);
+  }, [travelers]);
+
+  const hasDuplicateDocument = duplicateDocuments.length > 0;
 
   useEffect(() => {
     if (cart && cart.length > 0) {
@@ -185,6 +201,8 @@ export const useCheckoutForm = (cart: CartItem[]) => {
     getTraveler,
     clearAllForms,
     isReadyForCheckout,
-    hasMinorsWithoutAdult
+    hasMinorsWithoutAdult,
+    hasDuplicateDocument,
+    duplicateDocuments
   };
 };
