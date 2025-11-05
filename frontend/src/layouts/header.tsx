@@ -70,7 +70,6 @@ export default function Header() {
             >
               <div className="relative w-5 h-5">
                 <ShoppingCart className="w-full h-full text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-                <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-medium border border-[#081225]">0</div>
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </Link>
@@ -155,7 +154,6 @@ export default function Header() {
               >
                 <div className="relative">
                   <ShoppingCart className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
-                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</div>
                 </div>
                 <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
                   Carrito
