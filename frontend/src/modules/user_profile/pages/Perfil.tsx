@@ -103,9 +103,7 @@ export default function Perfil() {
   const [walletError, setWalletError] = useState<string | null>(null);
 
   // UI local de métodos
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   // Modal añadir tarjeta
   const [showAddCard, setShowAddCard] = useState(false);
