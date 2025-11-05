@@ -3,7 +3,7 @@ import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-// Lista de nacionalidades (recortada por brevedad; usa tu lista completa)
+// Lista de nacionalidades (recortada por brevedad)
 const NATIONALITIES = [
   { label: "Colombia", value: "Colombia" },
   { label: "Argentina", value: "Argentina" },
@@ -25,7 +25,7 @@ interface Profile {
   suscrito_noticias: boolean;
   creado_en: string;
   must_change_password: boolean;
-  tipo_usuario?: string;
+  tipo_usuario?: string; // "admin" | "root" | otro
 }
 
 type ActiveTab = "personal" | "contact" | "security" | "wallet";
@@ -70,9 +70,6 @@ const formatCOP = (n: number) => {
   }
 };
 
-// ✅ Mensaje genérico solicitado
-const GENERIC_CARD_ERROR = "No pudimos validar la validez de esta tarjeta";
-
 export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
     NATIONALITIES.find((c) => c.value === val)?.label ?? val ?? "-";
@@ -85,20 +82,7 @@ export default function Perfil() {
 
   // Sincronizar tabs con query params
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") as ActiveTab | null;
-
-  useEffect(() => {
-    if (tabFromUrl && ["personal", "contact", "security", "wallet"].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-    } else {
-      setSearchParams({ tab: "personal" });
-    }
-  }, [tabFromUrl, setSearchParams]);
-
-  const handleTabChange = (newTab: ActiveTab) => {
-    setActiveTab(newTab);
-    setSearchParams({ tab: newTab });
-  };
+  const tabFromUrl = (searchParams.get("tab") as ActiveTab | null) ?? null;
 
   // Seguridad
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -113,11 +97,12 @@ export default function Perfil() {
   const [contactForm, setContactForm] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monedero (solo saldoTotalUsuario) y métodos (UI local)
+  // ---------- Monedero (saldoTotalUsuario desde /tarjetas) ----------
   const [walletBalance, setWalletBalance] = useState<number>(0); // saldoTotalUsuario
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
+  // UI local de métodos
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
   ]);
@@ -137,6 +122,40 @@ export default function Perfil() {
   });
   const [addCardError, setAddCardError] = useState<string | null>(null);
   const [addCardOk, setAddCardOk] = useState<string | null>(null);
+
+  // Sólo usuarios con monedero:
+  const hasWallet = !(profile?.tipo_usuario === "admin" || profile?.tipo_usuario === "root");
+
+  // Tabs permitidos según rol
+  const availableTabs: { id: ActiveTab; label: string; icon: string }[] = [
+    { id: "personal", label: "Información personal", icon: "👤" },
+    { id: "contact", label: "Información de contacto", icon: "📧" },
+    { id: "security", label: "Seguridad", icon: "🔒" },
+    ...(hasWallet ? [{ id: "wallet", label: "Monedero", icon: "💳" } as const] : []),
+  ];
+
+  // Efecto inicial: si la URL trae un tab inválido o wallet para roles sin monedero, forzar "personal"
+  useEffect(() => {
+    const ids = availableTabs.map(t => t.id);
+    if (tabFromUrl && ids.includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    } else {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
+
+  const handleTabChange = (newTab: ActiveTab) => {
+    // Evitar navegar a wallet si no tiene monedero
+    if (newTab === "wallet" && !hasWallet) {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+      return;
+    }
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
 
   // Parse exp "MM/YY"
   const parseExp = (exp: string) => {
@@ -165,12 +184,9 @@ export default function Perfil() {
     setWalletError(null);
     setWalletLoading(true);
     try {
-      // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
       const res = await api.get("/tarjetas");
-      // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
       const total = Number(res?.data?.saldoTotalUsuario ?? 0);
       setWalletBalance(Number.isFinite(total) ? total : 0);
-      // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
       console.error("GET /tarjetas error:", err?.response?.data || err);
       const msg =
@@ -188,24 +204,27 @@ export default function Perfil() {
     setAddCardError(null);
     setAddCardOk(null);
 
-    // ❗ Si faltan datos válidos, muestra el mensaje genérico
     if (!canSubmitCard) {
-      setAddCardError(GENERIC_CARD_ERROR);
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
       return;
     }
 
     try {
       setSavingCard(true);
 
-      const { month, year } = parseExp(addCardForm.exp)!;
+      const parsed = parseExp(addCardForm.exp);
+      if (!parsed) {
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
+        return;
+      }
+      const { month, year } = parsed;
       const titular = addCardForm.holder.trim();
       const banco = addCardForm.banco.trim();
       const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
       const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
 
-      // ❗ Si número de tarjeta es corto, mensaje genérico
       if (digitsOnly.length < 16) {
-        setAddCardError(GENERIC_CARD_ERROR);
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
         return;
       }
 
@@ -222,7 +241,7 @@ export default function Perfil() {
 
       await api.post("/tarjetas/cards", payload);
 
-      // ✅ Re-consultar saldoTotalUsuario inmediatamente
+      // Re-consultar saldoTotalUsuario inmediatamente
       await fetchWallet();
 
       // UI local de métodos (opcional)
@@ -252,10 +271,8 @@ export default function Perfil() {
       });
     } catch (err: any) {
       console.error("Crear tarjeta error:", err?.response?.data || err);
-
-      // ❗ Para cualquier error de validación del backend, usa el mensaje genérico
-      // (igual aplica si el backend devuelve mensajes como "must be a string", "should not be empty", etc.)
-      setAddCardError(GENERIC_CARD_ERROR);
+      // Mensaje unificado de validez
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
     } finally {
       setSavingCard(false);
     }
@@ -283,6 +300,7 @@ export default function Perfil() {
 
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
+  // Cargar perfil y saldo inicial
   useEffect(() => {
     const getProfileInfo = async () => {
       try {
@@ -302,13 +320,16 @@ export default function Perfil() {
           suscrito_noticias: res.data.suscrito_noticias,
         });
 
-        // ✅ Traer saldo (saldoTotalUsuario)
-        fetchWallet(); // no await; paralelo
+        // Traer saldo (solo si tiene monedero)
+        if (!(res.data?.tipo_usuario === "admin" || res.data?.tipo_usuario === "root")) {
+          fetchWallet(); // paralelo
+        }
       } catch (err) {
         console.error(err);
       }
     };
     getProfileInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
@@ -357,7 +378,7 @@ export default function Perfil() {
               <button
                 type="button"
                 onClick={() => navigate("/panelAdministrador/root")}
-                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duración-300 font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
               >
                 Ir al Panel Root
               </button>
@@ -366,12 +387,7 @@ export default function Perfil() {
 
           {/* Tabs */}
           <div className="flex justify-center mb-8 bg-gray-50 rounded-lg p-2">
-            {[
-              { id: "personal", label: "Información personal", icon: "👤" },
-              { id: "contact", label: "Información de contacto", icon: "📧" },
-              { id: "security", label: "Seguridad", icon: "🔒" },
-              { id: "wallet", label: "Monedero", icon: "💳" },
-            ].map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
@@ -380,7 +396,7 @@ export default function Perfil() {
                   setPasswordMessage(null);
                 }}
                 className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${
-                  activeTab === (tab.id as ActiveTab)
+                  activeTab === tab.id
                     ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
                     : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
                 }`}
@@ -393,7 +409,7 @@ export default function Perfil() {
 
           {/* Contenido tabs */}
           <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-            {/* PERSONAL (igual que lo tenías) */}
+            {/* PERSONAL */}
             {activeTab === "personal" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -420,7 +436,6 @@ export default function Perfil() {
                   }
                 }}
               >
-                {/* ...campos personales... */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
                   <input
@@ -567,7 +582,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT (con checkbox que parchea inmediatamente) */}
+            {/* CONTACT */}
             {activeTab === "contact" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -633,7 +648,7 @@ export default function Perfil() {
                         } catch (err: any) {
                           console.error("Error al actualizar suscripción:", err);
                           setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-                          // revertir visualmente si falla
+                          // Revertir visualmente el cambio si falla
                           setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
                         }
                       }}
@@ -641,6 +656,7 @@ export default function Perfil() {
                     />
                   </div>
                 </div>
+
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -680,7 +696,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* SECURITY (igual que lo tenías) */}
+            {/* SECURITY */}
             {activeTab === "security" && (
               <form
                 className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-6"
@@ -777,8 +793,8 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* WALLET — solo muestra saldoTotalUsuario + Añadir tarjeta */}
-            {activeTab === "wallet" && (
+            {/* WALLET — solo si el usuario tiene monedero */}
+            {activeTab === "wallet" && hasWallet && (
               <div className="space-y-6">
                 {/* Saldo */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
@@ -868,7 +884,7 @@ export default function Perfil() {
       </div>
 
       {/* MODAL AÑADIR TARJETA */}
-      {showAddCard && (
+      {showAddCard && hasWallet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100">
             <div className="p-6">
@@ -968,7 +984,7 @@ export default function Perfil() {
                       }}
                       onKeyDown={(e) => {
                         const allowedKeys = [
-                          "Backspace","Delete","Tab","Enter","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"
+                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
                         ];
                         if (allowedKeys.includes(e.key)) return;
                         if (/^\d$/.test(e.key)) e.preventDefault();
