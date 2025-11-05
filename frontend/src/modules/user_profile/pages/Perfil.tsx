@@ -3,7 +3,7 @@ import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-// Lista de nacionalidades (recortada por brevedad; usa tu lista completa)
+// Lista de nacionalidades (recortada por brevedad)
 const NATIONALITIES = [
   { label: "Colombia", value: "Colombia" },
   { label: "Argentina", value: "Argentina" },
@@ -25,7 +25,7 @@ interface Profile {
   suscrito_noticias: boolean;
   creado_en: string;
   must_change_password: boolean;
-  tipo_usuario?: string;
+  tipo_usuario?: string; // "admin" | "root" | otro
 }
 
 type ActiveTab = "personal" | "contact" | "security" | "wallet";
@@ -82,20 +82,7 @@ export default function Perfil() {
 
   // Sincronizar tabs con query params
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") as ActiveTab | null;
-
-  useEffect(() => {
-    if (tabFromUrl && ["personal", "contact", "security", "wallet"].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-    } else {
-      setSearchParams({ tab: "personal" });
-    }
-  }, [tabFromUrl, setSearchParams]);
-
-  const handleTabChange = (newTab: ActiveTab) => {
-    setActiveTab(newTab);
-    setSearchParams({ tab: newTab });
-  };
+  const tabFromUrl = (searchParams.get("tab") as ActiveTab | null) ?? null;
 
   // Seguridad
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -110,11 +97,12 @@ export default function Perfil() {
   const [contactForm, setContactForm] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Monedero (solo saldoTotalUsuario) y métodos (UI local)
+  // ---------- Monedero (saldoTotalUsuario desde /tarjetas) ----------
   const [walletBalance, setWalletBalance] = useState<number>(0); // saldoTotalUsuario
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
+  // UI local de métodos
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     { id: "pm_1", brand: "visa", last4: "4242", holder: "Nombre Apellido", expMonth: "12", expYear: "27", isDefault: true },
   ]);
@@ -134,6 +122,40 @@ export default function Perfil() {
   });
   const [addCardError, setAddCardError] = useState<string | null>(null);
   const [addCardOk, setAddCardOk] = useState<string | null>(null);
+
+  // Sólo usuarios con monedero:
+  const hasWallet = !(profile?.tipo_usuario === "admin" || profile?.tipo_usuario === "root");
+
+  // Tabs permitidos según rol
+  const availableTabs: { id: ActiveTab; label: string; icon: string }[] = [
+    { id: "personal", label: "Información personal", icon: "👤" },
+    { id: "contact", label: "Información de contacto", icon: "📧" },
+    { id: "security", label: "Seguridad", icon: "🔒" },
+    ...(hasWallet ? [{ id: "wallet", label: "Monedero", icon: "💳" } as const] : []),
+  ];
+
+  // Efecto inicial: si la URL trae un tab inválido o wallet para roles sin monedero, forzar "personal"
+  useEffect(() => {
+    const ids = availableTabs.map(t => t.id);
+    if (tabFromUrl && ids.includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    } else {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
+
+  const handleTabChange = (newTab: ActiveTab) => {
+    // Evitar navegar a wallet si no tiene monedero
+    if (newTab === "wallet" && !hasWallet) {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+      return;
+    }
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
 
   // Parse exp "MM/YY"
   const parseExp = (exp: string) => {
@@ -158,20 +180,20 @@ export default function Perfil() {
   })();
 
   // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
-  const fetchWallet = async () => {
+const fetchWallet = async () => {
     setWalletError(null);
     setWalletLoading(true);
     try {
       // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
-      const res = await api.get("/tarjetas");
+      const res = await api.get("/profile");
       // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
-      const total = Number(res?.data?.saldoTotalUsuario ?? 0);
+      const total = Number(res?.data?.saldo ?? 0);
       setWalletBalance(Number.isFinite(total) ? total : 0);
       // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
-      console.error("GET /tarjetas error:", err?.response?.data || err);
+      console.error("GET /tarjetas error:", err?.response?.data,  err);
       const msg =
-        err?.response?.data?.message ||
+        err?.response?.data?.message 
         err?.response?.data?.error ||
         "No se pudo obtener el saldo.";
       setWalletError(msg);
@@ -186,21 +208,26 @@ export default function Perfil() {
     setAddCardOk(null);
 
     if (!canSubmitCard) {
-      setAddCardError("Por favor completa los campos correctamente.");
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
       return;
     }
 
     try {
       setSavingCard(true);
 
-      const { month, year } = parseExp(addCardForm.exp)!;
+      const parsed = parseExp(addCardForm.exp);
+      if (!parsed) {
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
+        return;
+      }
+      const { month, year } = parsed;
       const titular = addCardForm.holder.trim();
       const banco = addCardForm.banco.trim();
       const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
       const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
 
       if (digitsOnly.length < 16) {
-        setAddCardError("El número de tarjeta debe tener al menos 16 dígitos.");
+        setAddCardError("No pudimos validar la validez de esta tarjeta");
         return;
       }
 
@@ -217,7 +244,7 @@ export default function Perfil() {
 
       await api.post("/tarjetas/cards", payload);
 
-      // ✅ Re-consultar saldoTotalUsuario inmediatamente
+      // Re-consultar saldoTotalUsuario inmediatamente
       await fetchWallet();
 
       // UI local de métodos (opcional)
@@ -247,11 +274,8 @@ export default function Perfil() {
       });
     } catch (err: any) {
       console.error("Crear tarjeta error:", err?.response?.data || err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "❌ No se pudo guardar la tarjeta.";
-      setAddCardError(msg);
+      // Mensaje unificado de validez
+      setAddCardError("No pudimos validar la validez de esta tarjeta");
     } finally {
       setSavingCard(false);
     }
@@ -279,6 +303,7 @@ export default function Perfil() {
 
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
 
+  // Cargar perfil y saldo inicial
   useEffect(() => {
     const getProfileInfo = async () => {
       try {
@@ -298,13 +323,16 @@ export default function Perfil() {
           suscrito_noticias: res.data.suscrito_noticias,
         });
 
-        // ✅ Traer saldo (saldoTotalUsuario)
-        fetchWallet(); // no await; paralelo
+        // Traer saldo (solo si tiene monedero)
+        if (!(res.data?.tipo_usuario === "admin" || res.data?.tipo_usuario === "root")) {
+          fetchWallet(); // paralelo
+        }
       } catch (err) {
         console.error(err);
       }
     };
     getProfileInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
@@ -362,12 +390,7 @@ export default function Perfil() {
 
           {/* Tabs */}
           <div className="flex justify-center mb-8 bg-gray-50 rounded-lg p-2">
-            {[
-              { id: "personal", label: "Información personal", icon: "👤" },
-              { id: "contact", label: "Información de contacto", icon: "📧" },
-              { id: "security", label: "Seguridad", icon: "🔒" },
-              { id: "wallet", label: "Monedero", icon: "💳" },
-            ].map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
@@ -376,7 +399,7 @@ export default function Perfil() {
                   setPasswordMessage(null);
                 }}
                 className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${
-                  activeTab === (tab.id as ActiveTab)
+                  activeTab === tab.id
                     ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
                     : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
                 }`}
@@ -389,7 +412,7 @@ export default function Perfil() {
 
           {/* Contenido tabs */}
           <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-            {/* PERSONAL (se conserva igual que tenías) */}
+            {/* PERSONAL */}
             {activeTab === "personal" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -416,7 +439,6 @@ export default function Perfil() {
                   }
                 }}
               >
-                {/* ... (tus campos de personal tal como los tenías) */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
                   <input
@@ -563,7 +585,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT (igual que lo tenías) */}
+            {/* CONTACT */}
             {activeTab === "contact" && (
               <form
                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
@@ -598,6 +620,7 @@ export default function Perfil() {
                     value={contactForm.correo || ""}
                     disabled={true}
                     onChange={(e) => setContactForm({ ...contactForm, correo: e.target.value })}
+                    maxLength={50}
                   />
                 </div>
                 <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -609,36 +632,35 @@ export default function Perfil() {
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-<div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
-    Suscrito a noticias
-  </label>
+                  <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2 mt-4">
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      Suscrito a noticias
+                    </label>
+                    <input
+                      type="checkbox"
+                      checked={!!contactForm.suscrito_noticias}
+                      onChange={async (e) => {
+                        const nuevoValor = e.target.checked;
+                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+                        try {
+                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
+                          setUpdateMessage(
+                            nuevoValor
+                              ? "✅ Te has suscrito correctamente a las noticias."
+                              : "❌ Has cancelado la suscripción a las noticias."
+                          );
+                        } catch (err: any) {
+                          console.error("Error al actualizar suscripción:", err);
+                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
+                          // Revertir visualmente el cambio si falla
+                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+                        }
+                      }}
+                      className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
+                    />
+                  </div>
+                </div>
 
-        <input
-          type="checkbox"
-          checked={!!contactForm.suscrito_noticias}
-          onChange={async (e) => {
-            const nuevoValor = e.target.checked;
-            setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
-
-            try {
-              await api.patch("/profile", { suscrito_noticias: nuevoValor });
-              setUpdateMessage(
-                nuevoValor
-                  ? "✅ Te has suscrito correctamente a las noticias."
-                  : "❌ Has cancelado la suscripción a las noticias."
-              );
-            } catch (err: any) {
-              console.error("Error al actualizar suscripción:", err);
-              setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-              // Revertir visualmente el cambio si falla
-              setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
-            }
-          }}
-          className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
-        />
-      </div>
-                      </div>
                 <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
                   {updateMessage && (
                     <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
@@ -678,7 +700,7 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* SECURITY (igual que lo tenías) */}
+            {/* SECURITY */}
             {activeTab === "security" && (
               <form
                 className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-6"
@@ -746,7 +768,7 @@ export default function Perfil() {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duration-300"
+                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duración-300"
                         required
                       />
                     </div>
@@ -775,8 +797,8 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* WALLET — solo muestra saldoTotalUsuario + Añadir tarjeta */}
-            {activeTab === "wallet" && (
+            {/* WALLET — solo si el usuario tiene monedero */}
+            {activeTab === "wallet" && hasWallet && (
               <div className="space-y-6">
                 {/* Saldo */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
@@ -859,10 +881,6 @@ export default function Perfil() {
                     </ul>
                   )}
                 </div>
-
-                <p className="text-xs text-gray-500">
-                  * El saldo mostrado corresponde a <strong>saldoTotalUsuario</strong> de <code>GET /tarjetas</code>.
-                </p>
               </div>
             )}
           </div>
@@ -870,7 +888,7 @@ export default function Perfil() {
       </div>
 
       {/* MODAL AÑADIR TARJETA */}
-      {showAddCard && (
+      {showAddCard && hasWallet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100">
             <div className="p-6">
@@ -956,41 +974,36 @@ export default function Perfil() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
-<input
-    type="text"
-    inputMode="text"
-    autoComplete="off"
-    // HTML pattern por si usas validación nativa del form:
-    pattern="^[A-Za-zÀ-ÿ\s]+$"
-    value={addCardForm.banco}
-    onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
-      // Evita inyectar caracteres inválidos antes de que entren al input
-      const data = (e as unknown as InputEvent).data ?? "";
-      if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
-        (e.nativeEvent as InputEvent).preventDefault();
-      }
-    }}
-    onKeyDown={(e) => {
-      // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
-      const allowedKeys = [
-        "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
-      ];
-      if (allowedKeys.includes(e.key)) return;
-      if (/^\d$/.test(e.key)) e.preventDefault();
-    }}
-    onPaste={(e) => {
-      // Valida pegado: solo letras y espacios
-      const text = e.clipboardData.getData("text");
-      if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
-    }}
-    onChange={(e) => {
-      // Filtro definitivo por si algo se cuela (ej. autocompletar)
-      const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
-      setAddCardForm((s) => ({ ...s, banco: limpio }));
-    }}
-    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-    placeholder="Banco de Bogotá"
-  />
+                    <input
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      pattern="^[A-Za-zÀ-ÿ\s]+$"
+                      value={addCardForm.banco}
+                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
+                        const data = (e as unknown as InputEvent).data ?? "";
+                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
+                          (e.nativeEvent as InputEvent).preventDefault();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        const allowedKeys = [
+                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
+                        ];
+                        if (allowedKeys.includes(e.key)) return;
+                        if (/^\d$/.test(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData("text");
+                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
+                      }}
+                      onChange={(e) => {
+                        const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+                        setAddCardForm((s) => ({ ...s, banco: limpio }));
+                      }}
+                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      placeholder="Banco de Bogotá"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Tipo</label>
@@ -1004,15 +1017,13 @@ export default function Perfil() {
                     </select>
                   </div>
                 </div>
-
-
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddCard(false)}
-                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
                 >
                   Cancelar
                 </button>

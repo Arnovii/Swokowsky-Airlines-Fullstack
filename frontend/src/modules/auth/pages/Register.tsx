@@ -432,6 +432,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
+              maxLength={8}
             />
           </div>
           {/* Nombre */}
@@ -444,6 +445,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
+              maxLength={40}
             />
           </div>
           {/* Apellido */}
@@ -456,6 +458,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
+              maxLength={20}
             />
           </div>
           {/* Fecha de nacimiento */}
@@ -514,6 +517,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
+              maxLength={50}
             />
           </div>
           {/* Username */}
@@ -526,6 +530,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border rounded-lg"
+              maxLength={20}
             />
           </div>
           {/* Contraseña */}

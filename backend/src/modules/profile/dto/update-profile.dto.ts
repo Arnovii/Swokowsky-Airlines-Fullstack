@@ -28,6 +28,16 @@ export class UpdateUserDto {
   dni?: number;
 
   @ApiProperty({
+      example: '546462123456',
+      description: 'saldo del usuario',
+      required: false,
+    })
+    @IsOptional()
+    @IsInt()
+    @IsNotEmpty()
+    saldo?: number;
+
+  @ApiProperty({
     example: 'Juan',
     description: 'Nombre del usuario',
     required: false,
