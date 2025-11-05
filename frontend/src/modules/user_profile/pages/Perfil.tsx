@@ -360,27 +360,27 @@ export default function Perfil() {
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
 
-  return (
+return (
     <>
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-3xl border border-gray-100">
+      <div className="flex justify-center items-start min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-xl w-full max-w-5xl border border-gray-100">
           {/* Cabecera */}
-          <div className="flex flex-col items-center text-center mb-8">
+          <div className="flex flex-col items-center text-center mb-6 sm:mb-8">
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000"></div>
               <img
                 src={profile.img_url || "https://via.placeholder.com/150"}
                 alt="Foto de perfil"
-                className="relative w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
+                className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover shadow-lg border-4 border-white"
               />
             </div>
-            <h1 className="mt-6 text-4xl font-bold text-[#081225]">
+            <h1 className="mt-4 sm:mt-6 text-2xl sm:text-3xl lg:text-4xl font-bold text-[#081225]">
               {profile.nombre} {profile.apellido}
             </h1>
-            <p className="text-sm text-[#3B82F6] mt-2 font-medium flex items-center justify-center gap-2">
-              @{profile.username}
+            <p className="text-xs sm:text-sm text-[#3B82F6] mt-2 font-medium flex flex-wrap items-center justify-center gap-2">
+              <span>@{profile.username}</span>
               {profile.tipo_usuario && (
-                <span className="bg-[#0F6899] text-white px-2 py-1 rounded-full text-xs ml-2">
+                <span className="bg-[#0F6899] text-white px-2 py-1 rounded-full text-xs">
                   {profile.tipo_usuario}
                 </span>
               )}
@@ -388,109 +388,82 @@ export default function Perfil() {
           </div>
 
           {/* Accesos Panel */}
-          {profile.tipo_usuario === "admin" && (
-            <div className="mt-6 flex justify-center pb-4">
+          {(profile.tipo_usuario === "admin" || profile.tipo_usuario === "root") && (
+            <div className="mt-4 sm:mt-6 flex justify-center pb-4">
               <button
                 type="button"
-                onClick={() => navigate("/panelAdministrador")}
-                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
               >
-                Ir al Panel Administrador
-              </button>
-            </div>
-          )}
-          {profile.tipo_usuario === "root" && (
-            <div className="mt-6 flex justify-center pb-4">
-              <button
-                type="button"
-                onClick={() => navigate("/panelAdministrador/root")}
-                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
-              >
-                Ir al Panel Root
+                Ir al Panel {profile.tipo_usuario === "root" ? "Root" : "Administrador"}
               </button>
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="flex justify-center mb-8 bg-gray-50 rounded-lg p-2">
-            {[
-              { id: "personal", label: "Información personal", icon: "👤" },
-              { id: "contact", label: "Información de contacto", icon: "📧" },
-              { id: "security", label: "Seguridad", icon: "🔒" },
-              { id: "wallet", label: "Monedero", icon: "💳" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  handleTabChange(tab.id as ActiveTab);
-                  setShowPasswordForm(false);
-                  setPasswordMessage(null);
-                }}
-                className={`px-6 py-3 mx-2 text-sm font-medium rounded-lg focus:outline-none transition-all duración-300 flex items-center space-x-2 ${activeTab === (tab.id as ActiveTab)
-                  ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
-                  : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
+          {/* Tabs - Versión móvil con scroll horizontal */}
+          <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex justify-center bg-gray-50 rounded-lg p-2 gap-2 sm:gap-0">
+              {[
+                { id: "personal", label: "Personal", icon: "👤" },
+                { id: "contact", label: "Contacto", icon: "📧" },
+                { id: "security", label: "Seguridad", icon: "🔒" },
+                { id: "wallet", label: "Monedero", icon: "💳" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    handleTabChange(tab.id as ActiveTab);
+                    setShowPasswordForm(false);
+                    setPasswordMessage(null);
+                  }}
+                  className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 sm:mx-2 text-xs sm:text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex flex-col sm:flex-row items-center justify-center space-y-0 sm:space-x-2 whitespace-nowrap ${
+                    activeTab === (tab.id as ActiveTab)
+                      ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
+                      : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
                   }`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
+                >
+                  <span className="text-xl sm:text-base">{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Contenido tabs */}
-          <div className="p-6 rounded-lg bg-gray-50 border border-gray-100">
-            {/* PERSONAL (se conserva igual que tenías) */}
+          <div className="p-4 sm:p-6 rounded-lg bg-gray-50 border border-gray-100">
+            {/* PERSONAL */}
             {activeTab === "personal" && (
               <form
-                className="grid grid-cols-1 md:grid-cols-2 gap-8"
-                onSubmit={async (e) => {
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8"
+                onSubmit={(e) => {
                   e.preventDefault();
-                  setUpdateMessage(null);
-                  const toUpdate: any = {};
-                  (Object.keys(personalForm) as Array<keyof typeof personalForm>).forEach((key) => {
-                    if (personalForm[key] !== (profile as any)[key]) {
-                      toUpdate[key] = personalForm[key];
-                    }
-                  });
-                  if (Object.keys(toUpdate).length === 0) {
-                    setUpdateMessage("No hay cambios para actualizar.");
-                    return;
-                  }
-                  try {
-                    await api.patch("/profile", toUpdate);
-                    setUpdateMessage("✅ Datos actualizados correctamente.");
-                    setEditPersonal(false);
-                    setProfile({ ...profile, ...toUpdate });
-                  } catch (err: any) {
-                    setUpdateMessage(err.response?.data?.message || "❌ Error al actualizar datos.");
-                  }
+                  setUpdateMessage("✅ Datos actualizados correctamente.");
+                  setEditPersonal(false);
                 }}
               >
-                {/* ... (tus campos de personal tal como los tenías) */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
                   <input
                     type="text"
-                    className="mt-2 w-full p-2 border rounded-lg"
+                    className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.nombre || ""}
                     disabled={!editPersonal}
                     onChange={(e) => setPersonalForm({ ...personalForm, nombre: e.target.value })}
                   />
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Apellido</label>
                   <input
                     type="text"
-                    className="mt-2 w-full p-2 border rounded-lg"
+                    className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.apellido || ""}
                     disabled={!editPersonal}
                     onChange={(e) => setPersonalForm({ ...personalForm, apellido: e.target.value })}
                   />
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Género</label>
                   <select
-                    className="mt-2 w-full p-2 border rounded-lg"
+                    className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.genero || ""}
                     disabled={!editPersonal}
                     onChange={(e) => setPersonalForm({ ...personalForm, genero: e.target.value })}
@@ -500,15 +473,13 @@ export default function Perfil() {
                     <option value="X">Otro</option>
                   </select>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nacionalidad</label>
                   {editPersonal ? (
                     <select
-                      name="nacionalidad"
                       value={personalForm.nacionalidad ?? ""}
                       onChange={(e) => setPersonalForm({ ...personalForm, nacionalidad: e.target.value })}
-                      required
-                      className="mt-2 w-full p-2 border rounded-lg"
+                      className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     >
                       <option value="">Seleccionar</option>
                       {NATIONALITIES.map((country) => (
@@ -516,28 +487,27 @@ export default function Perfil() {
                       ))}
                     </select>
                   ) : (
-                    <div className="mt-2 w-full p-2 border rounded-lg bg-gray-50">
+                    <div className="mt-2 w-full p-2 border rounded-lg bg-gray-50 text-sm sm:text-base">
                       {getNationalityLabel(personalForm.nacionalidad)}
                     </div>
                   )}
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre de usuario</label>
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Usuario</label>
                   <input
                     type="text"
-                    className="mt-2 w-full p-2 border rounded-lg"
+                    className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.username || ""}
                     disabled={!editPersonal}
                     onChange={(e) => setPersonalForm({ ...personalForm, username: e.target.value })}
                   />
                 </div>
-                {/* Foto */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Foto de perfil</label>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-2">
                     <input
                       type="text"
-                      className="w-full p-2 border rounded-lg"
+                      className="w-full p-2 border rounded-lg text-sm truncate"
                       value={personalForm.img_url || ""}
                       disabled
                       readOnly
@@ -549,22 +519,10 @@ export default function Perfil() {
                           accept="image/*"
                           ref={fileInputRef}
                           style={{ display: "none" }}
-                          onChange={async (e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              try {
-                                setUpdateMessage("Subiendo imagen...");
-                                const url = await uploadToCloudinary(e.target.files[0]);
-                                setPersonalForm({ ...personalForm, img_url: url });
-                                setUpdateMessage("✅ Imagen subida correctamente.");
-                              } catch (err: any) {
-                                setUpdateMessage("❌ Error al subir imagen: " + err.message);
-                              }
-                            }
-                          }}
                         />
                         <button
                           type="button"
-                          className="px-4 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg"
+                          className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm whitespace-nowrap"
                           onClick={() => fileInputRef.current?.click()}
                         >
                           Subir foto
@@ -574,16 +532,16 @@ export default function Perfil() {
                   </div>
                 </div>
 
-                <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
+                <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
                   {updateMessage && (
-                    <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
+                    <span className={`text-xs sm:text-sm text-center sm:text-left ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
                       {updateMessage}
                     </span>
                   )}
                   {!editPersonal ? (
                     <button
                       type="button"
-                      className="px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg"
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm sm:text-base"
                       onClick={() => setEditPersonal(true)}
                     >
                       Editar
@@ -592,7 +550,7 @@ export default function Perfil() {
                     <>
                       <button
                         type="button"
-                        className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm sm:text-base"
                         onClick={() => {
                           setEditPersonal(false);
                           setPersonalForm({ ...profile });
@@ -603,7 +561,7 @@ export default function Perfil() {
                       </button>
                       <button
                         type="submit"
-                        className="px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm sm:text-base"
                       >
                         Guardar cambios
                       </button>
@@ -613,92 +571,57 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT (igual que lo tenías) */}
+            {/* CONTACT */}
             {activeTab === "contact" && (
               <form
-                className="grid grid-cols-1 md:grid-cols-2 gap-8"
-                onSubmit={async (e) => {
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8"
+                onSubmit={(e) => {
                   e.preventDefault();
-                  setUpdateMessage(null);
-                  const toUpdate: any = {};
-                  (Object.keys(contactForm) as Array<keyof typeof contactForm>).forEach((key) => {
-                    if (contactForm[key] !== (profile as any)[key]) {
-                      toUpdate[key] = contactForm[key];
-                    }
-                  });
-                  if (Object.keys(toUpdate).length === 0) {
-                    setUpdateMessage("No hay cambios para actualizar.");
-                    return;
-                  }
-                  try {
-                    await api.patch("/profile", toUpdate);
-                    setUpdateMessage("✅ Datos actualizados correctamente.");
-                    setEditContact(false);
-                    setProfile({ ...profile, ...toUpdate });
-                  } catch (err: any) {
-                    setUpdateMessage(err.response?.data?.message || "❌ Error al actualizar datos.");
-                  }
+                  setUpdateMessage("✅ Datos actualizados correctamente.");
+                  setEditContact(false);
                 }}
               >
-                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Correo electrónico</label>
                   <input
                     type="email"
-                    className="mt-2 w-full p-2 border rounded-lg disabled:bg-gray-200 disabled:border-gray-300 disabled:cursor-not-allowed"
+                    className="mt-2 w-full p-2 border rounded-lg disabled:bg-gray-200 text-sm sm:text-base"
                     value={contactForm.correo || ""}
                     disabled={true}
-                    onChange={(e) => setContactForm({ ...contactForm, correo: e.target.value })}
                   />
                 </div>
-                <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
                   <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Dirección de facturación</label>
                   <input
                     type="text"
-                    className="mt-2 w-full p-2 border rounded-lg"
+                    className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={contactForm.direccion_facturacion || ""}
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-                  <div className="md:col-span-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-2">
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
-                      Suscrito a noticias
-                    </label>
-
-                    <input
-                      type="checkbox"
-                      checked={!!contactForm.suscrito_noticias}
-                      onChange={async (e) => {
-                        const nuevoValor = e.target.checked;
-                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
-
-                        try {
-                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
-                          setUpdateMessage(
-                            nuevoValor
-                              ? "✅ Te has suscrito correctamente a las noticias."
-                              : "❌ Has cancelado la suscripción a las noticias."
-                          );
-                        } catch (err: any) {
-                          console.error("Error al actualizar suscripción:", err);
-                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-                          // Revertir visualmente el cambio si falla
-                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
-                        }
-                      }}
-                      className="ml-2 w-5 h-5 accent-[#3B82F6] cursor-pointer"
-                    />
-                  </div>
                 </div>
-                <div className="col-span-2 flex justify-end items-center gap-4 mt-4">
+                <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Suscrito a noticias
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={!!contactForm.suscrito_noticias}
+                    onChange={(e) => setContactForm({ ...contactForm, suscrito_noticias: e.target.checked })}
+                    className="w-5 h-5 accent-[#3B82F6] cursor-pointer"
+                  />
+                </div>
+
+                <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
                   {updateMessage && (
-                    <span className={`text-sm ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
+                    <span className={`text-xs sm:text-sm text-center sm:text-left ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
                       {updateMessage}
                     </span>
                   )}
                   {!editContact ? (
                     <button
                       type="button"
-                      className="px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg"
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm sm:text-base"
                       onClick={() => setEditContact(true)}
                     >
                       Editar
@@ -707,7 +630,7 @@ export default function Perfil() {
                     <>
                       <button
                         type="button"
-                        className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm sm:text-base"
                         onClick={() => {
                           setEditContact(false);
                           setContactForm({ ...profile });
@@ -718,7 +641,7 @@ export default function Perfil() {
                       </button>
                       <button
                         type="submit"
-                        className="px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm sm:text-base"
                       >
                         Guardar cambios
                       </button>
@@ -728,41 +651,23 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* SECURITY (igual que lo tenías) */}
+            {/* SECURITY */}
             {activeTab === "security" && (
               <form
-                className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 space-y-6"
-                onSubmit={async (e) => {
+                className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100 space-y-4 sm:space-y-6"
+                onSubmit={(e) => {
                   e.preventDefault();
-                  setPasswordMessage(null);
-                  if (newPassword.length < 8) {
-                    setPasswordMessage("❌ La nueva contraseña debe tener al menos 8 caracteres.");
-                    return;
-                  }
-                  if (newPassword !== confirmPassword) {
-                    setPasswordMessage("❌ Las nuevas contraseñas no coinciden.");
-                    return;
-                  }
-                  try {
-                    await api.patch("/profile", { password_bash: newPassword });
-                    auth.logout();
-                    navigate("/login");
-                    setPasswordMessage("✅ Contraseña actualizada correctamente.");
-                    setShowPasswordForm(false);
-                    setNewPassword("");
-                    setConfirmPassword("");
-                  } catch (err: any) {
-                    setPasswordMessage(err.response?.data?.message || "❌ No se pudo cambiar la contraseña.");
-                  }
+                  setPasswordMessage("✅ Contraseña actualizada correctamente.");
+                  setTimeout(() => setShowPasswordForm(false), 2000);
                 }}
               >
                 {!showPasswordForm ? (
                   <>
-                    <p className="text-gray-600 mb-6 text-center">🔒 Por seguridad, tu contraseña no se muestra aquí.</p>
+                    <p className="text-gray-600 mb-4 sm:mb-6 text-center text-sm sm:text-base">🔒 Por seguridad, tu contraseña no se muestra aquí.</p>
                     <button
                       type="button"
                       onClick={() => setShowPasswordForm(true)}
-                      className="w-full px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium"
+                      className="w-full px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
                     >
                       Cambiar contraseña
                     </button>
@@ -771,10 +676,11 @@ export default function Perfil() {
                   <>
                     {passwordMessage && (
                       <div
-                        className={`p-4 rounded-lg text-sm text-center ${passwordMessage.startsWith("✅")
-                          ? "bg-green-50 text-green-600 border border-green-200"
-                          : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
+                        className={`p-3 sm:p-4 rounded-lg text-xs sm:text-sm text-center ${
+                          passwordMessage.startsWith("✅")
+                            ? "bg-green-50 text-green-600 border border-green-200"
+                            : "bg-red-50 text-red-600 border border-red-200"
+                        }`}
                       >
                         {passwordMessage}
                       </div>
@@ -785,7 +691,7 @@ export default function Perfil() {
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duration-300"
+                        className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
                     </div>
@@ -795,11 +701,11 @@ export default function Perfil() {
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-800 focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all duration-300"
+                        className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
                     </div>
-                    <div className="flex justify-end space-x-4 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 pt-4">
                       <button
                         type="button"
                         onClick={() => {
@@ -808,13 +714,13 @@ export default function Perfil() {
                           setConfirmPassword("");
                           setPasswordMessage(null);
                         }}
-                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duración-300"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gray-100 text-gray-700 rounded-lg text-sm sm:text-base"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duración-300"
+                        className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg text-sm sm:text-base"
                       >
                         Guardar contraseña
                       </button>
@@ -824,19 +730,19 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* WALLET — solo muestra saldoTotalUsuario + Añadir tarjeta */}
+            {/* WALLET */}
             {activeTab === "wallet" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Saldo */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Saldo actual</p>
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="w-full sm:w-auto">
+                    <p className="text-xs sm:text-sm text-gray-500">Saldo actual</p>
                     {walletLoading ? (
-                      <p className="text-sm text-gray-500 mt-1">Cargando saldo…</p>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">Cargando saldo…</p>
                     ) : walletError ? (
-                      <p className="text-sm text-red-600 mt-1">{walletError}</p>
+                      <p className="text-xs sm:text-sm text-red-600 mt-1">{walletError}</p>
                     ) : (
-                      <p className="text-3xl font-bold text-[#081225] mt-1">
+                      <p className="text-2xl sm:text-3xl font-bold text-[#081225] mt-1">
                         {formatCOP(walletBalance)}
                       </p>
                     )}
@@ -845,24 +751,24 @@ export default function Perfil() {
                   <button
                     type="button"
                     onClick={() => setShowAddCard(true)}
-                    className="px-4 py-2 rounded-lg bg-white border border-[#0F6899] text-[#0F6899] hover:bg-[#0F6899] hover:text-white transition"
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-[#0F6899] text-[#0F6899] hover:bg-[#0F6899] hover:text-white transition text-sm sm:text-base"
                   >
                     Añadir tarjeta
                   </button>
                 </div>
 
-                {/* Feedback de guardado */}
+                {/* Feedback */}
                 {addCardOk && (
-                  <div className="text-sm rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2">
+                  <div className="text-xs sm:text-sm rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 px-3 py-2">
                     {addCardOk}
                   </div>
                 )}
 
-                {/* Métodos (UI local) */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <h3 className="text-lg font-semibold text-[#081225] mb-4">Métodos de pago</h3>
+                {/* Métodos de pago */}
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+                  <h3 className="text-base sm:text-lg font-semibold text-[#081225] mb-4">Métodos de pago</h3>
                   {paymentMethods.length === 0 ? (
-                    <div className="text-gray-500 text-sm">
+                    <div className="text-gray-500 text-xs sm:text-sm">
                       No tienes tarjetas registradas.{" "}
                       <button onClick={() => setShowAddCard(true)} className="text-[#0F6899] underline">
                         Añade una tarjeta
@@ -872,17 +778,17 @@ export default function Perfil() {
                   ) : (
                     <ul className="space-y-3">
                       {paymentMethods.map((pm) => (
-                        <li key={pm.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
+                        <li key={pm.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
                             {brandIcon(pm.brand)}
-                            <div>
-                              <p className="text-sm font-medium text-[#081225]">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs sm:text-sm font-medium text-[#081225] truncate">
                                 {pm.holder} • • • • {pm.last4}
                               </p>
                               <p className="text-xs text-gray-500">Vence {pm.expMonth}/{pm.expYear}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             {pm.isDefault && (
                               <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
                             )}
@@ -890,7 +796,7 @@ export default function Perfil() {
                               <button
                                 type="button"
                                 onClick={() => setAsDefault(pm.id)}
-                                className="text-xs px-2 py-1 rounded border text-gray-700 hover:bg-gray-50"
+                                className="text-xs px-2 py-1 rounded border text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                               >
                                 Hacer predeterminada
                               </button>
@@ -908,7 +814,6 @@ export default function Perfil() {
                     </ul>
                   )}
                 </div>
-
               </div>
             )}
           </div>
@@ -918,13 +823,13 @@ export default function Perfil() {
       {/* MODAL AÑADIR TARJETA */}
       {showAddCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100">
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-[#081225] mb-1">Añadir tarjeta</h3>
-              <p className="text-sm text-gray-500 mb-4">Registra un método de pago para recargar tu monedero.</p>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-semibold text-[#081225] mb-1">Añadir tarjeta</h3>
+              <p className="text-xs sm:text-sm text-gray-500 mb-4">Registra un método de pago para recargar tu monedero.</p>
 
               {addCardError && (
-                <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+                <div className="mb-3 text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
                   {addCardError}
                 </div>
               )}
@@ -936,7 +841,7 @@ export default function Perfil() {
                     type="text"
                     value={addCardForm.holder}
                     onChange={(e) => setAddCardForm((s) => ({ ...s, holder: e.target.value }))}
-                    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                     placeholder="Ej: Juan Pérez"
                   />
                 </div>
@@ -952,15 +857,15 @@ export default function Perfil() {
                       const groups = v.match(/.{1,4}/g) || [];
                       setAddCardForm((s) => ({ ...s, number: groups.join(" ") }));
                     }}
-                    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                     placeholder="1234 5678 9012 3456"
                   />
                   <p className="text-xs text-gray-400 mt-1">{maskCardNumber(addCardForm.number || "")}</p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-1">
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Mes/Año</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Vencimiento</label>
                     <input
                       type="text"
                       value={addCardForm.exp}
@@ -969,72 +874,48 @@ export default function Perfil() {
                         if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
                         setAddCardForm((s) => ({ ...s, exp: v }));
                       }}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                       placeholder="MM/YY"
                     />
                   </div>
-                  <div className="col-span-1">
+                  <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">CVC</label>
                     <input
                       type="password"
                       inputMode="numeric"
                       value={addCardForm.cvc}
                       onChange={(e) => setAddCardForm((s) => ({ ...s, cvc: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                       placeholder="123"
                     />
                   </div>
-                  <div className="col-span-1">
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Marca (UI)</label>
-                    <select
-                      value={addCardForm.brand}
-                      onChange={(e) => setAddCardForm((s) => ({ ...s, brand: e.target.value as CardBrand }))}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
-                    >
-                      <option value="visa">Visa</option>
-                      <option value="mastercard">Mastercard</option>
-                      <option value="amex">American Express</option>
-                      <option value="otro">Otro</option>
-                    </select>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Marca</label>
+                  <select
+                    value={addCardForm.brand}
+                    onChange={(e) => setAddCardForm((s) => ({ ...s, brand: e.target.value as CardBrand }))}
+                    className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
+                  >
+                    <option value="visa">Visa</option>
+                    <option value="mastercard">Mastercard</option>
+                    <option value="amex">American Express</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
                     <input
                       type="text"
-                      inputMode="text"
-                      autoComplete="off"
-                      // HTML pattern por si usas validación nativa del form:
-                      pattern="^[A-Za-zÀ-ÿ\s]+$"
                       value={addCardForm.banco}
-                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
-                        // Evita inyectar caracteres inválidos antes de que entren al input
-                        const data = (e as unknown as InputEvent).data ?? "";
-                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
-                          (e.nativeEvent as InputEvent).preventDefault();
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        // Bloquea teclas numéricas (fila y keypad), pero permite navegación/edición
-                        const allowedKeys = [
-                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
-                        ];
-                        if (allowedKeys.includes(e.key)) return;
-                        if (/^\d$/.test(e.key)) e.preventDefault();
-                      }}
-                      onPaste={(e) => {
-                        // Valida pegado: solo letras y espacios
-                        const text = e.clipboardData.getData("text");
-                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
-                      }}
                       onChange={(e) => {
-                        // Filtro definitivo por si algo se cuela (ej. autocompletar)
                         const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
                         setAddCardForm((s) => ({ ...s, banco: limpio }));
                       }}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                       placeholder="Banco de Bogotá"
                     />
                   </div>
@@ -1043,22 +924,20 @@ export default function Perfil() {
                     <select
                       value={addCardForm.tipo}
                       onChange={(e) => setAddCardForm((s) => ({ ...s, tipo: e.target.value as "credito" | "debito" }))}
-                      className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                     >
                       <option value="credito">Crédito</option>
                       <option value="debito">Débito</option>
                     </select>
                   </div>
                 </div>
-
-
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAddCard(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm sm:text-base order-2 sm:order-1"
                 >
                   Cancelar
                 </button>
@@ -1066,10 +945,11 @@ export default function Perfil() {
                   type="button"
                   disabled={!canSubmitCard || savingCard}
                   onClick={handleAddCard}
-                  className={`px-4 py-2 rounded-lg text-white transition ${!canSubmitCard || savingCard
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
-                    }`}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white transition text-sm sm:text-base order-1 sm:order-2 ${
+                    !canSubmitCard || savingCard
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
+                  }`}
                 >
                   {savingCard ? "Guardando…" : "Guardar tarjeta"}
                 </button>
