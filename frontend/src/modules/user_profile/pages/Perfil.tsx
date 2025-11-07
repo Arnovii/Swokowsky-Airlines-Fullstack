@@ -33,26 +33,39 @@ type CardBrand = "visa" | "mastercard" | "amex" | "otro";
 
 interface PaymentMethod {
   id: string;
-  brand: CardBrand;
+  brand: CardBrand | string;
   last4: string;
   holder: string;
-  expMonth: string; // "MM"
-  expYear: string;  // "YY" o "YYYY"
+  expMonth: string;
+  expYear: string;
   isDefault?: boolean;
+  banco?: string;
 }
 
-const brandIcon = (b: CardBrand) => {
-  const base = "px-2 py-1 rounded text-xs font-semibold";
-  switch (b) {
-    case "visa":
-      return <span className={`${base} bg-blue-100 text-blue-700`}>VISA</span>;
-    case "mastercard":
-      return <span className={`${base} bg-orange-100 text-orange-700`}>MASTERCARD</span>;
-    case "amex":
-      return <span className={`${base} bg-cyan-100 text-cyan-700`}>AMEX</span>;
-    default:
-      return <span className={`${base} bg-gray-100 text-gray-700`}>TARJETA</span>;
-  }
+const detectBrandFromPAN = (pan: string): CardBrand => {
+  const d = pan.replace(/\D/g, "");
+  if (/^4\d{12,18}$/.test(d)) return "visa"; // Visa
+  if (/^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7[01]\d{12}|720\d{12}))$/.test(d)) return "mastercard"; // 51–55, 2221–2720
+  if (/^(34|37)\d{13}$/.test(d)) return "amex"; // Amex
+  return "otro";
+};
+
+const detectBrandFromBanco = (banco?: string): CardBrand => {
+  const b = (banco || "").toLowerCase();
+  if (!b) return "otro";
+  if (b.includes("amex") || b.includes("american")) return "amex";
+  if (b.includes("visa")) return "visa";
+  if (b.includes("master")) return "mastercard";
+  return "otro";
+};
+
+const brandIcon = (brandInput?: string) => {
+  const base = "px-2 py-1 rounded text-xs font-semibold uppercase";
+  const b = (brandInput || "").toLowerCase();
+  if (b.includes("visa")) return <span className={`${base} bg-blue-100 text-blue-700`}>VISA</span>;
+  if (b.includes("master")) return <span className={`${base} bg-orange-100 text-orange-700`}>MASTERCARD</span>;
+  if (b.includes("amex") || b.includes("american")) return <span className={`${base} bg-cyan-100 text-cyan-700`}>AMEX</span>;
+  return <span className={`${base} bg-gray-100 text-gray-700`}>TARJETA</span>;
 };
 
 const maskCardNumber = (value: string) => {
@@ -97,8 +110,8 @@ export default function Perfil() {
   const [contactForm, setContactForm] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ---------- Monedero (saldoTotalUsuario desde /tarjetas) ----------
-  const [walletBalance, setWalletBalance] = useState<number>(0); // saldoTotalUsuario
+  // ---------- Monedero ----------
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
@@ -125,15 +138,15 @@ export default function Perfil() {
 
   // Tabs permitidos según rol
   const availableTabs: { id: ActiveTab; label: string; icon: string }[] = [
-    { id: "personal", label: "Información personal", icon: "👤" },
-    { id: "contact", label: "Información de contacto", icon: "📧" },
+    { id: "personal", label: "Personal", icon: "👤" },
+    { id: "contact", label: "Contacto", icon: "📧" },
     { id: "security", label: "Seguridad", icon: "🔒" },
     ...(hasWallet ? [{ id: "wallet", label: "Monedero", icon: "💳" } as const] : []),
   ];
 
   // Efecto inicial: si la URL trae un tab inválido o wallet para roles sin monedero, forzar "personal"
   useEffect(() => {
-    const ids = availableTabs.map(t => t.id);
+    const ids = availableTabs.map((t) => t.id);
     if (tabFromUrl && ids.includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     } else {
@@ -144,7 +157,6 @@ export default function Perfil() {
   }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
 
   const handleTabChange = (newTab: ActiveTab) => {
-    // Evitar navegar a wallet si no tiene monedero
     if (newTab === "wallet" && !hasWallet) {
       setSearchParams({ tab: "personal" });
       setActiveTab("personal");
@@ -176,22 +188,19 @@ export default function Perfil() {
     );
   })();
 
-  // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
+  // --- GET saldo desde /profile ---
   const fetchWallet = async () => {
     setWalletError(null);
     setWalletLoading(true);
     try {
-      // si api ya tiene baseURL=/api/v1, con "/tarjetas" basta
       const res = await api.get("/profile");
-      // esperamos un shape: { tarjetas: [...], saldoTotalUsuario: number }
       const total = Number(res?.data?.saldo ?? 0);
       setWalletBalance(Number.isFinite(total) ? total : 0);
-      // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
-      console.error("GET /tarjetas error:", err?.response?.data, err);
+      console.error("GET /profile (saldo) error:", err?.response?.data || err);
       const msg =
-        err?.response?.data?.message
-      err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
         "No se pudo obtener el saldo.";
       setWalletError(msg);
     } finally {
@@ -200,8 +209,6 @@ export default function Perfil() {
   };
 
   // POST /api/v1/tarjetas/cards
-
-
   const handleAddCard = async () => {
     setAddCardError(null);
     setAddCardOk(null);
@@ -241,33 +248,33 @@ export default function Perfil() {
         creado_en: new Date().toISOString(),
       };
 
-      // 🟢 Crea la tarjeta
       const res = await api.post("/tarjetas/cards", payload);
-      console.log("Respuesta creación tarjeta:", res.data);
+      const tarjeta = res?.data?.tarjeta ?? res?.data ?? null;
 
-      // 🧩 Ajuste importante: a veces el backend devuelve directamente el objeto
-      // y otras veces dentro de res.data.tarjeta
-      const tarjeta = res.data?.tarjeta ?? res.data ?? null;
-
-      // 🔁 Refresca el saldo
+      // refrescar saldo
       await fetchWallet();
 
+      // Derivar marca final: preferimos lo que el usuario seleccionó, si no, inferimos
+      const derivedBrand: CardBrand =
+        (addCardForm.brand as CardBrand) ||
+        detectBrandFromPAN(digitsOnly) ||
+        detectBrandFromBanco(banco) ||
+        "otro";
+
       if (tarjeta && tarjeta.id_tarjeta) {
-        // 🆔 Usa el ID real devuelto
         const newPm: PaymentMethod = {
           id: String(tarjeta.id_tarjeta),
-          brand: "visa", // 👈 detecta automáticamente
-          last4: String(tarjeta.num_tarjeta).slice(-4),
-          holder: tarjeta.titular,
-          expMonth: String(tarjeta.vence_mes).padStart(2, "0"),
-          expYear: String(tarjeta.vence_anio),
+          brand: derivedBrand,
+          last4: String(tarjeta.num_tarjeta || digitsOnly).slice(-4),
+          holder: tarjeta.titular || titular,
+          expMonth: String(tarjeta.vence_mes ?? month).padStart(2, "0"),
+          expYear: String(tarjeta.vence_anio ?? year),
           isDefault: addCardForm.makeDefault || paymentMethods.length === 0,
+          banco,
         };
-
-        // Agrega la tarjeta localmente
         setPaymentMethods((prev) => [newPm, ...prev]);
       } else {
-        // Si no devuelve la tarjeta, vuelve a pedirlas
+        // si el backend no devuelve la tarjeta, volver a pedirlas
         await fetchCards();
       }
 
@@ -285,15 +292,11 @@ export default function Perfil() {
       });
     } catch (err: any) {
       console.error("Crear tarjeta error:", err?.response?.data || err);
-      // Mensaje unificado de validez
       setAddCardError("No pudimos validar la validez de esta tarjeta");
     } finally {
       setSavingCard(false);
     }
   };
-
-
-
 
   const setAsDefault = (id: string) => {
     setPaymentMethods((prev) => prev.map((p) => ({ ...p, isDefault: p.id === id })));
@@ -301,22 +304,14 @@ export default function Perfil() {
 
   const removeMethod = async (id: string) => {
     try {
-      // llama directamente al backend con axios
-      const res = await api.delete(`/tarjetas/cards/${id}`);
-      console.log("Tarjeta borrada:", res.data);
-
-      // actualiza estado local
-      setPaymentMethods(prev => prev.filter(p => String(p.id) !== String(id)));
-
-      // actualiza el saldo en pantalla
+      await api.delete(`/tarjetas/cards/${id}`);
+      setPaymentMethods((prev) => prev.filter((p) => String(p.id) !== String(id)));
       await fetchWallet();
     } catch (err: any) {
       console.error("Error al eliminar tarjeta:", err?.response?.data || err);
       alert(err?.response?.data?.message || "No se pudo eliminar la tarjeta");
     }
   };
-
-
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
@@ -335,21 +330,27 @@ export default function Perfil() {
   const fetchCards = async () => {
     try {
       const res = await api.get("/tarjetas");
-      const tarjetas = (res.data.tarjetas || []).map((t: any) => ({
-        id: String(t.id_tarjeta),
-        brand: "visa", // 👈 detecta automáticamente
-        last4: t.num_tarjeta.slice(-4),
-        holder: t.titular,
-        expMonth: String(t.vence_mes).padStart(2, "0"),
-        expYear: String(t.vence_anio),
-      }));
+      const tarjetas = (res.data?.tarjetas || []).map((t: any) => {
+        const brand =
+          detectBrandFromPAN(String(t.num_tarjeta || "")) ||
+          detectBrandFromBanco(String(t.banco || "")) ||
+          "otro";
+        return {
+          id: String(t.id_tarjeta),
+          brand,
+          last4: String(t.num_tarjeta || "").slice(-4),
+          holder: t.titular,
+          expMonth: String(t.vence_mes).padStart(2, "0"),
+          expYear: String(t.vence_anio),
+          banco: t.banco,
+        } as PaymentMethod;
+      });
 
       setPaymentMethods(tarjetas);
     } catch (err: any) {
       console.error("Error obteniendo tarjetas:", err?.response?.data || err);
     }
   };
-
 
   // Cargar perfil y saldo inicial
   useEffect(() => {
@@ -371,7 +372,7 @@ export default function Perfil() {
           suscrito_noticias: res.data.suscrito_noticias,
         });
 
-        // Traer saldo (solo si tiene monedero)
+        // Traer saldo/tarjetas (solo si tiene monedero)
         if (!(res.data?.tipo_usuario === "admin" || res.data?.tipo_usuario === "root")) {
           fetchWallet(); // paralelo
           fetchCards();
@@ -383,7 +384,6 @@ export default function Perfil() {
     getProfileInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
 
@@ -433,7 +433,7 @@ export default function Perfil() {
             </div>
           )}
           {/* Accesos a los tickets */}
-          {(profile.tipo_usuario === "cliente") && (
+          {profile.tipo_usuario === "cliente" && (
             <div className="mt-4 sm:mt-6 flex justify-center pb-4">
               <button
                 type="button"
@@ -445,15 +445,10 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Tabs - Versión móvil con scroll horizontal */}
+          {/* Tabs */}
           <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <div className="flex justify-center bg-gray-50 rounded-lg p-2 gap-2 sm:gap-0">
-              {[
-                { id: "personal", label: "Personal", icon: "👤" },
-                { id: "contact", label: "Contacto", icon: "📧" },
-                { id: "security", label: "Seguridad", icon: "🔒" },
-                { id: "wallet", label: "Monedero", icon: "💳" },
-              ].map((tab) => (
+              {availableTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => {
@@ -461,10 +456,11 @@ export default function Perfil() {
                     setShowPasswordForm(false);
                     setPasswordMessage(null);
                   }}
-                  className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 sm:mx-2 text-xs sm:text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex flex-col sm:flex-row items-center justify-center space-y-0 sm:space-x-2 whitespace-nowrap ${activeTab === (tab.id as ActiveTab)
+                  className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 sm:mx-2 text-xs sm:text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex flex-col sm:flex-row items-center justify-center space-y-0 sm:space-x-2 whitespace-nowrap ${
+                    activeTab === tab.id
                       ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
                       : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
-                    }`}
+                  }`}
                 >
                   <span className="text-xl sm:text-base">{tab.icon}</span>
                   <span className="hidden sm:inline">{tab.label}</span>
@@ -739,10 +735,11 @@ export default function Perfil() {
                   <>
                     {passwordMessage && (
                       <div
-                        className={`p-3 sm:p-4 rounded-lg text-xs sm:text-sm text-center ${passwordMessage.startsWith("✅")
+                        className={`p-3 sm:p-4 rounded-lg text-xs sm:text-sm text-center ${
+                          passwordMessage.startsWith("✅")
                             ? "bg-green-50 text-green-600 border border-green-200"
                             : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
+                        }`}
                       >
                         {passwordMessage}
                       </div>
@@ -842,7 +839,7 @@ export default function Perfil() {
                       {paymentMethods.map((pm) => (
                         <li key={pm.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3">
                           <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {brandIcon(pm.brand)}
+                            {brandIcon(pm.brand || detectBrandFromBanco(pm.banco) || "otro")}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs sm:text-sm font-medium text-[#081225] truncate">
                                 {pm.holder} • • • • {pm.last4}
@@ -851,6 +848,18 @@ export default function Perfil() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
+                            {pm.isDefault && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
+                            )}
+                            {!pm.isDefault && (
+                              <button
+                                type="button"
+                                onClick={() => setAsDefault(pm.id)}
+                                className="text-xs px-2 py-1 rounded border text-gray-700 hover:bg-gray-50"
+                              >
+                                Hacer predeterminada
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeMethod(pm.id)}
@@ -901,6 +910,7 @@ export default function Perfil() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    maxLength={19}
                     value={addCardForm.number}
                     onChange={(e) => {
                       const v = e.target.value.replace(/\D/g, "").slice(0, 19);
@@ -946,7 +956,7 @@ export default function Perfil() {
                   <select
                     value={addCardForm.brand}
                     onChange={(e) => setAddCardForm((s) => ({ ...s, brand: e.target.value as CardBrand }))}
-                    className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
+                    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
                   >
                     <option value="visa">Visa</option>
                     <option value="mastercard">Mastercard</option>
@@ -1015,10 +1025,11 @@ export default function Perfil() {
                   type="button"
                   disabled={!canSubmitCard || savingCard}
                   onClick={handleAddCard}
-                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white transition text-sm sm:text-base order-1 sm:order-2 ${!canSubmitCard || savingCard
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white transition text-sm sm:text-base order-1 sm:order-2 ${
+                    !canSubmitCard || savingCard
                       ? "bg-gray-300 cursor-not-allowed"
                       : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
-                    }`}
+                  }`}
                 >
                   {savingCard ? "Guardando…" : "Guardar tarjeta"}
                 </button>
