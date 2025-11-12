@@ -749,7 +749,7 @@ export default function Perfil() {
                       <input
                         type="password"
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                        onChange={(e) => setNewPassword(e.target.value.replace(/\s/g, ""))} // 🚫 elimina espacios
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
@@ -759,7 +759,7 @@ export default function Perfil() {
                       <input
                         type="password"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onChange={(e) => setConfirmPassword(e.target.value.replace(/\s/g, ""))}
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
