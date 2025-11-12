@@ -37,7 +37,7 @@
         setSubmitting(true);
 
         try {
-        // 🔥 Llamada real al endpoint PATCH
+        // Llamada real al endpoint PATCH
         await api.patch("/profile", {
             password_bash: newPwd,
             must_change_password: false, // ✅ ahora se actualiza a FALSE
@@ -75,62 +75,68 @@
 
             {/* Formulario */}
             <form onSubmit={handleSubmit} className="space-y-4">
+            
             {/* Nueva contraseña */}
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-                <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nueva contraseña
+            </label>
+            <div className="relative">
                 <input
-                    type={showNew ? "text" : "password"}
-                    value={newPwd}
-                    onChange={(e) => setNewPwd(e.target.value)}
-                    placeholder="Nueva contraseña segura"
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    required
-                    autoFocus
+                type={showNew ? "text" : "password"}
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value.replace(/\s/g, ""))} // 🚫 elimina espacios
+                placeholder="Nueva contraseña segura"
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                required
+                autoFocus
                 />
                 <button
-                    type="button"
-                    onClick={() => setShowNew((s) => !s)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                type="button"
+                onClick={() => setShowNew((s) => !s)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
                 >
-                    {showNew ? <FiEyeOff /> : <FiEye />}
+                {showNew ? <FiEyeOff /> : <FiEye />}
                 </button>
-                </div>
-                {!newPwd ? null : isStrong(newPwd) ? (
+            </div>
+            {!newPwd ? null : isStrong(newPwd) ? (
                 <p className="mt-1 text-xs text-green-600">Contraseña fuerte ✅</p>
-                ) : (
+            ) : (
                 <p className="mt-1 text-xs text-amber-600">
-                    Requisitos: 8+ caracteres, mayúscula, minúscula, número y símbolo.
+                Requisitos: 8+ caracteres, mayúscula, minúscula, número y símbolo.
                 </p>
-                )}
+            )}
             </div>
 
             {/* Confirmar */}
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar nueva contraseña</label>
-                <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmar nueva contraseña
+            </label>
+            <div className="relative">
                 <input
-                    type={showConfirm ? "text" : "password"}
-                    value={confirmPwd}
-                    onChange={(e) => setConfirmPwd(e.target.value)}
-                    placeholder="Repite la nueva contraseña"
-                    className="w-full rounded-2xl border border-gray-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    required
+                type={showConfirm ? "text" : "password"}
+                value={confirmPwd}
+                onChange={(e) => setConfirmPwd(e.target.value.replace(/\s/g, ""))} // 🚫 elimina espacios
+                placeholder="Repite la nueva contraseña"
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 pr-10 shadow-inner focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                required
                 />
                 <button
-                    type="button"
-                    onClick={() => setShowConfirm((s) => !s)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                type="button"
+                onClick={() => setShowConfirm((s) => !s)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
                 >
-                    {showConfirm ? <FiEyeOff /> : <FiEye />}
+                {showConfirm ? <FiEyeOff /> : <FiEye />}
                 </button>
-                </div>
-                {!confirmPwd ? null : confirmPwd === newPwd ? (
-                <p className="mt-1 text-xs text-green-600">Coinciden ✅</p>
-                ) : (
-                <p className="mt-1 text-xs text-rose-600">No coinciden.</p>
-                )}
             </div>
+            {!confirmPwd ? null : confirmPwd === newPwd ? (
+                <p className="mt-1 text-xs text-green-600">Coinciden ✅</p>
+            ) : (
+                <p className="mt-1 text-xs text-rose-600">No coinciden.</p>
+            )}
+            </div>
+
 
             {/* Mensajes */}
             {error && (

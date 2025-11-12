@@ -910,7 +910,6 @@ export default function Perfil() {
                   <input
                     type="text"
                     inputMode="numeric"
-                    maxLength={19}
                     value={addCardForm.number}
                     onChange={(e) => {
                       const v = e.target.value.replace(/\D/g, "").slice(0, 19);
