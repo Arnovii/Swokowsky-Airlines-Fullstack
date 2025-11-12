@@ -243,12 +243,17 @@ export default function Register() {
   }, [imgFile]);
 
   // Maneja los cambios en los campos del formulario de texto/select
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-  };
+const handleChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+  const { name, value } = e.target;
+
+  // 🚫 Si es el campo de contraseña, eliminamos los espacios
+  const cleanValue = name === "password" || name === "confirmPassword" ? value.replace(/\s/g, "") : value;
+
+  setForm({ ...form, [name]: cleanValue });
+};
+
 
   // Maneja la selección de archivo de imagen
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
