@@ -34,12 +34,13 @@ export class FlightsService {
   async updateFlight(id_vuelo: number, dto: UpdateFlightDto) {
     return this.prisma.$transaction(async (tx) => {
 
-      // Crear promoción si viene en DTO
-      let promocionCreada: PromocionModel | null = null;
+      let id_promocion_a_usar: number | null | undefined = undefined;
 
+      // Lógica de Promoción: Crear o Actualizar
       if (dto.promocion) {
         const promo = dto.promocion;
 
+        // Conversión de fechas y validación
         const fechaInicio = new Date(promo.fecha_inicio);
         const fechaFin = new Date(promo.fecha_fin);
 
@@ -47,16 +48,31 @@ export class FlightsService {
           throw new BadRequestException('fecha_fin debe ser posterior a fecha_inicio');
         }
 
-        promocionCreada = await tx.promocion.create({
-          data: {
-            nombre: promo.nombre,
-            descripcion: promo.descripcion,
-            descuento: promo.descuento,
-            fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-          }
-        });
+        const dataPromocion = {
+          nombre: promo.nombre,
+          descripcion: promo.descripcion,
+          descuento: promo.descuento,
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+        };
+
+        if (promo.id_promocion) {
+          // ⭐ ACTUALIZAR promoción existente (Si viene el ID)
+          const promocionActualizada = await tx.promocion.update({
+            where: { id_promocion: promo.id_promocion },
+            data: dataPromocion,
+          });
+          id_promocion_a_usar = promocionActualizada.id_promocion;
+        } else {
+          // ⭐ CREAR nueva promoción (Si NO viene el ID)
+          const promocionCreada = await tx.promocion.create({
+            data: dataPromocion,
+          });
+          id_promocion_a_usar = promocionCreada.id_promocion;
+        }
       }
+      // Si dto.promocion no se provee, 'id_promocion_a_usar' es 'undefined', 
+      // lo cual mantendrá la FK existente en el vuelo.
 
       // Actualizar vuelo
       const vueloActualizado = await tx.vuelo.update({
@@ -64,7 +80,8 @@ export class FlightsService {
         data: {
           salida_programada_utc: dto.salida_programada_utc,
           llegada_programada_utc: dto.llegada_programada_utc,
-          id_promocionFK: promocionCreada?.id_promocion ?? undefined,
+          // Asigna el ID de la promoción nueva/actualizada, o 'undefined'
+          id_promocionFK: id_promocion_a_usar,
         },
         include: { promocion: true }
       });

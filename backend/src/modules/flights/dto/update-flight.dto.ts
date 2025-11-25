@@ -1,31 +1,37 @@
 import { IsOptional, IsString, IsNumber, IsDateString } from 'class-validator';
 
 class PromotionInsideFlightDto {
-  @IsString()
-  nombre: string;
+    // ⚠️ ¡CAMBIO CRUCIAL AQUÍ!
+    @IsOptional() 
+    @IsNumber() 
+    id_promocion?: number; 
+    // ----------------------
 
-  @IsString()
-  descripcion: string;
+    @IsString()
+    nombre: string;
 
-  @IsNumber()
-  descuento: number;
+    @IsString()
+    descripcion: string;
 
-  @IsDateString()
-  fecha_inicio: string;
+    @IsNumber()
+    descuento: number;
 
-  @IsDateString()
-  fecha_fin: string;
+    @IsDateString()
+    fecha_inicio: string;
+
+    @IsDateString()
+    fecha_fin: string;
 }
 
 export class UpdateFlightDto {
-  @IsOptional()
-  @IsDateString()
-  salida_programada_utc?: string;
+    @IsOptional()
+    @IsDateString()
+    salida_programada_utc?: string;
 
-  @IsOptional()
-  @IsDateString()
-  llegada_programada_utc?: string;
+    @IsOptional()
+    @IsDateString()
+    llegada_programada_utc?: string;
 
-  @IsOptional()
-  promocion?: PromotionInsideFlightDto;
+    @IsOptional()
+    promocion?: PromotionInsideFlightDto;
 }
