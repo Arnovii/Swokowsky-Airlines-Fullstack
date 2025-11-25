@@ -3,7 +3,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SearchFlightsDto } from './dto/search-flights.dto';
 import { FlightResultDto } from './dto/flight-result.dto';
-
+import { UpdateFlightDto } from './dto/update-flight.dto';
+import { promocion as PromocionModel } from '@prisma/client';
 @Injectable()
 export class FlightsService {
   constructor(private prisma: PrismaService) { }
@@ -19,6 +20,107 @@ export class FlightsService {
       },
     });
   }
+
+  async getActiveFlights() {
+    return this.prisma.vuelo.findMany({
+      where: {
+        estado: {
+          not: 'Cancelado',   // ⭐ Solo devuelve vuelos activos
+        },
+      },
+    });
+  }
+
+  async updateFlight(id_vuelo: number, dto: UpdateFlightDto) {
+    return this.prisma.$transaction(async (tx) => {
+
+      // Crear promoción si viene en DTO
+      let promocionCreada: PromocionModel | null = null;
+
+      if (dto.promocion) {
+        const promo = dto.promocion;
+
+        const fechaInicio = new Date(promo.fecha_inicio);
+        const fechaFin = new Date(promo.fecha_fin);
+
+        if (fechaFin <= fechaInicio) {
+          throw new BadRequestException('fecha_fin debe ser posterior a fecha_inicio');
+        }
+
+        promocionCreada = await tx.promocion.create({
+          data: {
+            nombre: promo.nombre,
+            descripcion: promo.descripcion,
+            descuento: promo.descuento,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin,
+          }
+        });
+      }
+
+      // Actualizar vuelo
+      const vueloActualizado = await tx.vuelo.update({
+        where: { id_vuelo },
+        data: {
+          salida_programada_utc: dto.salida_programada_utc,
+          llegada_programada_utc: dto.llegada_programada_utc,
+          id_promocionFK: promocionCreada?.id_promocion ?? undefined,
+        },
+        include: { promocion: true }
+      });
+
+      return vueloActualizado;
+    });
+  }
+
+
+
+
+  async deleteFlight(id_vuelo: number) {
+    const vuelo = await this.prisma.vuelo.findUnique({
+      where: { id_vuelo },
+      include: { ticket: true }
+    });
+
+    if (!vuelo) {
+      throw new BadRequestException('El vuelo no existe.');
+    }
+
+    const hasTickets = vuelo.ticket.length > 0;
+
+    // ⭐ Si NO tiene tickets, simplemente marcar como cancelado
+    if (!hasTickets) {
+      await this.prisma.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      return { message: 'Vuelo cancelado correctamente (sin tickets).' };
+    }
+
+    // ⭐ Si tiene tickets → cancelar vuelo y tickets dentro de una transacción
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Cancelar el vuelo
+      await tx.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      // 2. Cancelar los tickets asociados
+      await tx.ticket.updateMany({
+        where: { id_vueloFK: id_vuelo, estado: { not: 'cancelado' } },
+        data: { estado: 'cancelado' }
+      });
+    });
+
+    return {
+      message:
+        'El vuelo tenía tickets y ha sido cancelado. Los tickets fueron marcados como cancelados.'
+    };
+  }
+
+
+
 
   private dayRangeFromDateString(dateStr: string) {
     // Interpretamos dateStr como fecha (YYYY-MM-DD o ISO). Buscamos entre [00:00:00, 23:59:59] UTC
