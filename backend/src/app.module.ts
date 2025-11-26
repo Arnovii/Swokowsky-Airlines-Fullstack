@@ -20,6 +20,8 @@ import { HistoryModule } from './modules/history/history.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { PasajeroModule } from './modules/pasajero/pasajero.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
+import { ForoModule } from './modules/foro/foro.module';
+
 
 
 
@@ -46,6 +48,7 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
     PasajeroModule,
     CheckoutModule,
     HistoryModule,
+    ForoModule
   
   ],
   controllers: [AppController],
