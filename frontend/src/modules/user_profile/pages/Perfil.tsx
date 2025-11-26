@@ -177,7 +177,7 @@ export default function Perfil() {
   })();
 
   // --- GET /api/v1/tarjetas -> usar saldoTotalUsuario ---
-const fetchWallet = async () => {
+  const fetchWallet = async () => {
     setWalletError(null);
     setWalletLoading(true);
     try {
@@ -188,10 +188,10 @@ const fetchWallet = async () => {
       setWalletBalance(Number.isFinite(total) ? total : 0);
       // (Opcional) podríamos mapear tarjetas a paymentMethods, pero por ahora solo necesitamos el saldo
     } catch (err: any) {
-      console.error("GET /tarjetas error:", err?.response?.data,  err);
+      console.error("GET /tarjetas error:", err?.response?.data, err);
       const msg =
-        err?.response?.data?.message 
-        err?.response?.data?.error ||
+        err?.response?.data?.message
+      err?.response?.data?.error ||
         "No se pudo obtener el saldo.";
       setWalletError(msg);
     } finally {
@@ -387,7 +387,7 @@ const fetchWallet = async () => {
 
   if (!profile) return <div className="text-center py-10">Cargando...</div>;
 
-return (
+  return (
     <>
       <div className="flex justify-center items-start min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-xl w-full max-w-5xl border border-gray-100">
@@ -419,9 +419,28 @@ return (
             <div className="mt-4 sm:mt-6 flex justify-center pb-4">
               <button
                 type="button"
+                onClick={() =>
+                  navigate(
+                    profile.tipo_usuario === "root"
+                      ? "/panelAdministrador/root"
+                      : "/panelAdministrador"
+                  )
+                }
                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
               >
                 Ir al Panel {profile.tipo_usuario === "root" ? "Root" : "Administrador"}
+              </button>
+            </div>
+          )}
+          {/* Accesos a los tickets */}
+          {(profile.tipo_usuario === "cliente") && (
+            <div className="mt-4 sm:mt-6 flex justify-center pb-4">
+              <button
+                type="button"
+                onClick={() => navigate("/tickets")}
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
+              >
+                Ver tickets
               </button>
             </div>
           )}
@@ -442,11 +461,10 @@ return (
                     setShowPasswordForm(false);
                     setPasswordMessage(null);
                   }}
-                  className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 sm:mx-2 text-xs sm:text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex flex-col sm:flex-row items-center justify-center space-y-0 sm:space-x-2 whitespace-nowrap ${
-                    activeTab === (tab.id as ActiveTab)
+                  className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 sm:mx-2 text-xs sm:text-sm font-medium rounded-lg focus:outline-none transition-all duration-300 flex flex-col sm:flex-row items-center justify-center space-y-0 sm:space-x-2 whitespace-nowrap ${activeTab === (tab.id as ActiveTab)
                       ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-lg shadow-[#3B82F6]/20"
                       : "text-gray-600 hover:text-[#0F6899] hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <span className="text-xl sm:text-base">{tab.icon}</span>
                   <span className="hidden sm:inline">{tab.label}</span>
@@ -721,11 +739,10 @@ return (
                   <>
                     {passwordMessage && (
                       <div
-                        className={`p-3 sm:p-4 rounded-lg text-xs sm:text-sm text-center ${
-                          passwordMessage.startsWith("✅")
+                        className={`p-3 sm:p-4 rounded-lg text-xs sm:text-sm text-center ${passwordMessage.startsWith("✅")
                             ? "bg-green-50 text-green-600 border border-green-200"
                             : "bg-red-50 text-red-600 border border-red-200"
-                        }`}
+                          }`}
                       >
                         {passwordMessage}
                       </div>
@@ -834,18 +851,6 @@ return (
                             </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
-                            {pm.isDefault && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
-                            )}
-                            {!pm.isDefault && (
-                              <button
-                                type="button"
-                                onClick={() => setAsDefault(pm.id)}
-                                className="text-xs px-2 py-1 rounded border text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                              >
-                                Hacer predeterminada
-                              </button>
-                            )}
                             <button
                               type="button"
                               onClick={() => removeMethod(pm.id)}
@@ -1010,11 +1015,10 @@ return (
                   type="button"
                   disabled={!canSubmitCard || savingCard}
                   onClick={handleAddCard}
-                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white transition text-sm sm:text-base order-1 sm:order-2 ${
-                    !canSubmitCard || savingCard
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white transition text-sm sm:text-base order-1 sm:order-2 ${!canSubmitCard || savingCard
                       ? "bg-gray-300 cursor-not-allowed"
                       : "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] hover:shadow-lg hover:shadow-[#3B82F6]/20"
-                  }`}
+                    }`}
                 >
                   {savingCard ? "Guardando…" : "Guardar tarjeta"}
                 </button>

@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo , useEffect} from 'react';
+
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { CartItem } from '../../carrito/service/cartService';
 import type { Pasajero, CheckoutPayload } from '../types/checkout';
 import type { TravelerFormData } from '../components/TravelerForm';
@@ -23,9 +24,24 @@ const createEmptyTraveler = (): TravelerFormData => ({
 });
 
 export const useCheckoutForm = (cart: CartItem[]) => {
+
   // Estado: objeto con claves únicas por pasajero
   // Formato: { "itemId-passengerIndex": TravelerFormData }
   const [travelers, setTravelers] = useState<Record<string, TravelerFormData>>({});
+
+  // Devuelve true si hay algún documento repetido y la lista de duplicados
+  const duplicateDocuments = useMemo(() => {
+    const docs = Object.values(travelers)
+      .map((t: TravelerFormData) => t.numero_documento?.trim())
+      .filter(Boolean);
+    const count: Record<string, number> = {};
+    docs.forEach(doc => {
+      if (doc) count[doc] = (count[doc] || 0) + 1;
+    });
+    return Object.keys(count).filter(doc => count[doc] > 1);
+  }, [travelers]);
+
+  const hasDuplicateDocument = duplicateDocuments.length > 0;
 
   useEffect(() => {
     if (cart && cart.length > 0) {
@@ -147,6 +163,33 @@ export const useCheckoutForm = (cart: CartItem[]) => {
     return allFormsComplete;
   }, [allFormsComplete]);
 
+  /**
+   * Validar si hay menores sin adultos acompañantes
+   * Regla: Si hay al menos un menor (<18), debe haber al menos un adulto (>=18)
+   */
+  const hasMinorsWithoutAdult = useMemo(() => {
+    const allTravelers = Object.values(travelers);
+    if (allTravelers.length === 0) return false;
+
+    let minors = 0;
+    let adults = 0;
+    const today = new Date();
+
+    allTravelers.forEach(traveler => {
+      if (!traveler.fecha_nacimiento) return;
+      const birthDate = new Date(traveler.fecha_nacimiento);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 18) minors++;
+      if (age >= 18) adults++;
+    });
+
+    return minors > 0 && adults === 0;
+  }, [travelers]);
+
   return {
     travelers,
     updateTravelerInfo,
@@ -157,6 +200,9 @@ export const useCheckoutForm = (cart: CartItem[]) => {
     isItemComplete,
     getTraveler,
     clearAllForms,
-    isReadyForCheckout
+    isReadyForCheckout,
+    hasMinorsWithoutAdult,
+    hasDuplicateDocument,
+    duplicateDocuments
   };
 };

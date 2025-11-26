@@ -27,7 +27,10 @@ const CheckoutPage = () => {
     getCheckoutData,
     totalForms,
     isReadyForCheckout,
-    travelers // <-- Cambiado aquí
+    travelers,
+    hasMinorsWithoutAdult,
+    hasDuplicateDocument,
+    duplicateDocuments
   } = useCheckoutForm(cart);
 
   const {
@@ -103,6 +106,26 @@ const CheckoutPage = () => {
 
   // Handler para proceder al pago
   const handleProceedToPayment = async () => {
+
+
+    // Validar cédulas duplicadas
+    if (hasDuplicateDocument) {
+      toast.error('❌ No se permite ingresar dos pasajeros con la misma cédula. Cada pasajero debe tener un número de documento único.', {
+        position: 'top-center',
+        autoClose: 6000
+      });
+      return;
+    }
+
+    // Validar menores sin adultos
+    if (hasMinorsWithoutAdult) {
+      toast.error('❌ No se permite la compra solo para menores de edad. Debe haber al menos un adulto (18+) en la reserva.', {
+        position: 'top-center',
+        autoClose: 6000
+      });
+      return;
+    }
+
     // Validar saldo suficiente
     const userBalance = saldo || 0;
     if (userBalance < totalAmount) {
@@ -131,6 +154,7 @@ const CheckoutPage = () => {
       
       return;
     }
+
 
     // Validar que el payload esté listo
     if (!isReadyForCheckout()) {
@@ -174,7 +198,7 @@ const CheckoutPage = () => {
         setTimeout(async () => {
           await clearCart();
           navigate('/');
-        }, 1000);
+        }, 5000);
       }
 
     } catch (error) {
@@ -309,6 +333,7 @@ const CheckoutPage = () => {
                                 index={passengerIndex + 1}
                                 initialData={initialData}
                                 onUpdate={(data) => updateTravelerInfo(formKey, data)}
+                                duplicateDocuments={duplicateDocuments}
                               />
                             );
                           })
@@ -332,7 +357,7 @@ const CheckoutPage = () => {
               cart={cart}
               totalAmount={totalAmount}
               isProcessing={isProcessing}
-              allFormsComplete={allFormsComplete}
+              allFormsComplete={allFormsComplete && !hasDuplicateDocument}
               onPayment={handleProceedToPayment}
             />
           </div>

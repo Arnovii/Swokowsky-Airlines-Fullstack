@@ -19,9 +19,10 @@ interface TravelerFormProps {
   index: number;
   initialData?: Partial<TravelerFormData>;
   onUpdate: (data: TravelerFormData) => void;
+  duplicateDocuments?: string[];
 }
 
-const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, onUpdate }) => {
+const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, onUpdate, duplicateDocuments }) => {
   const [formData, setFormData] = useState<TravelerFormData>({
     numero_documento: initialData.numero_documento || '',
     primer_nombre: initialData.primer_nombre || '',
@@ -38,6 +39,26 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Marcar error si el documento está repetido
+  const isDuplicateDocument = !!(
+    duplicateDocuments &&
+    formData.numero_documento &&
+    duplicateDocuments.includes(formData.numero_documento.trim())
+  );
+
+  // Si el documento está repetido, forzar el error en el campo
+  useEffect(() => {
+    if (isDuplicateDocument) {
+      setErrors(prev => ({ ...prev, numero_documento: 'Este número de documento ya está usado por otro pasajero' }));
+    } else if (errors.numero_documento === 'Este número de documento ya está usado por otro pasajero') {
+      setErrors(prev => {
+        const { numero_documento, ...rest } = prev;
+        return rest;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDuplicateDocument, formData.numero_documento]);
 
   // Validar campo individual
   const validateField = (name: string, value: unknown): string => {
@@ -178,15 +199,17 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
             placeholder="1234567890"
             maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
-              errors.numero_documento 
-                ? 'border-red-400 focus:border-red-500' 
+              errors.numero_documento || isDuplicateDocument
+                ? 'border-red-400 focus:border-red-500'
                 : isFieldComplete('numero_documento')
                 ? 'border-green-400 focus:border-green-500'
                 : 'border-gray-300 focus:border-[#39A5D8]'
             } focus:outline-none transition-all duration-300`}
           />
-          {errors.numero_documento && (
-            <p className="text-red-500 text-xs mt-1">{errors.numero_documento}</p>
+          {(errors.numero_documento || isDuplicateDocument) && (
+            <p className="text-red-500 text-xs mt-1">
+              {errors.numero_documento || (isDuplicateDocument && 'Este número de documento ya está usado por otro pasajero')}
+            </p>
           )}
         </div>
 
