@@ -76,63 +76,6 @@ const SeatMapPage = () => {
           </p>
         </div>
 
-        {/* Controles de demostración */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
-          <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
-            Opciones de visualización
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Tipo de vuelo */}
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Tipo de vuelo
-              </label>
-              <select
-                value={flightType}
-                onChange={(e) => {
-                  setFlightType(e.target.value as 'nacional' | 'internacional');
-                  setSelectedSeat(null);
-                  setHasChangedSeat(false);
-                }}
-                className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-[#39A5D8]"
-              >
-                <option value="nacional" className="text-slate-800">Nacional (150 asientos)</option>
-                <option value="internacional" className="text-slate-800">Internacional (250 asientos)</option>
-              </select>
-            </div>
-
-            {/* Clase del pasajero */}
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Filtrar por clase
-              </label>
-              <select
-                value={passengerClass || ''}
-                onChange={(e) => setPassengerClass(e.target.value as 'primera' | 'economica' | undefined || undefined)}
-                className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-[#39A5D8]"
-              >
-                <option value="" className="text-slate-800">Todas las clases</option>
-                <option value="primera" className="text-slate-800">Solo Primera Clase</option>
-                <option value="economica" className="text-slate-800">Solo Económica</option>
-              </select>
-            </div>
-
-            {/* Botón reiniciar */}
-            <div className="flex items-end">
-              <button
-                onClick={resetSelection}
-                className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold hover:from-amber-600 hover:to-orange-600 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30"
-              >
-                🔄 Reiniciar selección
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Información del asiento seleccionado */}
         {selectedSeat && (
           <div className="bg-gradient-to-r from-[#39A5D8]/20 to-[#1180B8]/20 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-[#39A5D8]/30">
@@ -172,31 +115,6 @@ const SeatMapPage = () => {
           onSeatSelect={handleSeatSelect}
           readOnly={false}
         />
-
-        {/* Información adicional */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <h4 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-              <span className="text-2xl">✈️</span> Vuelo Nacional
-            </h4>
-            <ul className="text-white/80 text-sm space-y-2">
-              <li>• <strong className="text-purple-400">Primera Clase:</strong> Asientos 1-25</li>
-              <li>• <strong className="text-emerald-400">Económica:</strong> Asientos 26-150</li>
-              <li>• Capacidad total: 150 pasajeros</li>
-            </ul>
-          </div>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-            <h4 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-              <span className="text-2xl">🌍</span> Vuelo Internacional
-            </h4>
-            <ul className="text-white/80 text-sm space-y-2">
-              <li>• <strong className="text-purple-400">Primera Clase:</strong> Asientos 1-50</li>
-              <li>• <strong className="text-emerald-400">Económica:</strong> Asientos 51-250</li>
-              <li>• Capacidad total: 250 pasajeros</li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   );
