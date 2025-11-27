@@ -42,11 +42,17 @@ interface PaymentMethod {
   banco?: string;
 }
 
+// Detectar marca por número
 const detectBrandFromPAN = (pan: string): CardBrand => {
   const d = pan.replace(/\D/g, "");
   if (/^4\d{12,18}$/.test(d)) return "visa"; // Visa
-  if (/^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7[01]\d{12}|720\d{12}))$/.test(d)) return "mastercard"; // 51–55, 2221–2720
-  if (/^(34|37)\d{13}$/.test(d)) return "amex"; // Amex
+  if (
+    /^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7[01]\d{12}|720\d{12}))$/.test(
+      d
+    )
+  )
+    return "mastercard"; // 51–55, 2221–2720
+  if (/^(34|37)\d{13}$/.test(d)) return "amex"; // Amex (15)
   return "otro";
 };
 
@@ -62,10 +68,23 @@ const detectBrandFromBanco = (banco?: string): CardBrand => {
 const brandIcon = (brandInput?: string) => {
   const base = "px-2 py-1 rounded text-xs font-semibold uppercase";
   const b = (brandInput || "").toLowerCase();
-  if (b.includes("visa")) return <span className={`${base} bg-blue-100 text-blue-700`}>VISA</span>;
-  if (b.includes("master")) return <span className={`${base} bg-orange-100 text-orange-700`}>MASTERCARD</span>;
-  if (b.includes("amex") || b.includes("american")) return <span className={`${base} bg-cyan-100 text-cyan-700`}>AMEX</span>;
-  return <span className={`${base} bg-gray-100 text-gray-700`}>TARJETA</span>;
+  if (b.includes("visa"))
+    return (
+      <span className={`${base} bg-blue-100 text-blue-700`}>VISA</span>
+    );
+  if (b.includes("master"))
+    return (
+      <span className={`${base} bg-orange-100 text-orange-700`}>
+        MASTERCARD
+      </span>
+    );
+  if (b.includes("amex") || b.includes("american"))
+    return (
+      <span className={`${base} bg-cyan-100 text-cyan-700`}>AMEX</span>
+    );
+  return (
+    <span className={`${base} bg-gray-100 text-gray-700`}>TARJETA</span>
+  );
 };
 
 const maskCardNumber = (value: string) => {
@@ -77,7 +96,11 @@ const maskCardNumber = (value: string) => {
 // Formateo COP
 const formatCOP = (n: number) => {
   try {
-    return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0,
+    }).format(n);
   } catch {
     return `$${n.toLocaleString("es-CO")} COP`;
   }
@@ -101,7 +124,9 @@ export default function Perfil() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(
+    null
+  );
 
   // Edición
   const [editPersonal, setEditPersonal] = useState(false);
@@ -115,7 +140,9 @@ export default function Perfil() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]); // UI local
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
+    []
+  ); // UI local
 
   // Modal añadir tarjeta
   const [showAddCard, setShowAddCard] = useState(false);
@@ -125,9 +152,6 @@ export default function Perfil() {
     number: "",
     exp: "", // "MM/YY"
     cvc: "",
-    brand: "visa" as CardBrand, // solo para UI
-    makeDefault: true,
-    banco: "",
     tipo: "credito" as "credito" | "debito",
   });
   const [addCardError, setAddCardError] = useState<string | null>(null);
@@ -137,14 +161,33 @@ export default function Perfil() {
   const hasContact = profile?.tipo_usuario === "cliente";
 
   // Sólo usuarios con monedero:
-  const hasWallet = !(profile?.tipo_usuario === "admin" || profile?.tipo_usuario === "root");
+  const hasWallet = !(
+    profile?.tipo_usuario === "admin" ||
+    profile?.tipo_usuario === "root"
+  );
 
   // Tabs permitidos según rol
   const availableTabs = [
     { id: "personal" as ActiveTab, label: "Personal", icon: "👤" },
-    ...(hasContact ? [{ id: "contact" as ActiveTab, label: "Contacto", icon: "📧" }] : []),
+    ...(hasContact
+      ? [
+          {
+            id: "contact" as ActiveTab,
+            label: "Contacto",
+            icon: "📧",
+          },
+        ]
+      : []),
     { id: "security" as ActiveTab, label: "Seguridad", icon: "🔒" },
-    ...(hasWallet ? [{ id: "wallet" as ActiveTab, label: "Monedero", icon: "💳" }] : []),
+    ...(hasWallet
+      ? [
+          {
+            id: "wallet" as ActiveTab,
+            label: "Monedero",
+            icon: "💳",
+          },
+        ]
+      : []),
   ] as { id: ActiveTab; label: string; icon: string }[];
 
   // Efecto inicial: si la URL trae un tab inválido o no permitido, forzar "personal"
@@ -160,7 +203,6 @@ export default function Perfil() {
   }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
 
   const handleTabChange = (newTab: ActiveTab) => {
-    // Seguridad extra: no permitir cambiar a un tab que no esté disponible
     const ids = availableTabs.map((t) => t.id);
     if (!ids.includes(newTab)) {
       setSearchParams({ tab: "personal" });
@@ -195,7 +237,6 @@ export default function Perfil() {
       addCardForm.holder.trim().length >= 3 &&
       addCardForm.cvc.replace(/\D/g, "").length >= 3 &&
       !!exp &&
-      addCardForm.banco.trim().length >= 2 &&
       (addCardForm.tipo === "credito" || addCardForm.tipo === "debito")
     );
   })();
@@ -240,14 +281,29 @@ export default function Perfil() {
       }
       const { month, year } = parsed;
       const titular = addCardForm.holder.trim();
-      const banco = addCardForm.banco.trim();
       const cvv = String(addCardForm.cvc || "").replace(/\D/g, "");
-      const digitsOnly = String(addCardForm.number || "").replace(/\D/g, "");
+      const digitsOnly = String(addCardForm.number || "").replace(
+        /\D/g,
+        ""
+      );
 
-      if (digitsOnly.length < 16) {
+      if (digitsOnly.length < 13) {
         setAddCardError("No pudimos validar la validez de esta tarjeta");
         return;
       }
+
+      // Detectar marca por regex
+      const brand = detectBrandFromPAN(digitsOnly); // "visa" | "mastercard" | "amex" | "otro"
+
+      if (brand === "otro") {
+        setAddCardError(
+          "No pudimos reconocer la entidad de la tarjeta (Visa/Mastercard/Amex)."
+        );
+        return;
+      }
+
+      // Lo que enviamos como 'banco' al backend
+      const banco = brand.toUpperCase(); // "VISA" / "MASTERCARD" / "AMEX"
 
       const payload = {
         num_tarjeta: digitsOnly,
@@ -266,22 +322,15 @@ export default function Perfil() {
       // refrescar saldo
       await fetchWallet();
 
-      // Derivar marca final: preferimos lo que el usuario seleccionó, si no, inferimos
-      const derivedBrand: CardBrand =
-        (addCardForm.brand as CardBrand) ||
-        detectBrandFromPAN(digitsOnly) ||
-        detectBrandFromBanco(banco) ||
-        "otro";
-
       if (tarjeta && tarjeta.id_tarjeta) {
         const newPm: PaymentMethod = {
           id: String(tarjeta.id_tarjeta),
-          brand: derivedBrand,
+          brand, // usamos la marca detectada
           last4: String(tarjeta.num_tarjeta || digitsOnly).slice(-4),
           holder: tarjeta.titular || titular,
           expMonth: String(tarjeta.vence_mes ?? month).padStart(2, "0"),
           expYear: String(tarjeta.vence_anio ?? year),
-          isDefault: addCardForm.makeDefault || paymentMethods.length === 0,
+          isDefault: paymentMethods.length === 0,
           banco,
         };
         setPaymentMethods((prev) => [newPm, ...prev]);
@@ -297,9 +346,6 @@ export default function Perfil() {
         number: "",
         exp: "",
         cvc: "",
-        brand: "visa",
-        makeDefault: true,
-        banco: "",
         tipo: "credito",
       });
     } catch (err: any) {
@@ -311,13 +357,17 @@ export default function Perfil() {
   };
 
   const setAsDefault = (id: string) => {
-    setPaymentMethods((prev) => prev.map((p) => ({ ...p, isDefault: p.id === id })));
+    setPaymentMethods((prev) =>
+      prev.map((p) => ({ ...p, isDefault: p.id === id }))
+    );
   };
 
   const removeMethod = async (id: string) => {
     try {
       await api.delete(`/tarjetas/cards/${id}`);
-      setPaymentMethods((prev) => prev.filter((p) => String(p.id) !== String(id)));
+      setPaymentMethods((prev) =>
+        prev.filter((p) => String(p.id) !== String(id))
+      );
       await fetchWallet();
     } catch (err: any) {
       console.error("Error al eliminar tarjeta:", err?.response?.data || err);
@@ -331,9 +381,13 @@ export default function Perfil() {
     fd.append("file", file);
     fd.append("upload_preset", "Swokowsky-bucket");
     const res = await fetch(url, { method: "POST", body: fd });
-    if (!res.ok) throw new Error(`Upload a Cloudinary falló: ${res.status} ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(
+        `Upload a Cloudinary falló: ${res.status} ${await res.text()}`
+      );
     const data = await res.json();
-    if (!data.secure_url) throw new Error("No se recibió secure_url desde Cloudinary");
+    if (!data.secure_url)
+      throw new Error("No se recibió secure_url desde Cloudinary");
     return data.secure_url as string;
   };
 
@@ -343,10 +397,11 @@ export default function Perfil() {
     try {
       const res = await api.get("/tarjetas");
       const tarjetas = (res.data?.tarjetas || []).map((t: any) => {
+        const brandFromBank = detectBrandFromBanco(String(t.banco || ""));
+        const brandFromPan = detectBrandFromPAN(String(t.num_tarjeta || ""));
         const brand =
-          detectBrandFromPAN(String(t.num_tarjeta || "")) ||
-          detectBrandFromBanco(String(t.banco || "")) ||
-          "otro";
+          brandFromBank !== "otro" ? brandFromBank : brandFromPan;
+
         return {
           id: String(t.id_tarjeta),
           brand,
@@ -354,7 +409,7 @@ export default function Perfil() {
           holder: t.titular,
           expMonth: String(t.vence_mes).padStart(2, "0"),
           expYear: String(t.vence_anio),
-          banco: t.banco,
+          banco: t.banco, // aquí llegará "VISA"/"MASTERCARD"/"AMEX"
         } as PaymentMethod;
       });
 
@@ -385,7 +440,12 @@ export default function Perfil() {
         });
 
         // Traer saldo/tarjetas (solo si tiene monedero)
-        if (!(res.data?.tipo_usuario === "admin" || res.data?.tipo_usuario === "root")) {
+        if (
+          !(
+            res.data?.tipo_usuario === "admin" ||
+            res.data?.tipo_usuario === "root"
+          )
+        ) {
           fetchWallet(); // paralelo
           fetchCards();
         }
@@ -427,7 +487,8 @@ export default function Perfil() {
           </div>
 
           {/* Accesos Panel */}
-          {(profile.tipo_usuario === "admin" || profile.tipo_usuario === "root") && (
+          {(profile.tipo_usuario === "admin" ||
+            profile.tipo_usuario === "root") && (
             <div className="mt-4 sm:mt-6 flex justify-center pb-4">
               <button
                 type="button"
@@ -440,11 +501,13 @@ export default function Perfil() {
                 }
                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
               >
-                Ir al Panel {profile.tipo_usuario === "root" ? "Root" : "Administrador"}
+                Ir al Panel{" "}
+                {profile.tipo_usuario === "root" ? "Root" : "Administrador"}
               </button>
-            </div>          
+            </div>
           )}
 
+          {/* Botón historial transacciones (solo cliente) */}
           {profile.tipo_usuario === "cliente" && (
             <div className="mt-4 sm:mt-6 flex justify-center pb-4">
               <button
@@ -456,8 +519,6 @@ export default function Perfil() {
               </button>
             </div>
           )}
-
-
 
           {/* Accesos a los tickets */}
           {profile.tipo_usuario === "cliente" && (
@@ -509,32 +570,53 @@ export default function Perfil() {
                 }}
               >
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Nombre
+                  </label>
                   <input
                     type="text"
                     className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.nombre || ""}
                     disabled={!editPersonal}
-                    onChange={(e) => setPersonalForm({ ...personalForm, nombre: e.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({
+                        ...personalForm,
+                        nombre: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Apellido</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Apellido
+                  </label>
                   <input
                     type="text"
                     className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.apellido || ""}
                     disabled={!editPersonal}
-                    onChange={(e) => setPersonalForm({ ...personalForm, apellido: e.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({
+                        ...personalForm,
+                        apellido: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Género</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Género
+                  </label>
                   <select
                     className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.genero || ""}
                     disabled={!editPersonal}
-                    onChange={(e) => setPersonalForm({ ...personalForm, genero: e.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({
+                        ...personalForm,
+                        genero: e.target.value,
+                      })
+                    }
                   >
                     <option value="M">Masculino</option>
                     <option value="F">Femenino</option>
@@ -542,16 +624,28 @@ export default function Perfil() {
                   </select>
                 </div>
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nacionalidad</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Nacionalidad
+                  </label>
                   {editPersonal ? (
                     <select
                       value={personalForm.nacionalidad ?? ""}
-                      onChange={(e) => setPersonalForm({ ...personalForm, nacionalidad: e.target.value })}
+                      onChange={(e) =>
+                        setPersonalForm({
+                          ...personalForm,
+                          nacionalidad: e.target.value,
+                        })
+                      }
                       className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     >
                       <option value="">Seleccionar</option>
                       {NATIONALITIES.map((country) => (
-                        <option key={country.value} value={country.value}>{country.label}</option>
+                        <option
+                          key={country.value}
+                          value={country.value}
+                        >
+                          {country.label}
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -561,17 +655,26 @@ export default function Perfil() {
                   )}
                 </div>
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Usuario</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Usuario
+                  </label>
                   <input
                     type="text"
                     className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={personalForm.username || ""}
                     disabled={!editPersonal}
-                    onChange={(e) => setPersonalForm({ ...personalForm, username: e.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({
+                        ...personalForm,
+                        username: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Foto de perfil</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Foto de perfil
+                  </label>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-2">
                     <input
                       type="text"
@@ -602,7 +705,13 @@ export default function Perfil() {
 
                 <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
                   {updateMessage && (
-                    <span className={`text-xs sm:text-sm text-center sm:text-left ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
+                    <span
+                      className={`text-xs sm:text-sm text-center sm:text-left ${
+                        updateMessage.startsWith("✅")
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {updateMessage}
                     </span>
                   )}
@@ -650,24 +759,38 @@ export default function Perfil() {
                 }}
               >
                 <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Correo electrónico</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Correo electrónico
+                  </label>
                   <input
                     type="email"
                     className="mt-2 w-full p-2 border rounded-lg disabled:bg-gray-200 text-sm sm:text-base"
                     value={contactForm.correo || ""}
                     disabled={true}
-                    onChange={(e) => setContactForm({ ...contactForm, correo: e.target.value })}
+                    onChange={(e) =>
+                      setContactForm({
+                        ...contactForm,
+                        correo: e.target.value,
+                      })
+                    }
                     maxLength={50}
                   />
                 </div>
                 <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Dirección de facturación</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Dirección de facturación
+                  </label>
                   <input
                     type="text"
                     className="mt-2 w-full p-2 border rounded-lg text-sm sm:text-base"
                     value={contactForm.direccion_facturacion || ""}
                     disabled={!editContact}
-                    onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
+                    onChange={(e) =>
+                      setContactForm({
+                        ...contactForm,
+                        direccion_facturacion: e.target.value,
+                      })
+                    }
                   />
                   <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3 mt-4">
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
@@ -678,19 +801,31 @@ export default function Perfil() {
                       checked={!!contactForm.suscrito_noticias}
                       onChange={async (e) => {
                         const nuevoValor = e.target.checked;
-                        setContactForm((prev: any) => ({ ...prev, suscrito_noticias: nuevoValor }));
+                        setContactForm((prev: any) => ({
+                          ...prev,
+                          suscrito_noticias: nuevoValor,
+                        }));
                         try {
-                          await api.patch("/profile", { suscrito_noticias: nuevoValor });
+                          await api.patch("/profile", {
+                            suscrito_noticias: nuevoValor,
+                          });
                           setUpdateMessage(
                             nuevoValor
                               ? "✅ Te has suscrito correctamente a las noticias."
                               : "❌ Has cancelado la suscripción a las noticias."
                           );
                         } catch (err: any) {
-                          console.error("Error al actualizar suscripción:", err);
-                          setUpdateMessage("⚠️ No se pudo actualizar la suscripción.");
-                          // Revertir visualmente el cambio si falla
-                          setContactForm((prev: any) => ({ ...prev, suscrito_noticias: !nuevoValor }));
+                          console.error(
+                            "Error al actualizar suscripción:",
+                            err
+                          );
+                          setUpdateMessage(
+                            "⚠️ No se pudo actualizar la suscripción."
+                          );
+                          setContactForm((prev: any) => ({
+                            ...prev,
+                            suscrito_noticias: !nuevoValor,
+                          }));
                         }
                       }}
                       className="w-5 h-5 accent-[#3B82F6] cursor-pointer"
@@ -700,7 +835,13 @@ export default function Perfil() {
 
                 <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
                   {updateMessage && (
-                    <span className={`text-xs sm:text-sm text-center sm:text-left ${updateMessage.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
+                    <span
+                      className={`text-xs sm:text-sm text-center sm:text-left ${
+                        updateMessage.startsWith("✅")
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {updateMessage}
                     </span>
                   )}
@@ -749,7 +890,9 @@ export default function Perfil() {
               >
                 {!showPasswordForm ? (
                   <>
-                    <p className="text-gray-600 mb-4 sm:mb-6 text-center text-sm sm:text-base">🔒 Por seguridad, tu contraseña no se muestra aquí.</p>
+                    <p className="text-gray-600 mb-4 sm:mb-6 text-center text-sm sm:text-base">
+                      🔒 Por seguridad, tu contraseña no se muestra aquí.
+                    </p>
                     <button
                       type="button"
                       onClick={() => setShowPasswordForm(true)}
@@ -772,21 +915,31 @@ export default function Perfil() {
                       </div>
                     )}
                     <div>
-                      <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nueva contraseña</label>
+                      <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                        Nueva contraseña
+                      </label>
                       <input
                         type="password"
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value.replace(/\s/g, ""))} // 🚫 elimina espacios
+                        onChange={(e) =>
+                          setNewPassword(e.target.value.replace(/\s/g, ""))
+                        } // elimina espacios
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Confirmar nueva contraseña</label>
+                      <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                        Confirmar nueva contraseña
+                      </label>
                       <input
                         type="password"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value.replace(/\s/g, ""))}
+                        onChange={(e) =>
+                          setConfirmPassword(
+                            e.target.value.replace(/\s/g, "")
+                          )
+                        }
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
@@ -822,11 +975,17 @@ export default function Perfil() {
                 {/* Saldo */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="w-full sm:w-auto">
-                    <p className="text-xs sm:text-sm text-gray-500">Saldo actual</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      Saldo actual
+                    </p>
                     {walletLoading ? (
-                      <p className="text-xs sm:text-sm text-gray-500 mt-1">Cargando saldo…</p>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                        Cargando saldo…
+                      </p>
                     ) : walletError ? (
-                      <p className="text-xs sm:text-sm text-red-600 mt-1">{walletError}</p>
+                      <p className="text-xs sm:text-sm text-red-600 mt-1">
+                        {walletError}
+                      </p>
                     ) : (
                       <p className="text-2xl sm:text-3xl font-bold text-[#081225] mt-1">
                         {formatCOP(walletBalance)}
@@ -852,11 +1011,16 @@ export default function Perfil() {
 
                 {/* Métodos de pago */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
-                  <h3 className="text-base sm:text-lg font-semibold text-[#081225] mb-4">Métodos de pago</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-[#081225] mb-4">
+                    Métodos de pago
+                  </h3>
                   {paymentMethods.length === 0 ? (
                     <div className="text-gray-500 text-xs sm:text-sm">
                       No tienes tarjetas registradas.{" "}
-                      <button onClick={() => setShowAddCard(true)} className="text-[#0F6899] underline">
+                      <button
+                        onClick={() => setShowAddCard(true)}
+                        className="text-[#0F6899] underline"
+                      >
                         Añade una tarjeta
                       </button>
                       .
@@ -864,19 +1028,30 @@ export default function Perfil() {
                   ) : (
                     <ul className="space-y-3">
                       {paymentMethods.map((pm) => (
-                        <li key={pm.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3">
+                        <li
+                          key={pm.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3"
+                        >
                           <div className="flex items-center gap-3 w-full sm:w-auto">
-                            {brandIcon(pm.brand || detectBrandFromBanco(pm.banco) || "otro")}
+                            {brandIcon(
+                              pm.brand ||
+                                detectBrandFromBanco(pm.banco) ||
+                                "otro"
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs sm:text-sm font-medium text-[#081225] truncate">
                                 {pm.holder} • • • • {pm.last4}
                               </p>
-                              <p className="text-xs text-gray-500">Vence {pm.expMonth}/{pm.expYear}</p>
+                              <p className="text-xs text-gray-500">
+                                Vence {pm.expMonth}/{pm.expYear}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 w-full sm:w-auto">
                             {pm.isDefault && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Predeterminada</span>
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                Predeterminada
+                              </span>
                             )}
                             {!pm.isDefault && (
                               <button
@@ -909,10 +1084,14 @@ export default function Perfil() {
       {/* MODAL AÑADIR TARJETA */}
       {showAddCard && hasWallet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md bg.white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-semibold text-[#081225] mb-1">Añadir tarjeta</h3>
-              <p className="text-xs sm:text-sm text-gray-500 mb-4">Registra un método de pago para recargar tu monedero.</p>
+              <h3 className="text-lg sm:text-xl font-semibold text-[#081225] mb-1">
+                Añadir tarjeta
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-500 mb-4">
+                Registra un método de pago para recargar tu monedero.
+              </p>
 
               {addCardError && (
                 <div className="mb-3 text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
@@ -922,42 +1101,67 @@ export default function Perfil() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Nombre en la tarjeta</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Nombre en la tarjeta
+                  </label>
                   <input
                     type="text"
                     value={addCardForm.holder}
-                    onChange={(e) => setAddCardForm((s) => ({ ...s, holder: e.target.value }))}
+                    onChange={(e) =>
+                      setAddCardForm((s) => ({
+                        ...s,
+                        holder: e.target.value,
+                      }))
+                    }
                     className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                     placeholder="Ej: Juan Pérez"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Número de tarjeta</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Número de tarjeta
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={addCardForm.number}
                     onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "").slice(0, 19);
+                      const v = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 19);
                       const groups = v.match(/.{1,4}/g) || [];
-                      setAddCardForm((s) => ({ ...s, number: groups.join(" ") }));
+                      setAddCardForm((s) => ({
+                        ...s,
+                        number: groups.join(" "),
+                      }));
                     }}
                     className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                     placeholder="1234 5678 9012 3456"
                   />
-                  <p className="text-xs text-gray-400 mt-1">{maskCardNumber(addCardForm.number || "")}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {maskCardNumber(addCardForm.number || "")}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    La entidad (Visa / Mastercard / Amex) se detectará
+                    automáticamente.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Vencimiento</label>
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      Vencimiento
+                    </label>
                     <input
                       type="text"
                       value={addCardForm.exp}
                       onChange={(e) => {
-                        let v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                        if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                        let v = e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 4);
+                        if (v.length >= 3)
+                          v = `${v.slice(0, 2)}/${v.slice(2)}`;
                         setAddCardForm((s) => ({ ...s, exp: v }));
                       }}
                       className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
@@ -965,12 +1169,21 @@ export default function Perfil() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">CVC</label>
+                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                      CVC
+                    </label>
                     <input
                       type="password"
                       inputMode="numeric"
                       value={addCardForm.cvc}
-                      onChange={(e) => setAddCardForm((s) => ({ ...s, cvc: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                      onChange={(e) =>
+                        setAddCardForm((s) => ({
+                          ...s,
+                          cvc: e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 4),
+                        }))
+                      }
                       className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                       placeholder="123"
                     />
@@ -978,64 +1191,22 @@ export default function Perfil() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Marca</label>
+                  <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
+                    Tipo
+                  </label>
                   <select
-                    value={addCardForm.brand}
-                    onChange={(e) => setAddCardForm((s) => ({ ...s, brand: e.target.value as CardBrand }))}
-                    className="mt-2 w-full p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]"
+                    value={addCardForm.tipo}
+                    onChange={(e) =>
+                      setAddCardForm((s) => ({
+                        ...s,
+                        tipo: e.target.value as "credito" | "debito",
+                      }))
+                    }
+                    className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
                   >
-                    <option value="visa">Visa</option>
-                    <option value="mastercard">Mastercard</option>
-                    <option value="amex">American Express</option>
-                    <option value="otro">Otro</option>
+                    <option value="credito">Crédito</option>
+                    <option value="debito">Débito</option>
                   </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Banco</label>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      autoComplete="off"
-                      pattern="^[A-Za-zÀ-ÿ\s]+$"
-                      value={addCardForm.banco}
-                      onBeforeInput={(e: React.FormEvent<HTMLInputElement>) => {
-                        const data = (e as unknown as InputEvent).data ?? "";
-                        if (data && !/^[A-Za-zÀ-ÿ\s]$/.test(data)) {
-                          (e.nativeEvent as InputEvent).preventDefault();
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        const allowedKeys = [
-                          "Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"
-                        ];
-                        if (allowedKeys.includes(e.key)) return;
-                        if (/^\d$/.test(e.key)) e.preventDefault();
-                      }}
-                      onPaste={(e) => {
-                        const text = e.clipboardData.getData("text");
-                        if (!/^[A-Za-zÀ-ÿ\s]+$/.test(text)) e.preventDefault();
-                      }}
-                      onChange={(e) => {
-                        const limpio = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
-                        setAddCardForm((s) => ({ ...s, banco: limpio }));
-                      }}
-                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
-                      placeholder="Banco de Bogotá"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">Tipo</label>
-                    <select
-                      value={addCardForm.tipo}
-                      onChange={(e) => setAddCardForm((s) => ({ ...s, tipo: e.target.value as "credito" | "debito" }))}
-                      className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] text-sm sm:text-base"
-                    >
-                      <option value="credito">Crédito</option>
-                      <option value="debito">Débito</option>
-                    </select>
-                  </div>
                 </div>
               </div>
 
