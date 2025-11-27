@@ -24,6 +24,7 @@ import ChangePassword from "../modules/auth/pages/ChangePassword";
 import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
+import { ForoPage, HiloDetallePage } from "../modules/foro";
 
 
 
@@ -85,6 +86,24 @@ export default function AppRoutes() {
           }
         />
 
+        {/* Foro del usuario */}
+        <Route
+          path="/foro"
+          element={
+            <ClientRoute>
+              <ForoPage />
+            </ClientRoute>
+          }
+        />
+        <Route
+          path="/foro/:id"
+          element={
+            <ClientRoute>
+              <HiloDetallePage />
+            </ClientRoute>
+          }
+        />
+
         <Route
           path="/checkout"
           element={
@@ -132,9 +151,6 @@ export default function AppRoutes() {
           }
         />
       </Route>
-
-
-
 
 
       {/* ✅ Cambio de contraseña obligatorio */}
