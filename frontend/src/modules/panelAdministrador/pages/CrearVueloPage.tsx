@@ -313,10 +313,6 @@ export const CrearVueloPage: React.FC = () => {
       nuevosErrores.url_imagen = "La imagen del vuelo es obligatoria";
       showErrorToast('Campo obligatorio', 'Debes seleccionar una imagen para el vuelo');
     }
-    if (!form.id_aeronaveFK) {
-      nuevosErrores.id_aeronaveFK = "Selecciona una aeronave";
-      showErrorToast('Campo obligatorio', 'Debe seleccionar una aeronave');
-    }
     
     if (!aeropuertoOrigenSeleccionado) {
       nuevosErrores.id_aeropuerto_origenFK = "Selecciona el aeropuerto de origen";
@@ -858,40 +854,7 @@ export const CrearVueloPage: React.FC = () => {
                   <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Detalles del Vuelo</span>
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Aeronave
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="id_aeronaveFK"
-                        value={form.id_aeronaveFK}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.id_aeronaveFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none appearance-none text-gray-900 font-medium`}
-                      >
-                        <option value="">Seleccionar aeronave</option>
-                        {aeronaves.map((a) => (
-                          <option key={a.id_aeronave} value={a.id_aeronave}>
-                            {a.modelo} ({a.capacidad} pax)
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#select-blue-gradient)">
-                          <defs>
-                            <linearGradient id="select-blue-gradient" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0%" stopColor="#123361" />
-                              <stop offset="100%" stopColor="#1180B8" />
-                            </linearGradient>
-                          </defs>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </div>
-                    {errores.id_aeronaveFK && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.id_aeronaveFK}</p>}
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Aeropuerto Origen
