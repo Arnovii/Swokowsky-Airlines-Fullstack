@@ -16,11 +16,12 @@ import { CardsModule } from './modules/cards/cards.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { RootModule } from './modules/root/root.module';
 import { CartModule } from './modules/cart/cart.module';
-
+import { HistoryModule } from './modules/history/history.module';
 import { TicketModule } from './modules/ticket/ticket.module';
-
 import { PasajeroModule } from './modules/pasajero/pasajero.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
+import { ForoModule } from './modules/foro/foro.module';
+
 
 
 
@@ -44,8 +45,11 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
     RootModule,
     CartModule,
     TicketModule,
-  PasajeroModule,
-  CheckoutModule
+    PasajeroModule,
+    CheckoutModule,
+    HistoryModule,
+    ForoModule
+  
   ],
   controllers: [AppController],
   providers: [AppService],
