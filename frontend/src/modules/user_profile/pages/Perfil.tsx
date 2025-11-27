@@ -434,13 +434,20 @@ export default function Perfil() {
           )}
           {/* Accesos a los tickets */}
           {(profile.tipo_usuario === "cliente") && (
-            <div className="mt-4 sm:mt-6 flex justify-center pb-4">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
               <button
                 type="button"
                 onClick={() => navigate("/tickets")}
                 className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
               >
-                Ver tickets
+                🎫 Ver tickets
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/foro")}
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
+              >
+                💬 Mi Foro
               </button>
             </div>
           )}

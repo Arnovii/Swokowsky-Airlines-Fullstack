@@ -23,6 +23,8 @@ import Root from "../modules/panelAdministrador/pages/Root";
 import ChangePassword from "../modules/auth/pages/ChangePassword";
 import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
+import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
+import { ForoPage, HiloDetallePage } from "../modules/foro";
 
 
 
@@ -64,6 +66,16 @@ export default function AppRoutes() {
 
         <Route path="/tickets" element={<TicketPage />} />
 
+        {/* Mapa de asientos */}
+        <Route
+          path="/mapa-asientos"
+          element={
+            <ClientRoute>
+              <SeatMapPage />
+            </ClientRoute>
+          }
+        />
+
         {/* Ruta protegida del carrito */}
         <Route
           path="/carrito"
@@ -73,6 +85,11 @@ export default function AppRoutes() {
             </ClientRoute>
           }
         />
+
+        {/* Foro del usuario */}
+        {/* Foro público - visible para todos, escritura solo para usuarios autenticados */}
+        <Route path="/foro" element={<ForoPage />} />
+        <Route path="/foro/:id" element={<HiloDetallePage />} />
 
         <Route
           path="/checkout"
@@ -121,9 +138,6 @@ export default function AppRoutes() {
           }
         />
       </Route>
-
-
-
 
 
       {/* ✅ Cambio de contraseña obligatorio */}

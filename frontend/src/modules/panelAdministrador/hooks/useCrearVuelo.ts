@@ -86,7 +86,6 @@ export function useCrearVuelo(): UseCrearVueloResult {
     const maxDate = new Date();
     maxDate.setFullYear(now.getFullYear() + 1);
     if (
-      !form.id_aeronaveFK ||
       !form.id_aeropuerto_origenFK ||
       !form.id_aeropuerto_destinoFK ||
       !salidaDate ||
@@ -151,7 +150,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       } : undefined,
       salida_colombia: salidaDate ? salidaDate.toISOString() : "",
       llegada_colombia: llegadaDate ? llegadaDate.toISOString() : "",
-      id_aeronaveFK: form.id_aeronaveFK,
+      id_aeronaveFK: 1, // Valor fijo - la capacidad se determina por tipo de vuelo (nacional/internacional)
       id_aeropuerto_origenFK: form.id_aeropuerto_origenFK,
       id_aeropuerto_destinoFK: form.id_aeropuerto_destinoFK
     };

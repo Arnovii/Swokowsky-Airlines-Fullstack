@@ -76,9 +76,7 @@ const EditarVueloPage: React.FC = () => {
     if (!form.url_imagen || form.url_imagen.trim() === "") {
       nuevosErrores.url_imagen = "La URL de la imagen es obligatoria";
     }
-    if (!form.id_aeronaveFK) {
-      nuevosErrores.id_aeronaveFK = "Selecciona una aeronave";
-    }
+
     if (!form.id_aeropuerto_origenFK) {
       nuevosErrores.id_aeropuerto_origenFK = "Selecciona el aeropuerto de origen";
     }
@@ -182,17 +180,6 @@ const EditarVueloPage: React.FC = () => {
             {errores.descripcion_larga && <p className="text-red-500 text-sm mt-1 font-semibold">{errores.descripcion_larga}</p>}
           </div>
           <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block mb-2 font-medium">Aeronave</label>
-              <input
-                type="number"
-                name="id_aeronaveFK"
-                value={form?.id_aeronaveFK || ""}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[#39A5D8] focus:border-transparent bg-white text-lg font-bold shadow-sm transition-all duration-200 ${errores.id_aeronaveFK ? 'border-red-500' : 'border-[#39A5D8]'}`}
-                placeholder="ID Aeronave"
-              />
-            </div>
             <div className="flex-1">
               <label className="block mb-2 font-medium">Aeropuerto Origen</label>
               <input
