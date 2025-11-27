@@ -25,10 +25,6 @@ import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 
-
-
-
-
 export default function AppRoutes() {
   return (
     <Routes>
