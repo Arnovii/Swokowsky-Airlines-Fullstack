@@ -25,7 +25,7 @@ interface Profile {
   suscrito_noticias: boolean;
   creado_en: string;
   must_change_password: boolean;
-  tipo_usuario?: string; // "admin" | "root" | otro
+  tipo_usuario?: string; // "admin" | "root" | "cliente" | otro
 }
 
 type ActiveTab = "personal" | "contact" | "security" | "wallet";
@@ -133,18 +133,21 @@ export default function Perfil() {
   const [addCardError, setAddCardError] = useState<string | null>(null);
   const [addCardOk, setAddCardOk] = useState<string | null>(null);
 
+  // Solo clientes pueden ver CONTACTO
+  const hasContact = profile?.tipo_usuario === "cliente";
+
   // Sólo usuarios con monedero:
   const hasWallet = !(profile?.tipo_usuario === "admin" || profile?.tipo_usuario === "root");
 
   // Tabs permitidos según rol
-  const availableTabs: { id: ActiveTab; label: string; icon: string }[] = [
-    { id: "personal", label: "Personal", icon: "👤" },
-    { id: "contact", label: "Contacto", icon: "📧" },
-    { id: "security", label: "Seguridad", icon: "🔒" },
-    ...(hasWallet ? [{ id: "wallet", label: "Monedero", icon: "💳" } as const] : []),
-  ];
+  const availableTabs = [
+    { id: "personal" as ActiveTab, label: "Personal", icon: "👤" },
+    ...(hasContact ? [{ id: "contact" as ActiveTab, label: "Contacto", icon: "📧" }] : []),
+    { id: "security" as ActiveTab, label: "Seguridad", icon: "🔒" },
+    ...(hasWallet ? [{ id: "wallet" as ActiveTab, label: "Monedero", icon: "💳" }] : []),
+  ] as { id: ActiveTab; label: string; icon: string }[];
 
-  // Efecto inicial: si la URL trae un tab inválido o wallet para roles sin monedero, forzar "personal"
+  // Efecto inicial: si la URL trae un tab inválido o no permitido, forzar "personal"
   useEffect(() => {
     const ids = availableTabs.map((t) => t.id);
     if (tabFromUrl && ids.includes(tabFromUrl)) {
@@ -157,11 +160,20 @@ export default function Perfil() {
   }, [tabFromUrl, profile?.tipo_usuario]); // depende del rol para recalcular availableTabs
 
   const handleTabChange = (newTab: ActiveTab) => {
+    // Seguridad extra: no permitir cambiar a un tab que no esté disponible
+    const ids = availableTabs.map((t) => t.id);
+    if (!ids.includes(newTab)) {
+      setSearchParams({ tab: "personal" });
+      setActiveTab("personal");
+      return;
+    }
+
     if (newTab === "wallet" && !hasWallet) {
       setSearchParams({ tab: "personal" });
       setActiveTab("personal");
       return;
     }
+
     setActiveTab(newTab);
     setSearchParams({ tab: newTab });
   };
@@ -430,8 +442,23 @@ export default function Perfil() {
               >
                 Ir al Panel {profile.tipo_usuario === "root" ? "Root" : "Administrador"}
               </button>
+            </div>          
+          )}
+
+          {profile.tipo_usuario === "cliente" && (
+            <div className="mt-4 sm:mt-6 flex justify-center pb-4">
+              <button
+                type="button"
+                onClick={() => navigate("/transaction-history")}
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
+              >
+                Ir a historial de transacciones
+              </button>
             </div>
           )}
+
+
+
           {/* Accesos a los tickets */}
           {profile.tipo_usuario === "cliente" && (
             <div className="mt-4 sm:mt-6 flex justify-center pb-4">
@@ -612,8 +639,8 @@ export default function Perfil() {
               </form>
             )}
 
-            {/* CONTACT */}
-            {activeTab === "contact" && (
+            {/* CONTACT - solo clientes */}
+            {activeTab === "contact" && hasContact && (
               <form
                 className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-8"
                 onSubmit={(e) => {
@@ -642,7 +669,7 @@ export default function Perfil() {
                     disabled={!editContact}
                     onChange={(e) => setContactForm({ ...contactForm, direccion_facturacion: e.target.value })}
                   />
-                  <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
+                  <div className="sm:col-span-2 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3 mt-4">
                     <label className="block text-xs uppercase text-[#3B82F6] font-semibold tracking-wider">
                       Suscrito a noticias
                     </label>
@@ -749,7 +776,7 @@ export default function Perfil() {
                       <input
                         type="password"
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                        onChange={(e) => setNewPassword(e.target.value.replace(/\s/g, ""))} // 🚫 elimina espacios
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
@@ -759,7 +786,7 @@ export default function Perfil() {
                       <input
                         type="password"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onChange={(e) => setConfirmPassword(e.target.value.replace(/\s/g, ""))}
                         className="mt-2 w-full p-2 sm:p-3 bg-white border border-gray-200 rounded-lg text-sm sm:text-base"
                         required
                       />
@@ -882,7 +909,7 @@ export default function Perfil() {
       {/* MODAL AÑADIR TARJETA */}
       {showAddCard && hasWallet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-md bg.white rounded-2xl shadow-xl border border-gray-100 max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
               <h3 className="text-lg sm:text-xl font-semibold text-[#081225] mb-1">Añadir tarjeta</h3>
               <p className="text-xs sm:text-sm text-gray-500 mb-4">Registra un método de pago para recargar tu monedero.</p>
@@ -910,7 +937,6 @@ export default function Perfil() {
                   <input
                     type="text"
                     inputMode="numeric"
-                    maxLength={19}
                     value={addCardForm.number}
                     onChange={(e) => {
                       const v = e.target.value.replace(/\D/g, "").slice(0, 19);

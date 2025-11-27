@@ -116,7 +116,7 @@ class CheckoutService {
     const errors: string[] = [];
 
     if (!item.vueloID || item.vueloID <= 0) {
-      errors.push('ID de vuelo inválido');
+      errors.push('ID de vuelo no valido');
     }
 
     if (!item.Clase || (item.Clase !== 'economica' && item.Clase !== 'primera_clase')) {
