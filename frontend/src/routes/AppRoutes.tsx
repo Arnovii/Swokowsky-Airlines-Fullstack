@@ -87,22 +87,9 @@ export default function AppRoutes() {
         />
 
         {/* Foro del usuario */}
-        <Route
-          path="/foro"
-          element={
-            <ClientRoute>
-              <ForoPage />
-            </ClientRoute>
-          }
-        />
-        <Route
-          path="/foro/:id"
-          element={
-            <ClientRoute>
-              <HiloDetallePage />
-            </ClientRoute>
-          }
-        />
+        {/* Foro público - visible para todos, escritura solo para usuarios autenticados */}
+        <Route path="/foro" element={<ForoPage />} />
+        <Route path="/foro/:id" element={<HiloDetallePage />} />
 
         <Route
           path="/checkout"

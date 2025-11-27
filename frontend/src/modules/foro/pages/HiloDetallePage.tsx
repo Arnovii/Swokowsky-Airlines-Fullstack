@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useHiloDetalle } from '../hooks/useForo';
 import { CategoriaBadge } from '../components/CategoriaBadge';
+import { useAuth } from '../../../context/AuthContext';
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -34,10 +35,16 @@ export const HiloDetallePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hilo, loading, error, responderHilo, respondiendo, refetch } = useHiloDetalle(id!);
+  const { isAuthenticated, user } = useAuth();
   
   const [respuesta, setRespuesta] = useState('');
   const [respuestaError, setRespuestaError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Solo el autor del hilo o admin/root pueden responder
+  const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
+  const isAuthor = hilo && user?.id_usuario === hilo.id_usuarioFK;
+  const canReply = isAuthenticated && (isAuthor || isAdmin);
 
   const handleResponder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,63 +224,102 @@ export const HiloDetallePage = () => {
           )}
         </div>
 
-        {/* Formulario de respuesta */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span>✍️</span>
-              Agregar una respuesta
-            </h3>
-          </div>
-          <form onSubmit={handleResponder} className="p-6">
-            <textarea
-              value={respuesta}
-              onChange={(e) => {
-                setRespuesta(e.target.value);
-                setRespuestaError('');
-              }}
-              placeholder="Escribe tu respuesta aquí..."
-              rows={4}
-              className={`w-full px-4 py-3 rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0e254d]/20 resize-none ${
-                respuestaError ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#0e254d]'
-              }`}
-              maxLength={2000}
-            />
-            <div className="flex justify-between mt-2 mb-4">
-              {respuestaError ? (
-                <p className="text-red-500 text-sm flex items-center gap-1">
-                  <span>⚠️</span> {respuestaError}
-                </p>
-              ) : (
-                <span></span>
-              )}
-              <span className="text-xs text-gray-400">{respuesta.length}/2000</span>
-            </div>
-            
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={respondiendo}
-                className="px-6 py-3 bg-gradient-to-r from-[#0e254d] to-[#1a3a6e] text-white rounded-xl font-semibold hover:from-[#0a1a3a] hover:to-[#152d5a] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {respondiendo ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    <span>Enviando...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>📤</span>
-                    <span>Enviar respuesta</span>
-                  </>
+        {/* Formulario de respuesta - solo para autor del hilo o admin */}
+        {canReply ? (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                <span>✍️</span>
+                Agregar una respuesta
+                {isAdmin && !isAuthor && (
+                  <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
+                    ADMIN
+                  </span>
                 )}
-              </button>
+              </h3>
             </div>
-          </form>
-        </div>
+            <form onSubmit={handleResponder} className="p-6">
+              <textarea
+                value={respuesta}
+                onChange={(e) => {
+                  setRespuesta(e.target.value);
+                  setRespuestaError('');
+                }}
+                placeholder="Escribe tu respuesta aquí..."
+                rows={4}
+                className={`w-full px-4 py-3 rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0e254d]/20 resize-none ${
+                  respuestaError ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#0e254d]'
+                }`}
+                maxLength={2000}
+              />
+              <div className="flex justify-between mt-2 mb-4">
+                {respuestaError ? (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <span>⚠️</span> {respuestaError}
+                  </p>
+                ) : (
+                  <span></span>
+                )}
+                <span className="text-xs text-gray-400">{respuesta.length}/2000</span>
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={respondiendo}
+                  className="px-6 py-3 bg-gradient-to-r from-[#0e254d] to-[#1a3a6e] text-white rounded-xl font-semibold hover:from-[#0a1a3a] hover:to-[#152d5a] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {respondiendo ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📤</span>
+                      <span>Enviar respuesta</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : !isAuthenticated ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4">
+            <span className="text-4xl">💬</span>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="font-semibold text-blue-900 mb-1">¿Quieres ver más del foro?</h3>
+              <p className="text-blue-700 text-sm">
+                Inicia sesión o regístrate para crear tus propias publicaciones.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                to="/login"
+                className="px-6 py-2 bg-[#0e254d] text-white rounded-lg font-medium hover:bg-[#0a1a3a] transition-colors"
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                to="/registro"
+                className="px-6 py-2 border-2 border-[#0e254d] text-[#0e254d] rounded-lg font-medium hover:bg-[#0e254d] hover:text-white transition-colors"
+              >
+                Registrarse
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center">
+            <span className="text-4xl block mb-3">🔒</span>
+            <h3 className="font-semibold text-gray-700 mb-1">Solo el autor o administradores pueden responder</h3>
+            <p className="text-gray-500 text-sm">
+              Las respuestas están limitadas al autor de la publicación y al equipo de Swokowsky Airlines.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

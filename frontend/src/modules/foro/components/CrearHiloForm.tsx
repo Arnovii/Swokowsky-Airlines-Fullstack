@@ -25,14 +25,14 @@ export const CrearHiloForm = ({ onSubmit, onCancel, loading = false }: CrearHilo
 
     if (!titulo.trim()) {
       newErrors.titulo = 'El título es obligatorio';
-    } else if (titulo.trim().length < 5) {
-      newErrors.titulo = 'El título debe tener al menos 5 caracteres';
+    } else if (titulo.trim().length < 10) {
+      newErrors.titulo = 'El título debe tener al menos 10 caracteres';
     }
 
     if (!contenido.trim()) {
       newErrors.contenido = 'El contenido es obligatorio';
-    } else if (contenido.trim().length < 5) {
-      newErrors.contenido = 'El contenido debe tener al menos 5 caracteres';
+    } else if (contenido.trim().length < 20) {
+      newErrors.contenido = 'El contenido debe tener al menos 20 caracteres';
     }
 
     if (!categoria) {
@@ -123,7 +123,7 @@ export const CrearHiloForm = ({ onSubmit, onCancel, loading = false }: CrearHilo
               setTitulo(e.target.value);
               setErrors(prev => ({ ...prev, titulo: undefined }));
             }}
-            placeholder="Escribe un título descriptivo..."
+            placeholder="Escribe un título descriptivo (mínimo 10 caracteres)..."
             className={`w-full px-4 py-3 rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0e254d]/20 ${
               errors.titulo ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#0e254d]'
             }`}
@@ -153,12 +153,12 @@ export const CrearHiloForm = ({ onSubmit, onCancel, loading = false }: CrearHilo
               setContenido(e.target.value);
               setErrors(prev => ({ ...prev, contenido: undefined }));
             }}
-            placeholder="Describe tu duda, queja, recomendación o halago con detalle..."
+            placeholder="Describe tu duda, queja, recomendación o halago con detalle (mínimo 20 caracteres)..."
             rows={5}
             className={`w-full px-4 py-3 rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0e254d]/20 resize-none ${
               errors.contenido ? 'border-red-300 bg-red-50' : 'border-gray-200 focus:border-[#0e254d]'
             }`}
-            maxLength={2000}
+            maxLength={1000}
           />
           <div className="flex justify-between mt-1">
             {errors.contenido ? (
@@ -168,7 +168,7 @@ export const CrearHiloForm = ({ onSubmit, onCancel, loading = false }: CrearHilo
             ) : (
               <span></span>
             )}
-            <span className="text-xs text-gray-400">{contenido.length}/2000</span>
+            <span className="text-xs text-gray-400">{contenido.length}/1000</span>
           </div>
         </div>
 

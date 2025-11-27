@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateHiloDto } from './dto/create-hilo.dto';
 import { ReplyHiloDto } from './dto/reply-hilo.dto';
@@ -19,14 +19,29 @@ export class ForoService {
     });
   }
 
-  // Responder hilo
+  // Responder hilo (solo autor del hilo o admin/root)
   async responderHilo(id_hilo: number, dto: ReplyHiloDto, id_usuario: number) {
-    // Verificar si el hilo existe
-    const existe = await this.prisma.foro_hilo.findUnique({
+    // Obtener el hilo con el autor
+    const hilo = await this.prisma.foro_hilo.findUnique({
       where: { id_hilo },
+      include: { autor: true },
     });
 
-    if (!existe) throw new NotFoundException('Hilo no encontrado');
+    if (!hilo) throw new NotFoundException('Hilo no encontrado');
+
+    // Obtener el usuario que intenta responder
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario },
+      select: { tipo_usuario: true },
+    });
+
+    // Verificar si es autor del hilo o admin/root
+    const esAutor = hilo.id_usuarioFK === id_usuario;
+    const esAdmin = usuario?.tipo_usuario === 'admin' || usuario?.tipo_usuario === 'root';
+
+    if (!esAutor && !esAdmin) {
+      throw new ForbiddenException('Solo el autor del hilo o un administrador pueden responder');
+    }
 
     return this.prisma.foro_respuesta.create({
       data: {
@@ -39,34 +54,88 @@ export class ForoService {
 
   // Obtener hilo completo
   async getHiloCompleto(id_hilo: number) {
-    return this.prisma.foro_hilo.findUnique({
+    const hilo = await this.prisma.foro_hilo.findUnique({
       where: { id_hilo },
       include: {
-        autor: true,
+        autor: {
+          select: {
+            id_usuario: true,
+            nombre: true,
+            apellido: true,
+            username: true,
+            img_url: true,
+            tipo_usuario: true,
+          },
+        },
         respuestas: {
           include: {
-            usuario: true,
+            usuario: {
+              select: {
+                id_usuario: true,
+                nombre: true,
+                apellido: true,
+                username: true,
+                img_url: true,
+                tipo_usuario: true,
+              },
+            },
           },
+          orderBy: { creado_en: 'asc' },
         },
       },
     });
+
+    // Mapear 'usuario' a 'autor' para las respuestas
+    if (hilo && hilo.respuestas) {
+      hilo.respuestas = hilo.respuestas.map((resp: any) => ({
+        ...resp,
+        autor: resp.usuario,
+      }));
+    }
+
+    return hilo;
   }
 
   // Hilos creados por un usuario
   async getHilosPorUsuario(id_usuario: number) {
     return this.prisma.foro_hilo.findMany({
       where: { id_usuarioFK: id_usuario },
-      include: { respuestas: true },
+      include: {
+        autor: {
+          select: {
+            id_usuario: true,
+            nombre: true,
+            apellido: true,
+            username: true,
+            img_url: true,
+            tipo_usuario: true,
+          },
+        },
+        _count: {
+          select: { respuestas: true },
+        },
+      },
       orderBy: { creado_en: 'desc' },
     });
   }
 
-  // Todos los hilos (solo admin/root)
+  // Todos los hilos (público y admin/root)
   async getTodosLosHilos() {
     return this.prisma.foro_hilo.findMany({
       include: {
-        autor: true,
-        respuestas: true,
+        autor: {
+          select: {
+            id_usuario: true,
+            nombre: true,
+            apellido: true,
+            username: true,
+            img_url: true,
+            tipo_usuario: true,
+          },
+        },
+        _count: {
+          select: { respuestas: true },
+        },
       },
       orderBy: { creado_en: 'desc' },
     });

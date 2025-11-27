@@ -51,6 +51,12 @@ export interface CreateRespuestaDto {
 
 // Servicio del Foro
 const foroService = {
+  // Obtener hilos públicos (sin autenticación requerida)
+  getHilosPublicos: async (): Promise<Hilo[]> => {
+    const response = await api.get('/foro/publico');
+    return response.data;
+  },
+
   // Obtener mis hilos (usuario autenticado)
   getMisHilos: async (): Promise<Hilo[]> => {
     const response = await api.get('/foro/mis-hilos');

@@ -12,6 +12,7 @@ import { CreateHiloDto } from './dto/create-hilo.dto';
 import { ReplyHiloDto } from './dto/reply-hilo.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -25,6 +26,18 @@ import {
 @Controller('foro')
 export class ForoController {
   constructor(private readonly foroService: ForoService) {}
+
+  // ✅ PÚBLICO: Ver todos los hilos (para visitantes)
+  @Public()
+  @Get('publico')
+  @ApiOperation({
+    summary: 'Obtener todos los hilos del foro (público).',
+    description:
+      'Ruta pública sin autenticación. Cualquier visitante puede ver los hilos del foro.',
+  })
+  getHilosPublicos() {
+    return this.foroService.getTodosLosHilos();
+  }
 
   // Crear hilo (cliente + admin + root)
   @Post('hilos')
@@ -64,12 +77,13 @@ export class ForoController {
     return this.foroService.responderHilo(+id_hilo, dto, req.user.id_usuario);
   }
 
-  // Ver detalle del hilo con respuestas
+  // Ver detalle del hilo con respuestas (PÚBLICO)
+  @Public()
   @Get('hilos/:id_hilo')
   @ApiOperation({
     summary: 'Obtener el detalle completo de un hilo.',
     description:
-      'Incluye el autor del hilo y la lista de todas sus respuestas.',
+      'Ruta pública. Incluye el autor del hilo y la lista de todas sus respuestas.',
   })
   @ApiParam({
     name: 'id_hilo',

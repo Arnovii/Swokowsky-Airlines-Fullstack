@@ -17,23 +17,24 @@ export const useForo = (): UseForoReturn => {
   const [error, setError] = useState<string | null>(null);
   const [creatingHilo, setCreatingHilo] = useState(false);
 
-  const fetchMisHilos = useCallback(async () => {
+  const fetchHilos = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await foroService.getMisHilos();
+      // Siempre obtener todos los hilos públicos (para todos los usuarios)
+      const data = await foroService.getHilosPublicos();
       setHilos(data);
     } catch (err: any) {
       console.error('Error al obtener hilos:', err);
-      setError(err.response?.data?.message || 'Error al cargar tus hilos');
+      setError(err.response?.data?.message || 'Error al cargar los hilos');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchMisHilos();
-  }, [fetchMisHilos]);
+    fetchHilos();
+  }, [fetchHilos]);
 
   const crearHilo = async (data: CreateHiloDto): Promise<Hilo | null> => {
     setCreatingHilo(true);
@@ -51,7 +52,7 @@ export const useForo = (): UseForoReturn => {
   };
 
   const refetch = async () => {
-    await fetchMisHilos();
+    await fetchHilos();
   };
 
   return {
