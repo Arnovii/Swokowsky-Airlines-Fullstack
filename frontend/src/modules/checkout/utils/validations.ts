@@ -157,7 +157,7 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
       const now = new Date();
       
       if (isNaN(date.getTime())) {
-        return 'Fecha inválida';
+        return 'Fecha no válida';
       }
       if (date > now) {
         return 'La fecha no puede ser futura';
