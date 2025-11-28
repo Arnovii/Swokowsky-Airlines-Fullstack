@@ -176,7 +176,6 @@ async function main() {
       { id_pais: 3, nombre: "Reino Unido", iso2: "GB" },
       { id_pais: 4, nombre: "Estados Unidos", iso2: "US" },
       { id_pais: 5, nombre: "Argentina", iso2: "AR" },
-      // México eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -189,7 +188,6 @@ async function main() {
       { id_gmt: 3, name: "GMT+0", offset: 0 },  // Reino Unido (GMT / invierno)
       { id_gmt: 4, name: "GMT-3", offset: -3 }, // Argentina (ART)
       { id_gmt: 5, name: "GMT-4", offset: -4 }, // Estados Unidos - Este (EDT, p.ej. durante DST)
-      // GMT-6 (México) eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -234,7 +232,6 @@ async function main() {
       { id_ciudad: 33, id_paisFK: 4, id_gmtFK: 5, nombre: "New York", codigo: "JFK" }, // EE.UU., GMT-4 (EDT — DST)
       { id_ciudad: 34, id_paisFK: 5, id_gmtFK: 4, nombre: "Buenos Aires", codigo: "EZE" }, // Argentina, GMT-3
       { id_ciudad: 35, id_paisFK: 4, id_gmtFK: 5, nombre: "Miami", codigo: "MIA" }, // EE.UU., GMT-4 (EDT — DST)
-      // Ciudad de México (id_ciudad: 36) eliminada intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -279,7 +276,6 @@ async function main() {
       { id_aeropuerto: 33, id_ciudadFK: 33, nombre: "John F. Kennedy", codigo_iata: "JFK" },
       { id_aeropuerto: 34, id_ciudadFK: 34, nombre: "Ministro Pistarini", codigo_iata: "EZE" },
       { id_aeropuerto: 35, id_ciudadFK: 35, nombre: "Internacional de Miami", codigo_iata: "MIA" },
-      // Benito Juárez (id_aeropuerto: 36) eliminado intencionalmente
     ],
     skipDuplicates: true,
   });
@@ -287,9 +283,8 @@ async function main() {
   // Aeronaves
   await prisma.aeronave.createMany({
     data: [
-      { id_aeronave: 1, modelo: "Airbus A320" },
-      { id_aeronave: 2, modelo: "Boeing 787" },
-      { id_aeronave: 3, modelo: "Embraer E190" },
+      { id_aeronave: 1, modelo: "Nacional" },
+      { id_aeronave: 2, modelo: "Internacional" },
     ],
     skipDuplicates: true,
   });
@@ -297,17 +292,13 @@ async function main() {
   // Configuración de asientos
   await prisma.configuracion_asientos.createMany({
     data: [
-      // A320 | 30 asientos -> primeras 18, economica 12
-      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 12 },
-      { id_configuracion: 2, id_aeronaveFK: 1, clase: "primera_clase", cantidad: 18 },
+      // Nacional | 150 asientos -> primeras 25, economica 125
+      { id_configuracion: 1, id_aeronaveFK: 1, clase: "economica", cantidad: 125 },
+      { id_configuracion: 2, id_aeronaveFK: 1, clase: "primera_clase", cantidad: 25 },
 
-      // 787 | 50 asientos -> primeras 30, economica 20
-      { id_configuracion: 3, id_aeronaveFK: 2, clase: "economica", cantidad: 20 },
-      { id_configuracion: 4, id_aeronaveFK: 2, clase: "primera_clase", cantidad: 30 },
-
-      // E190 | 30 asientos -> primeras 10, economica 20
-      { id_configuracion: 5, id_aeronaveFK: 3, clase: "economica", cantidad: 20 },
-      { id_configuracion: 6, id_aeronaveFK: 3, clase: "primera_clase", cantidad: 10 },
+      // Internacional | 250 asientos -> primeras 50, economica 200
+      { id_configuracion: 3, id_aeronaveFK: 2, clase: "economica", cantidad: 200 },
+      { id_configuracion: 4, id_aeronaveFK: 2, clase: "primera_clase", cantidad: 50 },
     ],
     skipDuplicates: true,
   });
@@ -346,14 +337,13 @@ async function main() {
   // Vuelos CORREGIDOS - todas las referencias de aeropuertos ahora existen
   await prisma.vuelo.createMany({
     data: [
-      // existentes
       {
         id_vuelo: 1,
         id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 1, // BOG
         id_aeropuerto_destinoFK: 2, // MDE
-        salida_programada_utc: new Date("2025-10-10T12:00:00Z"),
-        llegada_programada_utc: new Date("2025-10-10T13:00:00Z"),
+        salida_programada_utc: new Date("2026-01-10T12:00:00Z"),
+        llegada_programada_utc: new Date("2026-01-10T13:20:00Z"), // doméstico +20'
         id_promocionFK: null,
         estado: "Programado",
       },
@@ -362,18 +352,18 @@ async function main() {
         id_aeronaveFK: 2,
         id_aeropuerto_origenFK: 1, // BOG
         id_aeropuerto_destinoFK: 31, // MAD
-        salida_programada_utc: new Date("2025-11-01T05:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-01T15:00:00Z"),
+        salida_programada_utc: new Date("2026-02-01T05:00:00Z"),
+        llegada_programada_utc: new Date("2026-02-01T16:00:00Z"), // internacional +60'
         id_promocionFK: 1,
         estado: "Programado",
       },
       {
         id_vuelo: 3,
-        id_aeronaveFK: 3,
+        id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 3, // CLO
         id_aeropuerto_destinoFK: 5, // CTG
-        salida_programada_utc: new Date("2025-10-20T08:00:00Z"),
-        llegada_programada_utc: new Date("2025-10-20T09:30:00Z"),
+        salida_programada_utc: new Date("2026-03-20T08:00:00Z"),
+        llegada_programada_utc: new Date("2026-03-20T09:50:00Z"), // doméstico +20'
         id_promocionFK: null,
         estado: "Programado",
       },
@@ -384,8 +374,8 @@ async function main() {
         id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 2, // MDE
         id_aeropuerto_destinoFK: 5, // CTG
-        salida_programada_utc: new Date("2025-10-15T14:00:00Z"),
-        llegada_programada_utc: new Date("2025-10-15T16:00:00Z"),
+        salida_programada_utc: new Date("2026-04-15T14:00:00Z"),
+        llegada_programada_utc: new Date("2026-04-15T16:20:00Z"), // doméstico +20'
         id_promocionFK: 2,
         estado: "Programado",
       },
@@ -394,8 +384,8 @@ async function main() {
         id_aeronaveFK: 2,
         id_aeropuerto_origenFK: 31, // MAD
         id_aeropuerto_destinoFK: 1, // BOG
-        salida_programada_utc: new Date("2025-11-28T08:00:00Z"),
-        llegada_programada_utc: new Date("2025-11-28T18:00:00Z"),
+        salida_programada_utc: new Date("2025-11-29T08:00:00Z"), // > 28-nov-2025
+        llegada_programada_utc: new Date("2025-11-29T19:00:00Z"), // internacional +60'
         id_promocionFK: 3,
         estado: "Programado",
       },
@@ -404,13 +394,13 @@ async function main() {
         id_aeronaveFK: 1,
         id_aeropuerto_origenFK: 1, // BOG
         id_aeropuerto_destinoFK: 5, // CTG
-        salida_programada_utc: new Date("2025-10-15T07:00:00Z"),
-        llegada_programada_utc: new Date("2025-10-15T08:30:00Z"),
+        salida_programada_utc: new Date("2026-04-15T07:00:00Z"),
+        llegada_programada_utc: new Date("2026-04-15T08:50:00Z"), // doméstico +20'
         id_promocionFK: 2,
         estado: "Programado",
       },
-      // Vuelos que referenciaban Ciudad de México (id_ciudad:36 / id_aeropuerto:36) han sido eliminados intencionalmente
     ],
+
     skipDuplicates: true,
   });
 
