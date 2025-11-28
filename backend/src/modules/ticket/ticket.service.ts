@@ -87,13 +87,12 @@ export class TicketService {
   }
 
   /**
-   * Obtiene todos los tickets pagados de un usuario
+   * Obtiene todos los tickets de un usuario (pagados y cancelados)
    */
   async getTicketsByUser(idUsuario: number) {
     return this.prisma.ticket.findMany({
       where: {
         id_usuarioFK: idUsuario,
-        estado: ticket_estado.pagado,
       },
       include: {
         pasajero: true,
