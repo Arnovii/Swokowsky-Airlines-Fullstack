@@ -309,8 +309,9 @@ const EditarVueloPage: React.FC = () => {
       if (!form.promo_descripcion || form.promo_descripcion.trim() === "") {
         nuevosErrores.promo_descripcion = "La descripción de la promoción es obligatoria";
       }
-      if (!form.descuento || Number(form.descuento) <= 0) {
-        nuevosErrores.descuento = "El descuento debe ser mayor a 0";
+      const descuentoNum = Number(form.descuento);
+      if (!form.descuento || descuentoNum < 1 || descuentoNum > 99) {
+        nuevosErrores.descuento = "El descuento debe estar entre 1% y 99%";
       }
       if (!form.promocion_inicio) {
         nuevosErrores.promocion_inicio = "La fecha de inicio es obligatoria";
@@ -330,8 +331,9 @@ const EditarVueloPage: React.FC = () => {
     }
   };
 
-  // No puede editar - estado moderno
-  if (!puedeEditar) {
+  // Solo bloquear completamente si el vuelo NO está programado (ya despegó, aterrizó o fue cancelado)
+  // Si tiene ventas pero está programado, se permite editar solo la promoción
+  if (!puedeEditar && !tieneVentas) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-md">
@@ -341,7 +343,7 @@ const EditarVueloPage: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-amber-600 mb-4">No se puede editar este vuelo</h2>
-          <p className="text-gray-600 mb-6">El vuelo ya sucedió o tiene tiquetes vendidos. Solo puedes cancelar el vuelo.</p>
+          <p className="text-gray-600 mb-6">El vuelo ya no está en estado "Programado". No se puede modificar.</p>
           <button onClick={() => navigate("/panelAdministrador")} className="px-6 py-3 bg-gradient-to-r from-[#0a1836] to-[#123361] text-white rounded-xl font-bold shadow hover:scale-105 transition-transform">Volver</button>
         </div>
       </div>
@@ -901,15 +903,23 @@ const EditarVueloPage: React.FC = () => {
                         {errores.promo_nombre && <p className="text-rose-300 text-sm mt-2 font-semibold">{errores.promo_nombre}</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-white mb-2">Descuento (%)</label>
+                        <label className="block text-sm font-bold text-white mb-2">Descuento (%) <span className="text-cyan-200 font-normal">máx. 99%</span></label>
                         <input
                           type="text"
                           inputMode="numeric"
                           name="descuento"
                           value={form?.descuento || ""}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            const valor = e.target.value.replace(/[^0-9]/g, ""); // Solo números
+                            const numero = parseInt(valor, 10);
+                            // Solo actualizar si está vacío o es un número válido entre 1-99
+                            if (valor === "" || (numero >= 1 && numero <= 99)) {
+                              setForm(f => ({ ...f!, descuento: valor }));
+                            }
+                          }}
+                          maxLength={2}
                           className={`w-full px-4 py-3.5 bg-white border-2 ${errores.descuento ? 'border-rose-500' : 'border-transparent'} rounded-xl focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-bold`}
-                          placeholder="20"
+                          placeholder="1-99"
                         />
                         {errores.descuento && <p className="text-rose-300 text-sm mt-2 font-semibold">{errores.descuento}</p>}
                       </div>
