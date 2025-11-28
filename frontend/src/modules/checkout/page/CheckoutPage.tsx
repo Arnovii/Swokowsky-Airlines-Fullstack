@@ -216,12 +216,17 @@ const CheckoutPage = () => {
   // Handler para cerrar modal
   const handleModalClose = () => {
     closeModal();
-    
-    // Si el pago fue exitoso, redirigir inmediatamente al home
+    // Si el pago fue exitoso, limpiar carrito pero NO redirigir
     if (paymentResult?.success) {
       clearCart();
-      navigate('/');
     }
+  };
+
+  // Handler para ver tickets después de compra exitosa
+  const handleViewTickets = () => {
+    closeModal();
+    clearCart();
+    navigate('/tickets');
   };
 
   // Loading state
@@ -382,6 +387,7 @@ const CheckoutPage = () => {
           message={paymentResult.message}
           transactionId={paymentResult.transactionId}
           onClose={handleModalClose}
+          onViewTickets={handleViewTickets}
         />
       )}
 

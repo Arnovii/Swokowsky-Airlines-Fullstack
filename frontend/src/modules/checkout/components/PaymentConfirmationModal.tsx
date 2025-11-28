@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 
+
+import { useNavigate } from 'react-router-dom';
+
 interface PaymentConfirmationModalProps {
   success: boolean;
   message: string;
   transactionId?: string;
   onClose: () => void;
+  onViewTickets?: () => void;
 }
 
 const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
   success,
   message,
   transactionId,
-  onClose
+  onClose,
+  onViewTickets
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -168,10 +173,19 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
           <div className="flex gap-3">
             {success ? (
               <button
-                onClick={handleClose}
+                onClick={() => {
+                  setIsVisible(false);
+                  setTimeout(() => {
+                    if (onViewTickets) {
+                      onViewTickets();
+                    } else {
+                      onClose();
+                    }
+                  }, 300);
+                }}
                 className="w-full px-6 py-4 bg-gradient-to-r from-[#123361] via-[#1180B8] to-[#39A5D8] text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:shadow-[#39A5D8]/30 transition-all duration-300 transform hover:scale-105"
               >
-                Ver Mis Reservas
+                Ver Tickets
               </button>
             ) : (
               <button
