@@ -89,17 +89,7 @@ export default function Header() {
             </Link>
           )}
 
-          {/* ⭐ Botón Realizar Check-In! (solo clientes o no logueado) */}
-          {showCheckIn && (
-            <Link
-              to="/check-in" // cambia esta ruta si tu check-in usa otra
-              className="flex items-center px-4 py-2.5 h-11 rounded-xl bg-gradient-to-r from-emerald-400/20 to-cyan-400/20 border border-emerald-300/40 hover:from-emerald-400/30 hover:to-cyan-400/30 hover:border-emerald-300/70 transition-all duration-300 group"
-            >
-              <span className="text-sm text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold whitespace-nowrap">
-                Realizar Check-In!
-              </span>
-            </Link>
-          )}
+
 
           {auth.isAuthenticated ? (
             <>
