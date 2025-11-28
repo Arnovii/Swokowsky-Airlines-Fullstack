@@ -87,14 +87,27 @@ export const AdminPanel: React.FC = () => {
     setVueloSeleccionado(null);
   };
 
-  const handleConfirmarEliminarFrontend = () => {
+  const handleConfirmarEliminarFrontend = async () => {
     if (!vueloSeleccionado) return;
 
-    setVuelos((prev) =>
-      prev.filter((v) => v.id_vuelo !== vueloSeleccionado.id_vuelo)
-    );
+    try {
+      // Llamar al backend para cancelar el vuelo
+      await axios.patch(`http://localhost:3000/api/v1/flights/${vueloSeleccionado.id_vuelo}`);
 
-    handleCerrarModalEliminar();
+      // Actualizar el estado local: cambiar estado a "Cancelado" en vez de eliminar
+      setVuelos((prev) =>
+        prev.map((v) =>
+          v.id_vuelo === vueloSeleccionado.id_vuelo
+            ? { ...v, estado: "Cancelado" }
+            : v
+        )
+      );
+
+      handleCerrarModalEliminar();
+    } catch (err: any) {
+      console.error("Error al cancelar el vuelo:", err);
+      alert(err?.response?.data?.message || "Error al cancelar el vuelo");
+    }
   };
 
   if (loading) return <p className="p-6">Cargando vuelos...</p>;
@@ -160,10 +173,13 @@ export const AdminPanel: React.FC = () => {
                     vuelo.ocupantes_primera_clase > 0 ||
                     vuelo.ocupantes_segunda_clase > 0;
 
+                  // Editable: siempre se puede editar si está programado y no ha sido realizado
                   const editable =
                     tabEstado === "Programado" &&
-                    !esRealizado &&
-                    !tienePasajeros;
+                    !esRealizado;
+
+                  // Cancelable: solo si no tiene pasajeros
+                  const cancelable = editable && !tienePasajeros;
 
                   return (
                     <tr key={vuelo.id_vuelo} className="hover:bg-gray-50">
@@ -223,17 +239,23 @@ export const AdminPanel: React.FC = () => {
                               ✏️ Editar
                             </button>
 
-                            <button
-                              onClick={() => handleAbrirModalEliminar(vuelo)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg"
-                            >
-                              ❌ Cancelar
-                            </button>
+                            {cancelable ? (
+                              <button
+                                onClick={() => handleAbrirModalEliminar(vuelo)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                              >
+                                ❌ Cancelar
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                title="No se puede cancelar porque hay pasajeros registrados"
+                                className="px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed opacity-60"
+                              >
+                                ❌ Cancelar
+                              </button>
+                            )}
                           </div>
-                        ) : tienePasajeros ? (
-                          <span className="text-xs text-red-500 font-semibold">
-                            No cancelable ni editable (hay pasajeros)
-                          </span>
                         ) : (
                           <span className="text-xs text-gray-400 italic">
                             No editable
