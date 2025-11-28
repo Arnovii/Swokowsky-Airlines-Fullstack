@@ -48,9 +48,5 @@ export class FlightsController {
     return this.flightsService.updateFlight(id_vuelo, dto);
   }
 
-
-
-
-
 }
 

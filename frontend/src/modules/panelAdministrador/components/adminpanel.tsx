@@ -91,8 +91,10 @@ export const AdminPanel: React.FC = () => {
     if (!vueloSeleccionado) return;
 
     try {
-      // Llamar al backend para cancelar el vuelo
-      await axios.patch(`http://localhost:3000/api/v1/flights/${vueloSeleccionado.id_vuelo}`);
+      // Llamar al backend para cancelar el vuelo usando PATCH
+      await axios.patch(`http://localhost:3000/api/v1/flights/${vueloSeleccionado.id_vuelo}`, {
+        estado: "Cancelado"
+      });
 
       // Actualizar el estado local: cambiar estado a "Cancelado" en vez de eliminar
       setVuelos((prev) =>
