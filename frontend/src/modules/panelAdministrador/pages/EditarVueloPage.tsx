@@ -32,6 +32,7 @@ const EditarVueloPage: React.FC = () => {
     handleChange,
     handleSubmit,
     puedeEditar,
+    tieneVentas,
   } = useEditarVuelo(id);
 
   const [errores, setErrores] = useState<{ [key: string]: string }>({});
@@ -176,13 +177,9 @@ const EditarVueloPage: React.FC = () => {
 
   // Efecto para cargar datos del vuelo y calcular duración inicial
   useEffect(() => {
-    if (vuelo && !form) {
-      setForm(vuelo);
+    if (vuelo && !duracionVuelo) {
       const salida = vuelo.salida_programada_utc ? new Date(vuelo.salida_programada_utc) : null;
       const llegada = vuelo.llegada_programada_utc ? new Date(vuelo.llegada_programada_utc) : null;
-      
-      setSalidaDate(salida);
-      setLlegadaDate(llegada);
       
       // Calcular y guardar la duración del vuelo original
       if (salida && llegada) {
@@ -192,7 +189,7 @@ const EditarVueloPage: React.FC = () => {
         }
       }
     }
-  }, [vuelo, form, setForm, setSalidaDate, setLlegadaDate]);
+  }, [vuelo, duracionVuelo]);
 
   // Efecto para buscar los nombres de aeropuertos cuando se cargan (solo una vez al inicio)
   useEffect(() => {
@@ -403,9 +400,29 @@ const EditarVueloPage: React.FC = () => {
             <p className="text-lg text-gray-600">Modifica la información del vuelo seleccionado</p>
           </div>
 
+          {/* Banner de advertencia cuando hay ventas */}
+          {tieneVentas && (
+            <div className="mb-8 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 rounded-2xl p-6 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="text-white">
+                  <h3 className="text-xl font-black mb-1">⚠️ Este vuelo tiene ventas registradas</h3>
+                  <p className="text-amber-100 font-medium">
+                    No se pueden editar los campos del vuelo porque ya existen tiquetes vendidos. 
+                    Solo puedes modificar la <span className="font-bold text-white">promoción</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmitPersonalizado} className="space-y-8">
             {/* Card: Información Básica */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className={`bg-white rounded-3xl shadow-xl p-8 border border-gray-100 ${tieneVentas ? 'opacity-60' : ''}`}>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#1180B8] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -413,6 +430,7 @@ const EditarVueloPage: React.FC = () => {
                   </svg>
                 </div>
                 <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#1180B8] bg-clip-text text-transparent">Información Básica</span>
+                {tieneVentas && <span className="ml-2 text-sm font-medium text-amber-500">🔒 Bloqueado</span>}
               </h2>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -423,7 +441,8 @@ const EditarVueloPage: React.FC = () => {
                     name="titulo"
                     value={form?.titulo || ""}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.titulo ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400`}
+                    disabled={tieneVentas}
+                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.titulo ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100`}
                     placeholder="Ej: Nuevo vuelo Bogotá → Barranquilla"
                   />
                   {errores.titulo && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.titulo}</p>}
@@ -435,7 +454,8 @@ const EditarVueloPage: React.FC = () => {
                     name="descripcion_corta"
                     value={form?.descripcion_corta || ""}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.descripcion_corta ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400`}
+                    disabled={tieneVentas}
+                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.descripcion_corta ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100`}
                     placeholder="Breve descripción del vuelo"
                   />
                   {errores.descripcion_corta && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.descripcion_corta}</p>}
@@ -446,8 +466,9 @@ const EditarVueloPage: React.FC = () => {
                     name="descripcion_larga"
                     value={form?.descripcion_larga || ""}
                     onChange={e => setForm(f => ({ ...f!, descripcion_larga: e.target.value }))}
+                    disabled={tieneVentas}
                     rows={4}
-                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.descripcion_larga ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none resize-none text-gray-900 font-medium placeholder:text-gray-400`}
+                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.descripcion_larga ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none resize-none text-gray-900 font-medium placeholder:text-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100`}
                     placeholder="Detalles completos del servicio..."
                   />
                   {errores.descripcion_larga && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.descripcion_larga}</p>}
@@ -456,7 +477,7 @@ const EditarVueloPage: React.FC = () => {
             </div>
 
             {/* Card: Ruta y Horarios */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className={`bg-white rounded-3xl shadow-xl p-8 border border-gray-100 ${tieneVentas ? 'opacity-60' : ''}`}>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#1180B8] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -464,6 +485,7 @@ const EditarVueloPage: React.FC = () => {
                   </svg>
                 </div>
                 <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#1180B8] bg-clip-text text-transparent">Ruta y Horarios</span>
+                {tieneVentas && <span className="ml-2 text-sm font-medium text-amber-500">🔒 Bloqueado</span>}
               </h2>
               
               {/* Selectores de aeropuertos */}
@@ -478,11 +500,12 @@ const EditarVueloPage: React.FC = () => {
                       type="text"
                       value={textoOrigen}
                       onChange={(e) => handleOrigenChange(e.target.value)}
-                      onFocus={() => filtrarAeropuertosOrigen("")}
-                      className={`w-full px-4 py-3.5 pr-11 bg-gray-50 border-2 ${errores.id_aeropuerto_origenFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400`}
+                      onFocus={() => !tieneVentas && filtrarAeropuertosOrigen("")}
+                      disabled={tieneVentas}
+                      className={`w-full px-4 py-3.5 pr-11 bg-gray-50 border-2 ${errores.id_aeropuerto_origenFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100`}
                       placeholder="Buscar aeropuerto de origen..."
                     />
-                    {aeropuertoOrigenSeleccionado ? (
+                    {aeropuertoOrigenSeleccionado && !tieneVentas ? (
                       <button
                         type="button"
                         onClick={handleResetearOrigen}
@@ -499,7 +522,7 @@ const EditarVueloPage: React.FC = () => {
                         </svg>
                       </div>
                     )}
-                    {sugerenciasOrigen.length > 0 && (
+                    {sugerenciasOrigen.length > 0 && !tieneVentas && (
                       <div className="absolute z-20 w-full bg-white border-2 border-blue-200 rounded-xl mt-2 max-h-60 overflow-y-auto shadow-xl">
                         {sugerenciasOrigen.map((aeropuerto) => (
                           <div
@@ -527,12 +550,12 @@ const EditarVueloPage: React.FC = () => {
                       type="text"
                       value={textoDestino}
                       onChange={(e) => handleDestinoChange(e.target.value)}
-                      onFocus={() => filtrarAeropuertosDestino("")}
-                      disabled={!aeropuertoOrigenSeleccionado}
-                      className={`w-full px-4 py-3.5 pr-11 bg-gray-50 border-2 ${errores.id_aeropuerto_destinoFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onFocus={() => !tieneVentas && filtrarAeropuertosDestino("")}
+                      disabled={!aeropuertoOrigenSeleccionado || tieneVentas}
+                      className={`w-full px-4 py-3.5 pr-11 bg-gray-50 border-2 ${errores.id_aeropuerto_destinoFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100`}
                       placeholder={aeropuertoOrigenSeleccionado ? "Buscar aeropuerto de destino..." : "Primero selecciona el origen"}
                     />
-                    {aeropuertoDestinoSeleccionado ? (
+                    {aeropuertoDestinoSeleccionado && !tieneVentas ? (
                       <button
                         type="button"
                         onClick={handleResetearDestino}
@@ -549,7 +572,7 @@ const EditarVueloPage: React.FC = () => {
                         </svg>
                       </div>
                     )}
-                    {sugerenciasDestino.length > 0 && (
+                    {sugerenciasDestino.length > 0 && !tieneVentas && (
                       <div className="absolute z-20 w-full bg-white border-2 border-blue-200 rounded-xl mt-2 max-h-60 overflow-y-auto shadow-xl">
                         {sugerenciasDestino.map((aeropuerto) => (
                           <div
@@ -581,7 +604,8 @@ const EditarVueloPage: React.FC = () => {
                     dateFormat="dd/MM/yyyy HH:mm"
                     minDate={new Date()}
                     maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                    className={`w-full px-4 py-3.5 pl-12 bg-gray-50 border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                    disabled={tieneVentas}
+                    className={`w-full px-4 py-3.5 pl-12 bg-gray-50 border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100`}
                     placeholderText="Selecciona fecha y hora de salida"
                     calendarClassName="modern-calendar-custom"
                     popperClassName="z-50"
@@ -637,15 +661,13 @@ const EditarVueloPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-emerald-100 mt-4 text-center">
-                    ℹ️ La llegada se calcula automáticamente según la duración original del vuelo
-                  </p>
+                 
                 </div>
               )}
             </div>
 
             {/* Card: Imagen */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className={`bg-white rounded-3xl shadow-xl p-8 border border-gray-100 ${tieneVentas ? 'opacity-60' : ''}`}>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#1180B8] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -653,6 +675,7 @@ const EditarVueloPage: React.FC = () => {
                   </svg>
                 </div>
                 <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#1180B8] bg-clip-text text-transparent">Imagen del Vuelo</span>
+                {tieneVentas && <span className="ml-2 text-sm font-medium text-amber-500">🔒 Bloqueado</span>}
               </h2>
               
               <div>
@@ -673,8 +696,8 @@ const EditarVueloPage: React.FC = () => {
                 {/* Zona de drop / selector */}
                 {!imagenPreview && !form.url_imagen ? (
                   <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`w-full px-6 py-12 bg-gray-50 border-2 border-dashed ${errores.url_imagen ? 'border-rose-500 bg-rose-50' : 'border-gray-300 hover:border-blue-400'} rounded-2xl cursor-pointer transition-all duration-200 hover:bg-blue-50 group`}
+                    onClick={() => !tieneVentas && fileInputRef.current?.click()}
+                    className={`w-full px-6 py-12 bg-gray-50 border-2 border-dashed ${errores.url_imagen ? 'border-rose-500 bg-rose-50' : 'border-gray-300 hover:border-blue-400'} rounded-2xl ${tieneVentas ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-blue-50'} transition-all duration-200 group`}
                   >
                     <div className="flex flex-col items-center justify-center text-center">
                       <div className="w-16 h-16 bg-gradient-to-br from-[#0a1836] to-[#123361] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -707,26 +730,30 @@ const EditarVueloPage: React.FC = () => {
                         Vista previa
                       </p>
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                          </svg>
-                          Cambiar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Eliminar
-                        </button>
+                        {!tieneVentas && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                              </svg>
+                              Cambiar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveImage}
+                              className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Eliminar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="relative rounded-xl overflow-hidden shadow-2xl">
@@ -757,7 +784,7 @@ const EditarVueloPage: React.FC = () => {
             </div>
 
             {/* Card: Tarifas */}
-            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+            <div className={`bg-white rounded-3xl shadow-xl p-8 border border-gray-100 ${tieneVentas ? 'opacity-60' : ''}`}>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#1180B8] rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -765,6 +792,7 @@ const EditarVueloPage: React.FC = () => {
                   </svg>
                 </div>
                 <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#1180B8] bg-clip-text text-transparent">Tarifas</span>
+                {tieneVentas && <span className="ml-2 text-sm font-medium text-amber-500">🔒 Bloqueado</span>}
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -786,12 +814,13 @@ const EditarVueloPage: React.FC = () => {
                     <input
                       type="text"
                       placeholder="0"
-                      value={form?.tarifa[0].precio_base.toLocaleString("es-CO")}
+                      value={form?.tarifa[0]?.precio_base?.toLocaleString("es-CO") || "0"}
                       onChange={(e) => {
                         const raw = e.target.value.replace(/[^0-9]/g, "");
                         handleTarifaChange("economica", Number(raw));
                       }}
-                      className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_economica ? 'border-rose-500' : 'border-transparent'} rounded-xl focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-2xl font-black text-gray-900`}
+                      disabled={tieneVentas}
+                      className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_economica ? 'border-rose-500' : 'border-transparent'} rounded-xl focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-2xl font-black text-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100`}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">COP</span>
                   </div>
@@ -816,12 +845,13 @@ const EditarVueloPage: React.FC = () => {
                     <input
                       type="text"
                       placeholder="0"
-                      value={form?.tarifa[1].precio_base.toLocaleString("es-CO")}
+                      value={form?.tarifa[1]?.precio_base?.toLocaleString("es-CO") || "0"}
                       onChange={(e) => {
                         const raw = e.target.value.replace(/[^0-9]/g, "");
                         handleTarifaChange("primera_clase", Number(raw));
                       }}
-                      className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_premium ? 'border-rose-500' : 'border-transparent'} rounded-xl focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-2xl font-black text-gray-900`}
+                      disabled={tieneVentas}
+                      className={`w-full px-4 py-4 pl-12 pr-20 bg-white border-2 ${errores.tarifa_premium ? 'border-rose-500' : 'border-transparent'} rounded-xl focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-2xl font-black text-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100`}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">COP</span>
                   </div>
