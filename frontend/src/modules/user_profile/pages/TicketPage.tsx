@@ -114,16 +114,18 @@ export default function TicketListView() {
       return "Este ticket ya está cancelado.";
     }
 
-    if (estado !== "pagado" && estado !== "confirmado") {
-      return "Solo puedes cancelar tickets pagados.";
-    }
-
     if (!ticket.vuelo?.salida_programada_utc) {
-      return "No se encontró la hora de salida del vuelo para validar la cancelación.";
+      return "No se encontró la hora de salida del vuelo.";
     }
 
     const now = Date.now();
     const salidaMs = new Date(ticket.vuelo.salida_programada_utc).getTime();
+
+    // 🛑 Si el vuelo ya despegó
+    if (salidaMs < now) {
+      return "No se puede reembolsar el ticket porque el vuelo ya despegó.";
+    }
+
     const diffHours = (salidaMs - now) / (1000 * 60 * 60);
 
     if (diffHours <= 1) {
@@ -132,6 +134,7 @@ export default function TicketListView() {
 
     return null;
   };
+
 
   const handleCancelTicket = async (ticket: Ticket) => {
     setGlobalMessage(null);
@@ -455,10 +458,13 @@ function TicketCard({
             </button>
           ) : (
             blockReason && (
-              <p className="text-xs text-gray-500 italic">{blockReason}</p>
+              <p className="text-sm text-red-600 font-semibold italic">
+                {blockReason}
+              </p>
             )
           )}
         </div>
+
 
         {/* PASAJERO */}
         {ticket.pasajero && (
