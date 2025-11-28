@@ -83,6 +83,10 @@ export class FlightsService {
 
       let id_promocion_a_usar: number | null | undefined = undefined;
 
+      if (dto.estado !== undefined) {
+        this.deleteFlight(id_vuelo);
+      }
+
       // Lógica de Promoción: Crear o Actualizar
       if (dto.promocion) {
         const promo = dto.promocion;
@@ -129,6 +133,7 @@ export class FlightsService {
           llegada_programada_utc: dto.llegada_programada_utc,
           // Asigna el ID de la promoción nueva/actualizada, o 'undefined'
           id_promocionFK: id_promocion_a_usar,
+          estado: dto.estado,
         },
         include: { promocion: true }
       });

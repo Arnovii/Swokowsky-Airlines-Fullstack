@@ -1,4 +1,5 @@
-import { IsOptional, IsString, IsNumber, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import { vuelo_estado } from '.prisma/client/wasm';
 
 class PromotionInsideFlightDto {
     // ⚠️ ¡CAMBIO CRUCIAL AQUÍ!
@@ -34,4 +35,7 @@ export class UpdateFlightDto {
 
     @IsOptional()
     promocion?: PromotionInsideFlightDto;
+
+    @IsEnum(vuelo_estado)
+    estado: vuelo_estado;
 }
