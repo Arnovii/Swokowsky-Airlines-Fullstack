@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import hbs from 'nodemailer-express-handlebars';
 import { resolve } from 'path';
+import { PrismaService } from '../database/prisma.service';
 
 type MailOptions = {
   to: string;
@@ -23,7 +24,8 @@ export class MailService {
   private transporter: nodemailer.Transporter;
   private readonly logger = new Logger(MailService.name);
 
-  constructor(private config: ConfigService) {
+  constructor(private config: ConfigService,
+      private readonly prisma: PrismaService) {
     this.transporter = nodemailer.createTransport({
       host: config.get<string>('EMAIL_HOST'),
       port: Number(config.get<string>('EMAIL_PORT')),
@@ -65,7 +67,7 @@ export class MailService {
     });
   }
 
-  async sendAdminWelcomeEmail(to: string, data: { name: string; loginLink: string; temporalPassword:string;}) {
+  async sendAdminWelcomeEmail(to: string, data: { name: string; loginLink: string; temporalPassword: string; }) {
     return this.sendMail({
       to,
       subject: 'Activación de cuenta - Swokowsky Airlines',
@@ -122,7 +124,46 @@ export class MailService {
     });
   }
 
-  async sendTicketEmail(to: string, data: { nombre: string; TituloNoticiaVuelo: string; NumeroAsiento: string }) {
+  async sendTicketEmail(
+    to: string,
+    data: { nombre: string; TituloNoticiaVuelo: string; NumeroAsiento: string }
+  ) {
+    // Extraer el número real del vuelo: "Vuelo #1234" => 1234
+    const idVueloRaw = data.TituloNoticiaVuelo;
+    const vueloId = Number(idVueloRaw.split('#')[1]?.trim());
+
+    if (isNaN(vueloId)) {
+      throw new Error(`El ID de vuelo no es válido: ${idVueloRaw}`);
+    }
+
+    // Buscar en la BD información del vuelo + aeropuertos + ciudades
+    const vuelo = await this.prisma.vuelo.findUnique({
+      where: { id_vuelo: vueloId },
+      include: {
+        aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: {
+          include: { ciudad: true },
+        },
+        aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: {
+          include: { ciudad: true },
+        },
+      },
+    });
+
+    if (!vuelo) {
+      throw new Error(`No se encontró el vuelo con ID ${vueloId}`);
+    }
+
+    // Origen
+    const origen = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto;
+    const ciudadOrigen = origen.ciudad.nombre;
+
+    // Destino
+    const destino = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto;
+    const ciudadDestino = destino.ciudad.nombre;
+
+    // Cambiar el título para el correo
+    data.TituloNoticiaVuelo = `${ciudadOrigen} => ${ciudadDestino}`;
+
     return this.sendMail({
       to,
       subject: 'Confirmación de Ticket - Swokowsky Airlines',
@@ -130,6 +171,7 @@ export class MailService {
       context: data,
     });
   }
+
 
   /**
    * Envía una notificación (plantilla new-notification) a múltiples destinatarios.
