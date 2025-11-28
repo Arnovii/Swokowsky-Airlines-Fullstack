@@ -1,272 +1,172 @@
-import React, { useMemo, useState } from "react";
+// frontend/src/modules/user_profile/pages/TransactionHistory.tsx
+
+import React, { useEffect, useState } from "react";
+import api from "../../../api/axios";
 import { useNavigate } from "react-router-dom";
 
-type EstadoTransaccion = "pagada" | "cancelada";
-
-interface Transaccion {
-id: string;
-referencia: string;
-fecha: string;       // ISO o string legible
-hora: string;        // opcional pero queda bonito
+interface Transaction {
+id_transaccion: number;
 monto: number;
-moneda: "COP";
-estado: EstadoTransaccion;
-metodo: string;      // "Tarjeta VISA", "Monedero", etc.
-descripcion: string;
+estado: string;
+fecha: string;
+descripcion?: string;
+metodo_pago?: string;
 }
 
-// Utilidad similar a la del Perfil
-const formatCOP = (n: number) => {
-try {
-    return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-    }).format(n);
-} catch {
-    return `$${n.toLocaleString("es-CO")} COP`;
-}
-};
+export default function TransactionHistory() {
+const [transactions, setTransactions] = useState<Transaction[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
 
-// Datos mock de ejemplo (luego se reemplazan por datos reales del backend)
-const MOCK_TRANSACCIONES: Transaccion[] = [
-{
-    id: "1",
-    referencia: "TRX-2025-0001",
-    fecha: "2025-11-20",
-    hora: "14:32",
-    monto: 150000,
-    moneda: "COP",
-    estado: "pagada",
-    metodo: "Tarjeta VISA terminada en 1234",
-    descripcion: "Compra de tiquetes Pereira - Bogotá",
-},
-{
-    id: "2",
-    referencia: "TRX-2025-0002",
-    fecha: "2025-11-18",
-    hora: "10:05",
-    monto: 85000,
-    moneda: "COP",
-    estado: "cancelada",
-    metodo: "Monedero Swokowsky",
-    descripcion: "Reserva cancelada Medellín - Cartagena",
-},
-{
-    id: "3",
-    referencia: "TRX-2025-0003",
-    fecha: "2025-11-15",
-    hora: "20:47",
-    monto: 220000,
-    moneda: "COP",
-    estado: "pagada",
-    metodo: "Tarjeta Mastercard terminada en 5678",
-    descripcion: "Compra de tiquetes Cali - San Andrés",
-},
-];
-
-const badgeEstado = (estado: EstadoTransaccion) => {
-const base =
-    "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold";
-if (estado === "pagada") {
-    return (
-    <span className={`${base} bg-emerald-50 text-emerald-700 border border-emerald-200`}>
-        ● Pagada
-    </span>
-    );
-}
-return (
-    <span className={`${base} bg-red-50 text-red-700 border border-red-200`}>
-    ● Cancelada
-    </span>
-);
-};
-
-export default function HistorialTransacciones() {
 const navigate = useNavigate();
 
-const [filtroEstado, setFiltroEstado] = useState<
-    "todas" | "pagadas" | "canceladas"
->("todas");
-const [busqueda, setBusqueda] = useState("");
+const fetchTransactions = async () => {
+    try {
+    setLoading(true);
 
-// TODO: en el futuro, reemplazar MOCK_TRANSACCIONES por datos traídos del backend
-// Ejemplo:
-// const [transacciones, setTransacciones] = useState<Transaccion[]>([]);
-// useEffect(() => {
-//   api.get("/transacciones/mis-transacciones").then((res) => {
-//     setTransacciones(res.data);
-//   });
-// }, []);
-const transacciones = MOCK_TRANSACCIONES;
+    // ✅ Usando el mismo endpoint GET /tickets
+    const res = await api.get("/tickets");
 
-const transaccionesFiltradas = useMemo(() => {
-    return transacciones.filter((t) => {
-    if (filtroEstado === "pagadas" && t.estado !== "pagada") return false;
-    if (filtroEstado === "canceladas" && t.estado !== "cancelada") return false;
+    let data = res.data;
+    if (!Array.isArray(data) && data?.data) {
+        data = data.data;
+    }
 
-    if (!busqueda.trim()) return true;
+    // 🔥 Convertimos TICKETS → TRANSACCIONES
+    const mapped: Transaction[] = (data ?? []).map((t: any) => ({
+        id_transaccion: t.id_ticket,
+        monto: t.precio,
+        estado: t.estado?.toUpperCase(),
+        fecha: t.creado_en,
+        descripcion: "Compra de ticket",
+        metodo_pago: t.metodo_pago || "Tarjeta registrada",
+    }));
 
-    const q = busqueda.toLowerCase();
-    return (
-        t.referencia.toLowerCase().includes(q) ||
-        t.descripcion.toLowerCase().includes(q) ||
-        t.metodo.toLowerCase().includes(q)
+    setTransactions(mapped);
+    } catch (err: any) {
+    console.error("Error obteniendo historial:", err?.response?.data || err);
+    setError(
+        err?.response?.data?.message ||
+        "No se pudo cargar el historial de transacciones."
     );
-    });
-}, [transacciones, filtroEstado, busqueda]);
+    } finally {
+    setLoading(false);
+    }
+};
+
+useEffect(() => {
+    fetchTransactions();
+}, []);
+
+const formatCOP = (monto: number) => {
+    try {
+    return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+    }).format(monto);
+    } catch {
+    return `COP ${monto}`;
+    }
+};
 
 return (
-    <div className="flex justify-center items-start min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-xl w-full max-w-5xl border border-gray-100">
-        {/* Cabecera */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-        <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#081225]">
-            Historial de transacciones
-            </h1>
-            <p className="mt-1 text-sm sm:text-base text-gray-500">
-            Consulta el detalle de tus pagos y transacciones canceladas.
-            </p>
-        </div>
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 flex justify-center">
+    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-[#081225]">
+            Historial de Transacciones
+        </h1>
+
         <button
-            type="button"
-            onClick={() => navigate("/perfil?tab=wallet")}
-            className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm"
         >
-            Volver al perfil
+            ← Volver
         </button>
         </div>
 
-        {/* Filtros */}
-        <div className="mb-4 sm:mb-6 space-y-3">
-        {/* Tabs estado */}
-        <div className="inline-flex rounded-lg bg-gray-50 p-1 border border-gray-100">
-            <button
-            type="button"
-            onClick={() => setFiltroEstado("todas")}
-            className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all ${
-                filtroEstado === "todas"
-                ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-            >
-            Todas
-            </button>
-            <button
-            type="button"
-            onClick={() => setFiltroEstado("pagadas")}
-            className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all ${
-                filtroEstado === "pagadas"
-                ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-            >
-            Pagadas
-            </button>
-            <button
-            type="button"
-            onClick={() => setFiltroEstado("canceladas")}
-            className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-md font-medium transition-all ${
-                filtroEstado === "canceladas"
-                ? "bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-            >
-            Canceladas
-            </button>
+        {/* Loading */}
+        {loading && (
+        <div className="text-center py-10 text-gray-500">
+            Cargando historial…
         </div>
+        )}
 
-        {/* Buscador */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <div className="relative flex-1">
-            <input
-                type="text"
-                placeholder="Buscar por referencia, método o descripción..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-sm sm:text-base bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent"
-            />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                🔍
-            </span>
-            </div>
-            <span className="text-xs sm:text-sm text-gray-500">
-            {transaccionesFiltradas.length} transacción
-            {transaccionesFiltradas.length !== 1 && "es"} encontrada
-            {transaccionesFiltradas.length !== 1 && "s"}.
-            </span>
+        {/* Error */}
+        {error && (
+        <div className="bg-red-100 text-red-700 border border-red-300 p-3 rounded-lg text-center mb-4">
+            {error}
         </div>
-        </div>
+        )}
 
-        {/* Tabla / lista */}
-        <div className="border border-gray-100 rounded-xl bg-gray-50">
-        <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-            <thead>
-                <tr className="bg-gray-100 text-xs sm:text-sm text-gray-600">
-                <th className="px-3 sm:px-4 py-3 text-left font-semibold">Referencia</th>
-                <th className="px-3 sm:px-4 py-3 text-left font-semibold">Fecha</th>
-                <th className="px-3 sm:px-4 py-3 text-left font-semibold">Estado</th>
-                <th className="px-3 sm:px-4 py-3 text-left font-semibold">Método</th>
-                <th className="px-3 sm:px-4 py-3 text-right font-semibold">Monto</th>
-                </tr>
-            </thead>
-            <tbody>
-                {transaccionesFiltradas.length === 0 ? (
-                <tr>
-                    <td
-                    colSpan={5}
-                    className="px-4 py-6 text-center text-xs sm:text-sm text-gray-500"
-                    >
-                    No se encontraron transacciones con los filtros actuales.
-                    </td>
-                </tr>
-                ) : (
-                transaccionesFiltradas.map((t) => (
-                    <tr
-                    key={t.id}
-                    className="bg-white border-t border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                    <td className="px-3 sm:px-4 py-3 align-top">
-                        <div className="flex flex-col">
-                        <span className="font-semibold text-[#081225] text-xs sm:text-sm">
-                            {t.referencia}
-                        </span>
-                        <span className="text-xs text-gray-500 line-clamp-2">
-                            {t.descripcion}
-                        </span>
-                        </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 align-top text-xs sm:text-sm text-gray-600">
-                        <div className="flex flex-col">
-                        <span>{t.fecha}</span>
-                        <span className="text-xs text-gray-400">{t.hora}</span>
-                        </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 align-top">
-                        {badgeEstado(t.estado)}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 align-top text-xs sm:text-sm text-gray-600">
-                        {t.metodo}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 align-top text-right">
-                        <span className="font-semibold text-[#081225] text-xs sm:text-sm">
-                        {formatCOP(t.monto)}
-                        </span>
-                    </td>
-                    </tr>
-                ))
+        {/* Empty */}
+        {!loading && !error && transactions.length === 0 && (
+        <div className="text-center py-10 text-gray-500">
+            No tienes transacciones registradas.
+        </div>
+        )}
+
+        {/* List */}
+        <div className="space-y-4">
+        {transactions.map((tx) => {
+            const isPaid =
+            tx.estado === "PAGADA" ||
+            tx.estado === "CONFIRMADO" ||
+            tx.estado === "PAGADO";
+
+            const isCancelled = tx.estado === "CANCELADA" || tx.estado === "CANCELADO";
+
+            return (
+            <div
+                key={tx.id_transaccion}
+                className="p-5 bg-gray-50 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-all"
+            >
+                <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-[#081225]">
+                    Transacción #{tx.id_transaccion}
+                </h2>
+
+                <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    isPaid
+                        ? "bg-green-100 text-green-700 border border-green-700"
+                        : isCancelled
+                        ? "bg-red-100 text-red-700 border border-red-700"
+                        : "bg-yellow-100 text-yellow-700 border border-yellow-700"
+                    }`}
+                >
+                    {tx.estado}
+                </span>
+                </div>
+
+                <div className="mt-3 text-gray-700 space-y-1">
+                <p className="text-sm">
+                    <span className="font-semibold">Fecha:</span>{" "}
+                    {new Date(tx.fecha).toLocaleString("es-ES")}
+                </p>
+
+                <p className="text-sm">
+                    <span className="font-semibold">Monto:</span>{" "}
+                    {formatCOP(tx.monto)}
+                </p>
+
+                {tx.metodo_pago && (
+                    <p className="text-sm">
+                    <span className="font-semibold">Método de pago:</span>{" "}
+                    {tx.metodo_pago}
+                    </p>
                 )}
-            </tbody>
-            </table>
-        </div>
-        </div>
 
-        {/* Nota / futuro filtros avanzados */}
-        {/* <p className="mt-4 text-xs text-gray-400">
-        En el futuro aquí se pueden añadir filtros por rango de fechas, método de pago, etc.
-        </p> */}
+                {tx.descripcion && (
+                    <p className="text-sm italic mt-2">{tx.descripcion}</p>
+                )}
+                </div>
+            </div>
+            );
+        })}
+        </div>
     </div>
     </div>
 );
