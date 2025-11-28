@@ -93,11 +93,16 @@ export class TicketService {
     return this.prisma.ticket.findMany({
       where: {
         id_usuarioFK: idUsuario,
-        estado: ticket_estado.pagado, // 🔥 solo pagados
+        estado: ticket_estado.pagado,
       },
       include: {
-        vuelo: true,
-        pasajero: true,   // ✅ se agrega aquí
+        pasajero: true,
+        vuelo: {
+          include: {
+            aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
+            aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
+          },
+        },
       },
       orderBy: { creado_en: 'desc' },
     });
