@@ -51,11 +51,14 @@ async function createTicketsAndPassengers(prisma: PrismaClient) {
     return true;
   }
 
-  // Plan de creación (usa los vuelos que ya tienes: 1,4,5)
-  const plan: Array<{ vuelo: number; seatStart: number; seatEnd: number; precio: number; prefix: string }> = [
-    { vuelo: 1, seatStart: 1, seatEnd: 12, precio: 120.0, prefix: 'A' },   // BOG->MDE
-    { vuelo: 4, seatStart: 13, seatEnd: 15, precio: 150.0, prefix: 'A' },  // MDE->CTG
-    { vuelo: 5, seatStart: 31, seatEnd: 50, precio: 500.0, prefix: 'B' },  // MAD->BOG
+  // Letras permitidas y plan (NOTA: números en 1..25)
+  const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  // plan ajustado para no exceder número 25
+  const plan: Array<{ vuelo: number; seatStart: number; seatEnd: number; precio: number }> = [
+    { vuelo: 1, seatStart: 1, seatEnd: 12, precio: 120.0 },   // BOG->MDE (usa números 1..12)
+    { vuelo: 4, seatStart: 13, seatEnd: 15, precio: 150.0 },  // MDE->CTG (13..15)
+    { vuelo: 5, seatStart: 16, seatEnd: 25, precio: 500.0 },  // MAD->BOG (16..25) -> límite 25
   ];
 
   // rotación simple para repartir usuarios compradores (intenta ser justo)
@@ -87,14 +90,16 @@ async function createTicketsAndPassengers(prisma: PrismaClient) {
         continue;
       }
 
+      // calcular letra (A..F) rotando y número (1..25 garantizado por plan)
+      const letter = LETTERS[(seatId - 1) % LETTERS.length];
+      const asientoStr = `${letter}${seatId}`;
+
       // verificar no duplicar asiento en la DB (idempotencia)
-      const asientoStr = `${p.prefix}${seatId}`;
       const exists = await prisma.ticket.findFirst({
         where: { id_vueloFK: p.vuelo, asiento_numero: asientoStr }
       });
       if (exists) {
         console.log(`Saltando asiento ${asientoStr} vuelo ${p.vuelo}: ya existe ticket id=${exists.id_ticket}`);
-        // aunque no registremos resumen, evitamos crear duplicados
         continue;
       }
 
@@ -165,6 +170,8 @@ async function createTicketsAndPassengers(prisma: PrismaClient) {
 
   console.log('Seeding de tickets + pasajeros finalizado.');
 }
+
+
 async function main() {
   console.log("Seeding DB...");
 
@@ -574,6 +581,24 @@ async function main() {
         genero: "M",
         correo: "cliente3@ejemplo.com",
         username: "javierg",
+        password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
+        img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
+        suscrito_noticias: false,
+        creado_en: new Date(),
+        must_change_password: false,
+      },
+      {
+        id_usuario: 6,
+        tipo_usuario: "admin",
+        dni: 90000006,
+        nombre: "Hernestro",
+        apellido: "Administreidor",
+        fecha_nacimiento: new Date("1985-01-10"),
+        nacionalidad: "Colombia",
+        direccion_facturacion: "Cll Falsa 123",
+        genero: "M",
+        correo: "admin2@ejemplo.com",
+        username: "hernestroa",
         password_bash: "$2b$10$wdn1MKbEbIi//T.3Ws1aRuA0z8Pxf9gl7ofR4nM00HFsW.gc8.nLa",
         img_url: "https://res.cloudinary.com/dycqxw0aj/image/upload/v1758875237/uve00nxuv3cdyxldibkb.png",
         suscrito_noticias: false,
