@@ -366,7 +366,6 @@ function TicketCard({
       {/* HEADER CON DEGRADADO */}
       <div className="relative bg-gradient-to-r from-[#123664] via-[#12699E] to-[#1785BC] px-8 py-8 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 transform -skew-x-12 group-hover:translate-x-full transition-transform duration-1000"></div>
-
         <div className="relative flex items-center justify-between text-white">
           <div className="flex items-center space-x-6">
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
@@ -405,7 +404,6 @@ function TicketCard({
           </div>
         </div>
       </div>
-
       {/* CONTENIDO */}
       <div className="p-8">
         {/* INFO DEL VUELO */}
@@ -430,7 +428,6 @@ function TicketCard({
             </div>
           </div>
         </div>
-
         {/* Info de fecha de salida (si viene el vuelo) */}
         {ticket.vuelo?.salida_programada_utc && (
           <div className="mb-4">
@@ -442,7 +439,6 @@ function TicketCard({
             />
           </div>
         )}
-
         {/* Botón cancelar / mensaje bloqueo */}
         <div className="mb-6">
           {canCancel ? (
@@ -464,13 +460,10 @@ function TicketCard({
             )
           )}
         </div>
-
-
         {/* PASAJERO */}
         {ticket.pasajero && (
           <div className="relative bg-gradient-to-br from-[#12699E]/5 via-[#1785BC]/5 to-[#123664]/5 backdrop-blur-sm rounded-2xl p-8 border border-[#1785BC]/20">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#1785BC]/10 to-transparent rounded-full filter blur-2xl"></div>
-
             <div className="relative flex items-center mb-8">
               <div className="bg-gradient-to-br from-[#12699E] via-[#1785BC] to-[#123664] rounded-2xl p-4 mr-5 shadow-lg shadow-[#1785BC]/30">
                 <svg
@@ -491,7 +484,6 @@ function TicketCard({
                 Información del Pasajero
               </h3>
             </div>
-
             <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5">
               <Info
                 label="Nombre completo"
