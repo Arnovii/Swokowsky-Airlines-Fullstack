@@ -142,6 +142,50 @@ export class FlightsService {
     });
   }
 
+  async deleteFlight(id_vuelo: number) {
+    const vuelo = await this.prisma.vuelo.findUnique({
+      where: { id_vuelo },
+      include: { ticket: true }
+    });
+
+    if (!vuelo) {
+      throw new BadRequestException('El vuelo no existe.');
+    }
+
+    const hasTickets = vuelo.ticket.length > 0;
+
+    // ⭐ Si NO tiene tickets, simplemente marcar como cancelado
+    if (!hasTickets) {
+      await this.prisma.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      return { message: 'Vuelo cancelado correctamente (sin tickets).' };
+    }
+
+    // ⭐ Si tiene tickets → cancelar vuelo y tickets dentro de una transacción
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Cancelar el vuelo
+      await tx.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      // 2. Cancelar los tickets asociados
+      await tx.ticket.updateMany({
+        where: { id_vueloFK: id_vuelo, estado: { not: 'cancelado' } },
+        data: { estado: 'cancelado' }
+      });
+    });
+
+    return {
+      message:
+        'El vuelo tenía tickets y ha sido cancelado. Los tickets fueron marcados como cancelados.'
+    };
+  }
+
+
 
 
   private dayRangeFromDateString(dateStr: string) {
