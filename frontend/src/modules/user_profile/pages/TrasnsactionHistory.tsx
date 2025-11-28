@@ -24,7 +24,7 @@ const fetchTransactions = async () => {
     try {
     setLoading(true);
 
-    // ✅ Usando el mismo endpoint GET /tickets
+    // Usando el endpoint GET /tickets
     const res = await api.get("/tickets");
 
     let data = res.data;
@@ -32,14 +32,14 @@ const fetchTransactions = async () => {
         data = data.data;
     }
 
-    // 🔥 Convertimos TICKETS → TRANSACCIONES
+    // Convertimos Tickets → Transacciones
     const mapped: Transaction[] = (data ?? []).map((t: any) => ({
         id_transaccion: t.id_ticket,
         monto: t.precio,
-        estado: t.estado?.toUpperCase(),
+        estado: (t.estado ?? "").toUpperCase(),
         fecha: t.creado_en,
         descripcion: "Compra de ticket",
-        metodo_pago: t.metodo_pago || "Tarjeta registrada",
+        metodo_pago: t.metodo_pago || "Saldo",
     }));
 
     setTransactions(mapped);
@@ -73,6 +73,7 @@ const formatCOP = (monto: number) => {
 return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 flex justify-center">
     <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-[#081225]">
@@ -111,12 +112,18 @@ return (
         {/* List */}
         <div className="space-y-4">
         {transactions.map((tx) => {
-            const isPaid =
-            tx.estado === "PAGADA" ||
-            tx.estado === "CONFIRMADO" ||
-            tx.estado === "PAGADO";
+            const estado = tx.estado;
 
-            const isCancelled = tx.estado === "CANCELADA" || tx.estado === "CANCELADO";
+            const isPaid =
+            estado === "PAGADA" ||
+            estado === "PAGADO" ||
+            estado === "CONFIRMADO";
+
+            const isCancelled =
+            estado === "CANCELADA" || estado === "CANCELADO";
+
+            // 🔥 Texto que se mostrará (si está cancelado → "REEMBOLSADO")
+            const displayEstado = isCancelled ? "REEMBOLSADO" : estado;
 
             return (
             <div
@@ -137,7 +144,7 @@ return (
                         : "bg-yellow-100 text-yellow-700 border border-yellow-700"
                     }`}
                 >
-                    {tx.estado}
+                    {displayEstado}
                 </span>
                 </div>
 

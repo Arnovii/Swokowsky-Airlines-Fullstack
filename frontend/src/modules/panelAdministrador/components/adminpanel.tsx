@@ -48,11 +48,29 @@ export const AdminPanel: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // 🔥 Filtrado por tab:
+  // - Programado: estado Programado y fecha de salida >= ahora
+  // - Cancelado: estado Cancelado
+  // - Realizado: fecha de salida < ahora (independiente del estado)
   const vuelosFiltrados = useMemo(() => {
+    const ahora = new Date();
+
     return vuelos.filter((v) => {
+      const salidaDate = new Date(v.salida_programada_utc);
       const matchBusqueda = v.id_vuelo.toString().includes(busqueda);
-      const matchEstado = v.estado === tabEstado;
-      return matchBusqueda && matchEstado;
+
+      let perteneceATab = false;
+
+      if (tabEstado === "Programado") {
+        perteneceATab =
+          v.estado === "Programado" && salidaDate.getTime() >= ahora.getTime();
+      } else if (tabEstado === "Cancelado") {
+        perteneceATab = v.estado === "Cancelado";
+      } else if (tabEstado === "Realizado") {
+        perteneceATab = salidaDate.getTime() < ahora.getTime();
+      }
+
+      return matchBusqueda && perteneceATab;
     });
   }, [busqueda, tabEstado, vuelos]);
 
@@ -81,6 +99,8 @@ export const AdminPanel: React.FC = () => {
 
   if (loading) return <p className="p-6">Cargando vuelos...</p>;
   if (error) return <p className="p-6 text-red-600">Error: {error}</p>;
+
+  const ahora = new Date();
 
   return (
     <>
@@ -154,9 +174,7 @@ export const AdminPanel: React.FC = () => {
                 </button>
 
                 <Link to="/perfil">
-                  <button
-                    className="px-6 py-3 bg-[#081225] text-white rounded-lg hover:bg-[#0F6899] transition-all duration-300 flex items-center justify-center space-x-2"
-                  >
+                  <button className="px-6 py-3 bg-[#081225] text-white rounded-lg hover:bg-[#0F6899] transition-all duration-300 flex items-center justify-center space-x-2">
                     <span>👤</span>
                     <span>Ver Perfil</span>
                   </button>
@@ -189,7 +207,27 @@ export const AdminPanel: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {vuelosFiltrados.map((vuelo) => {
-                    const editable = vuelo.estado === "Programado";
+                    const salidaDate = new Date(vuelo.salida_programada_utc);
+                    const esRealizadoPorFecha =
+                      salidaDate.getTime() < ahora.getTime();
+
+                    // Estado mostrado (texto del badge)
+                    const displayEstado = esRealizadoPorFecha
+                      ? "Realizado"
+                      : vuelo.estado;
+
+                    const badgeClasses = esRealizadoPorFecha
+                      ? "bg-emerald-100 text-emerald-700 border border-emerald-700"
+                      : vuelo.estado === "Programado"
+                      ? "bg-blue-100 text-[#0F6899] border border-[#0F6899]"
+                      : vuelo.estado === "En vuelo"
+                      ? "bg-amber-100 text-amber-700 border border-amber-700"
+                      : vuelo.estado === "Cancelado"
+                      ? "bg-red-100 text-red-700 border border-red-700"
+                      : "bg-gray-100 text-gray-700 border border-gray-300";
+
+                    // 🔥 Solo Programados (futuros) son editables
+                    const editable = tabEstado === "Programado";
 
                     return (
                       <tr
@@ -200,7 +238,9 @@ export const AdminPanel: React.FC = () => {
                         <td className="py-4 px-6 font-medium text-[#0F6899]">
                           {vuelo.aeronave?.modelo}
                         </td>
-                        <td className="py-4 px-6">{vuelo.aeronave?.capacidad}</td>
+                        <td className="py-4 px-6">
+                          {vuelo.aeronave?.capacidad}
+                        </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-2">
                             <span className="font-medium">
@@ -221,9 +261,7 @@ export const AdminPanel: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          {new Date(
-                            vuelo.salida_programada_utc
-                          ).toLocaleString()}
+                          {salidaDate.toLocaleString()}
                         </td>
                         <td className="py-4 px-6">
                           {new Date(
@@ -232,17 +270,9 @@ export const AdminPanel: React.FC = () => {
                         </td>
                         <td className="py-4 px-6">
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              vuelo.estado === "Programado"
-                                ? "bg-blue-100 text-[#0F6899] border border-[#0F6899]"
-                                : vuelo.estado === "En vuelo"
-                                ? "bg-amber-100 text-amber-700 border border-amber-700"
-                                : vuelo.estado === "Realizado"
-                                ? "bg-emerald-100 text-emerald-700 border border-emerald-700"
-                                : "bg-red-100 text-red-700 border border-red-700"
-                            }`}
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${badgeClasses}`}
                           >
-                            {vuelo.estado}
+                            {displayEstado}
                           </span>
                         </td>
                         <td className="py-4 px-6">
