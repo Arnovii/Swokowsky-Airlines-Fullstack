@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'react-toastify';
 
 export interface TravelerFormData {
   numero_documento: string;
@@ -15,14 +16,30 @@ export interface TravelerFormData {
   contacto_telefono: string;
 }
 
+// Interfaz para los datos del perfil del usuario autenticado
+export interface AuthUserProfile {
+  dni: number | null;
+  nombre: string;
+  apellido: string;
+  fecha_nacimiento: string | null;
+  nacionalidad: string | null;
+  genero: 'masculino' | 'femenino' | 'otro' | null;
+  correo: string;
+}
+
 interface TravelerFormProps {
   index: number;
   initialData?: Partial<TravelerFormData>;
   onUpdate: (data: TravelerFormData) => void;
   duplicateDocuments?: string[];
+  /** Datos del perfil del usuario autenticado para autocompletar */
+  authUserProfile?: AuthUserProfile | null;
 }
 
-const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, onUpdate, duplicateDocuments }) => {
+const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, onUpdate, duplicateDocuments, authUserProfile }) => {
+  // Ref para evitar mostrar el toast de autocompletado múltiples veces
+  const hasAutocompletedRef = useRef(false);
+  
   const [formData, setFormData] = useState<TravelerFormData>({
     numero_documento: initialData.numero_documento || '',
     primer_nombre: initialData.primer_nombre || '',
@@ -47,6 +64,85 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
     duplicateDocuments.includes(formData.numero_documento.trim())
   );
 
+  // Función para mapear género del perfil al formato del formulario
+  const mapGenderFromProfile = useCallback((genero: 'masculino' | 'femenino' | 'otro' | null): 'M' | 'F' | 'O' => {
+    if (!genero) return 'M';
+    switch (genero.toLowerCase()) {
+      case 'masculino': return 'M';
+      case 'femenino': return 'F';
+      case 'otro': return 'O';
+      default: return 'M';
+    }
+  }, []);
+
+  // Función para formatear fecha del perfil al formato del formulario (YYYY-MM-DD)
+  const formatDateFromProfile = useCallback((fecha: string | null): string => {
+    if (!fecha) return '';
+    try {
+      const date = new Date(fecha);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  }, []);
+
+  // Autocompletar cuando la cédula coincide con la del usuario autenticado
+  useEffect(() => {
+    // Solo autocompletar si:
+    // 1. Hay datos del perfil del usuario autenticado
+    // 2. La cédula ingresada tiene entre 8 y 10 dígitos
+    // 3. La cédula coincide con la del usuario autenticado
+    // 4. No se ha autocompletado previamente para esta cédula
+    if (
+      authUserProfile?.dni &&
+      formData.numero_documento.length >= 8 &&
+      formData.numero_documento.length <= 10 &&
+      formData.numero_documento === String(authUserProfile.dni) &&
+      !hasAutocompletedRef.current
+    ) {
+      // Marcar que ya se autocompletó para esta cédula
+      hasAutocompletedRef.current = true;
+      
+      // Separar apellidos (asume que están separados por espacio)
+      const apellidos = (authUserProfile.apellido || '').trim().split(/\s+/);
+      const primerApellido = apellidos[0] || '';
+      const segundoApellido = apellidos.slice(1).join(' ') || '';
+      
+      // Separar nombres (asume que están separados por espacio)
+      const nombres = (authUserProfile.nombre || '').trim().split(/\s+/);
+      const primerNombre = nombres[0] || '';
+      const segundoNombre = nombres.slice(1).join(' ') || '';
+      
+      // Autocompletar los campos con los datos del perfil
+      setFormData(prev => ({
+        ...prev,
+        primer_nombre: primerNombre || prev.primer_nombre,
+        segundo_nombre: segundoNombre || prev.segundo_nombre,
+        primer_apellido: primerApellido || prev.primer_apellido,
+        segundo_apellido: segundoApellido || prev.segundo_apellido,
+        fecha_nacimiento: formatDateFromProfile(authUserProfile.fecha_nacimiento) || prev.fecha_nacimiento,
+        genero: mapGenderFromProfile(authUserProfile.genero),
+        nacionalidad: authUserProfile.nacionalidad || prev.nacionalidad || 'CO',
+        email: authUserProfile.correo || prev.email,
+      }));
+
+      // Mostrar toast de éxito
+      toast.success('✅ Datos autocompletados con tu información de perfil', {
+        position: 'top-center',
+        autoClose: 3000,
+      });
+    }
+    
+    // Si la cédula cambió y ya no coincide, resetear el ref
+    if (
+      authUserProfile?.dni &&
+      formData.numero_documento !== String(authUserProfile.dni)
+    ) {
+      hasAutocompletedRef.current = false;
+    }
+  }, [formData.numero_documento, authUserProfile, mapGenderFromProfile, formatDateFromProfile]);
+
   // Si el documento está repetido, forzar el error en el campo
   useEffect(() => {
     if (isDuplicateDocument) {
@@ -65,7 +161,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
     switch (name) {
       case 'numero_documento':
         if (!value || String(value).trim() === '') return 'El número de documento es requerido';
-        if (!/^\d{10}$/.test(String(value))) return 'El documento debe tener exactamente 10 dígitos';
+        if (!/^\d{8,10}$/.test(String(value))) return 'El documento debe tener entre 8 y 10 dígitos';
         return '';
       case 'primer_nombre':
         return !value || String(value).trim() === '' ? 'El primer nombre es requerido' : '';
@@ -112,7 +208,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
       
       case 'numero_documento':
-        // Solo números, sin letras ni caracteres especiales (máximo 10)
+        // Solo números, sin letras ni caracteres especiales (máximo 10, mínimo 8 para validación)
         return value.replace(/[^0-9]/g, '').slice(0, 10);
       
       case 'telefono':
@@ -189,14 +285,14 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         {/* Número de Documento */}
         <div className="relative">
           <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Número de Documento (10 dígitos) *
+            Número de Documento (8-10 dígitos) *
           </label>
           <input
             type="text"
             name="numero_documento"
             value={formData.numero_documento}
             onChange={handleChange}
-            placeholder="1234567890"
+            placeholder="12345678"
             maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
               errors.numero_documento || isDuplicateDocument

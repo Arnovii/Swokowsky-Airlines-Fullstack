@@ -87,20 +87,68 @@ export class TicketService {
   }
 
   /**
-   * Obtiene todos los tickets pagados de un usuario
+   * Obtiene todos los tickets de un usuario (pagados y cancelados)
    */
   async getTicketsByUser(idUsuario: number) {
     return this.prisma.ticket.findMany({
       where: {
         id_usuarioFK: idUsuario,
-        estado: ticket_estado.pagado, // 🔥 solo pagados
       },
       include: {
-        vuelo: true,
-        pasajero: true,   // ✅ se agrega aquí
+        pasajero: true,
+        vuelo: {
+          include: {
+            aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
+            aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
+          },
+        },
       },
       orderBy: { creado_en: 'desc' },
     });
   }
 
+
+  async updateTicketStatus(
+    idTicket: number,
+    idUsuario: number,
+    nuevoEstado: ticket_estado
+  ) {
+    // 1. Buscar el ticket con su vuelo
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id_ticket: idTicket },
+      include: {
+        vuelo: true,
+      },
+    });
+
+    if (!ticket) throw new NotFoundException("El ticket no existe");
+
+    // 2. Validar que el ticket pertenezca al usuario autenticado
+    if (ticket.id_usuarioFK !== idUsuario) {
+      throw new BadRequestException("No tienes permiso para actualizar este ticket");
+    }
+
+    // 3. Validar que falte mínimo 1 hora para el vuelo
+    const ahora = new Date();
+    const salidaVuelo = new Date(ticket.vuelo.salida_programada_utc);
+
+    const diffMs = salidaVuelo.getTime() - ahora.getTime();
+    const diffHoras = diffMs / (1000 * 60 * 60);
+
+    if (diffHoras < 1) {
+      throw new BadRequestException(
+        "No puedes actualizar el ticket: debe faltar mínimo 1 hora para el vuelo"
+      );
+    }
+
+    // 4. Actualizar únicamente el estado
+    return this.prisma.ticket.update({
+      where: { id_ticket: idTicket },
+      data: { estado: nuevoEstado },
+    });
+  }
+
 }
+
+
+

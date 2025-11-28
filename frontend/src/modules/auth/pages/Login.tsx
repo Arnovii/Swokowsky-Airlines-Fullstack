@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiMail, FiLock, FiLogIn, FiUserPlus } from "react-icons/fi";
+import { Plane } from "lucide-react";
 import imagenFondo from "../../../assets/imagen_login.jpg";
 import api from "../../../api/axios";
 
@@ -78,110 +79,163 @@ export default function Login() {
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen bg-cover bg-center"
+      className="flex items-center justify-center min-h-screen bg-cover bg-center relative overflow-hidden"
       style={{
-        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.5)), url(${imagenFondo})`,
+        backgroundImage: `url(${imagenFondo})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
-        {/* efecto difuso detrás */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-400 rounded-2xl blur-2xl opacity-50 -z-10"></div>
+      {/* Overlay con degradado */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#081225]/95 via-[#0a1533]/90 to-[#081225]/95 backdrop-blur-sm"></div>
+      
+      {/* Efectos decorativos */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-cyan-400/5 rounded-full blur-2xl"></div>
 
-        {/* encabezado */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Bienvenido</h1>
-          <p className="text-gray-500">Inicia sesión para continuar</p>
+      {/* Contenedor principal */}
+      <div className="relative z-10 w-full max-w-md mx-4">
+        {/* Card de login - Fondo blanco */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+          {/* Header del card */}
+          <div className="bg-gradient-to-r from-[#081225] via-[#0a1533] to-[#081225] px-8 py-8 border-b border-cyan-500/20">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-white mb-1">
+                ¡Bienvenido de vuelta!
+              </h1>
+              <p className="text-cyan-200/80 text-sm">
+                Inicia sesión para continuar tu viaje
+              </p>
+            </div>
+          </div>
+
+          {/* Formulario */}
+          <div className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Campo Email */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Correo electrónico
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FiMail className="h-5 w-5 text-[#0a1533]" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="ejemplo@dominio.com"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+
+              {/* Campo Contraseña */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Contraseña
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/forgot-password")}
+                    className="text-xs text-cyan-600 hover:text-cyan-500 transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FiLock className="h-5 w-5 text-[#0a1533]" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
+                    required
+                    placeholder="••••••••"
+                    className="w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-[#0a1533] transition-colors"
+                  >
+                    {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-red-600 text-sm">{error}</span>
+                </div>
+              )}
+
+              {/* Botón Login */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0a1533] to-[#1a3a5c] text-white py-3.5 rounded-xl font-semibold hover:from-[#0d1d40] hover:to-[#1e4470] focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 transition-all duration-300 shadow-lg shadow-[#0a1533]/25 disabled:opacity-60 disabled:cursor-not-allowed group"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Ingresando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiLogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    <span>Iniciar sesión</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Separador */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">¿Nuevo en Swokowsky?</span>
+              </div>
+            </div>
+
+            {/* Botón Registro */}
+            <button
+              type="button"
+              onClick={() => navigate("/registro")}
+              className="w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-200 text-[#0a1533] py-3.5 rounded-xl font-semibold hover:bg-gray-100 hover:border-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-300 group"
+            >
+              <FiUserPlus className="w-5 h-5 text-cyan-600 group-hover:scale-110 transition-transform" />
+              <span>Crear una cuenta</span>
+            </button>
+          </div>
         </div>
 
-        {/* formulario */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* email */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Correo electrónico
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="ejemplo@dominio.com"
-              className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              maxLength={50}
-            />
-          </div>
-
-          {/* contraseña */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Contraseña
-              </label>
-              <button
-                type="button"
-                onClick={() => navigate("/forgot-password")}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
-                required
-                placeholder="********"
-                className="w-full px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          {/* error */}
-          {error && (
-            <div className="text-red-600 text-sm font-medium">{error}</div>
-          )}
-
-          {/* botón login */}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-60"
-          >
-            {submitting ? "Ingresando…" : "Iniciar sesión"}
-          </button>
-        </form>
-
-        {/* sección registro */}
+        {/* Footer decorativo */}
         <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm mb-2">¿No tienes cuenta?</p>
-          <button
-            type="button"
-            onClick={() => navigate("/registro")}
-            className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition duration-300"
-          >
-            Registrarse
-          </button>
+          <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
+            <Plane className="w-4 h-4" />
+            <span>Vuela con nosotros hacia tu próxima aventura</span>
+          </div>
         </div>
       </div>
     </div>

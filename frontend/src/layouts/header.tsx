@@ -1,5 +1,5 @@
 // src/layouts/Header.tsx
-import { ShoppingCart, Settings, User, Menu, X, LogOut, Newspaper, Bell } from "lucide-react";
+import { ShoppingCart, Settings, User, Menu, X, LogOut, Newspaper, Bell, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { useState } from "react";
@@ -10,9 +10,15 @@ export default function Header() {
   const auth = useAuth();
 
   const usernameDisplay = auth.user?.username ?? auth.user?.correo ?? "Usuario";
-  
+
   // ⭐ Verificar si el usuario es administrador
-  const isAdmin = auth.user?.tipo_usuario === "admin" || auth.user?.tipo_usuario === "root";
+  const isAdmin =
+    auth.user?.tipo_usuario === "admin" ||
+    auth.user?.tipo_usuario === "root";
+
+  const isClient = auth.user?.tipo_usuario === "cliente";
+  // Mostrar botón de Check-In solo si NO está logueado o es cliente
+  const showCheckIn = !auth.isAuthenticated || isClient;
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-[#081225] via-[#0a1533] to-[#081225] backdrop-blur-md border-b border-cyan-500/20 text-white px-6 py-4 z-50 shadow-2xl font-sans">
@@ -28,7 +34,7 @@ export default function Header() {
               />
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/20 to-cyan-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full blur-xl"></div>
             </div>
-            <span className="text-xl font-bold tracking-wide bg-gradient-to-r from-white via-cyan-300 to-white bg-clip-text text-transparent group-hover:from-cyan-300 group-hover:to-cyan-100 transition-all duration-300">
+            <span className="text-xl font-bold tracking-wide text-white group-hover:text-cyan-200 transition-all duration-300">
               Swokowsky Airlines
             </span>
           </Link>
@@ -51,29 +57,39 @@ export default function Header() {
 
         {/* Desktop navigation */}
         <div className="hidden lg:flex items-center space-x-3">
-          {/* News Icon */}
+          {/* News - Icono + Nombre */}
           <Link
             to="/news"
-            className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+            className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
             title="Noticias"
           >
-            <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+            <span className="text-sm font-medium">Noticias</span>
           </Link>
 
-          {/* ⭐ Shopping Cart Icon - SOLO VISIBLE PARA CLIENTES */}
+          {/* Forum - Icono + Nombre */}
+          <Link
+            to="/foro"
+            className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
+            title="Foro de la Comunidad"
+          >
+            <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+            <span className="text-sm font-medium">Foro</span>
+          </Link>
+
+          {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES */}
           {!isAdmin && (
             <Link
               to="/carrito"
-              className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+              className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
               title="Carrito de compras"
             >
-              <div className="relative w-5 h-5">
-                <ShoppingCart className="w-full h-full text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <ShoppingCart className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+              <span className="text-sm font-medium">Carrito</span>
             </Link>
           )}
+
+
 
           {auth.isAuthenticated ? (
             <>
@@ -83,8 +99,13 @@ export default function Header() {
                 className="flex items-center px-4 py-2.5 h-11 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 group"
               >
                 <span className="text-sm text-cyan-200 group-hover:text-white transition-colors duration-300 whitespace-nowrap">
-                  Hola, <span className="font-semibold text-white">{usernameDisplay}</span>
-                  <span className="ml-1 inline-block group-hover:animate-bounce">👋</span>
+                  Hola,{" "}
+                  <span className="font-semibold text-white">
+                    {usernameDisplay}
+                  </span>
+                  <span className="ml-1 inline-block group-hover:animate-bounce">
+                    👋
+                  </span>
                 </span>
               </Link>
 
@@ -102,15 +123,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              {/* Login Icon */}
-              <Link
-                to="/login"
-                className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
-                title="Iniciar sesión"
-              >
-                <User className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
+              
 
               {/* Login Text */}
               <Link
@@ -127,10 +140,11 @@ export default function Header() {
       </div>
 
       {/* Mobile dropdown menu */}
-      <div className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${open
-        ? 'max-h-96 opacity-100 translate-y-0'
-        : 'max-h-0 opacity-0 -translate-y-4'
-        }`}>
+      <div
+        className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${
+          open ? "max-h-96 opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-4"
+        }`}
+      >
         <div className="mt-6 pt-6 border-t border-cyan-500/20">
           <div className="flex flex-col space-y-3">
             {/* News Link Mobile */}
@@ -142,6 +156,18 @@ export default function Header() {
               <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
               <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
                 Noticias
+              </span>
+            </Link>
+
+            {/* Forum Link Mobile - visible para todos */}
+            <Link
+              to="/foro"
+              className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-cyan-500/10 hover:border-cyan-400/30 transition-all duration-300 group"
+              onClick={() => setOpen(false)}
+            >
+              <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
+              <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
+                Foro
               </span>
             </Link>
 
@@ -161,6 +187,19 @@ export default function Header() {
               </Link>
             )}
 
+            {/* ⭐ Botón Realizar Check-In! Mobile */}
+            {showCheckIn && (
+              <Link
+                to="/check-in" // misma ruta que en desktop
+                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
+                onClick={() => setOpen(false)}
+              >
+                <span className="text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold">
+                  Realizar Check-In!
+                </span>
+              </Link>
+            )}
+
             {auth.isAuthenticated ? (
               <>
                 <Link
@@ -169,8 +208,13 @@ export default function Header() {
                   onClick={() => setOpen(false)}
                 >
                   <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 text-center">
-                    Hola, <span className="font-semibold text-white">{usernameDisplay}</span>
-                    <span className="ml-2 inline-block group-hover:animate-bounce">👋</span>
+                    Hola,{" "}
+                    <span className="font-semibold text-white">
+                      {usernameDisplay}
+                    </span>
+                    <span className="ml-2 inline-block group-hover:animate-bounce">
+                      👋
+                    </span>
                   </span>
                 </Link>
 

@@ -1,64 +1,73 @@
 import { useState, useEffect } from "react";
 import type { CrearVueloPayload } from "../types/vuelo";
-// import { editarVuelo, getVueloById } from "../services/flightsEdit"; // Comentado para versión mock
+import { getVueloById, getNoticiaById, editarVuelo, verificarVentasVuelo, type VueloAPIResponse, type UpdateFlightPayload } from "../services/flightsEdit";
+
+// Destinos internacionales (fuera de Colombia)
+const DESTINOS_INTERNACIONALES = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+
+// Tiempos mínimos antes del vuelo (en milisegundos)
+const TIEMPO_MINIMO_NACIONAL = 60 * 60 * 1000; // 1 hora
+const TIEMPO_MINIMO_INTERNACIONAL = 3 * 60 * 60 * 1000; // 3 horas
 
 export function useEditarVuelo(id: string | undefined) {
-  const [vuelo, setVuelo] = useState<CrearVueloPayload | null>(null);
+  const [vueloOriginal, setVueloOriginal] = useState<VueloAPIResponse | null>(null);
   const [form, setForm] = useState<CrearVueloPayload | null>(null);
   const [salidaDate, setSalidaDate] = useState<Date | null>(null);
   const [llegadaDate, setLlegadaDate] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [puedeEditar, setPuedeEditar] = useState(true);
-  const [cuposDisponibles, setCuposDisponibles] = useState<number>(0);
+  const [tieneVentas, setTieneVentas] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setError(null);
     
-    // Simular datos mock para desarrollo estético
-    const dataMock = {
-      id_aeronaveFK: 1,
-      id_aeropuerto_origenFK: 1,
-      id_aeropuerto_destinoFK: 2,
-      salida_programada_utc: "2024-12-25T10:00:00Z",
-      llegada_programada_utc: "2024-12-25T14:30:00Z",
-      id_promocionFK: null,
-      estado: "Programado" as const,
-      titulo: "Vuelo Navideño Especial",
-      descripcion_corta: "Disfruta de un vuelo especial en estas fiestas navideñas",
-      descripcion_larga: "Un vuelo único diseñado para celebrar la temporada navideña con servicios premium y atención especial para toda la familia. Incluye entretenimiento especial y menú festivo.",
-      cupos_disponibles: 150,
-      tiquetes_vendidos: false,
-      tarifa: [
-        { clase: "economica" as const, precio_base: 250000 },
-        { clase: "primera_clase" as const, precio_base: 750000 }
-      ]
-    };
-    
-    // Simular delay de API
-    setTimeout(() => {
-      setVuelo(dataMock);
-      setForm(dataMock);
-      setSalidaDate(new Date(dataMock.salida_programada_utc));
-      setLlegadaDate(new Date(dataMock.llegada_programada_utc));
-      setPuedeEditar(dataMock.estado === "Programado" && !dataMock.tiquetes_vendidos);
-      setCuposDisponibles(dataMock.cupos_disponibles || 0);
-      setLoading(false);
-    }, 1000);
-    
-    // Código original comentado para cuando esté listo el backend:
-    /*
-    getVueloById(Number(id))
-      .then((data) => {
-        if (data) {
-          setVuelo(data);
-          setForm(data);
-          setSalidaDate(data.salida_programada_utc ? new Date(data.salida_programada_utc) : null);
-          setLlegadaDate(data.llegada_programada_utc ? new Date(data.llegada_programada_utc) : null);
-          setPuedeEditar(data.estado === "Programado" && !data.tiquetes_vendidos);
-          setCuposDisponibles(data.cupos_disponibles || 0);
+    // Cargar vuelo y noticia en paralelo
+    Promise.all([
+      getVueloById(Number(id)),
+      getNoticiaById(Number(id))
+    ])
+      .then(([vueloData, noticiaData]) => {
+        if (vueloData) {
+          setVueloOriginal(vueloData);
+          
+          // Transformar datos de la API al formato del formulario
+          const formData: CrearVueloPayload = {
+            id_aeronaveFK: vueloData.id_aeronaveFK,
+            id_aeropuerto_origenFK: vueloData.id_aeropuerto_origenFK,
+            id_aeropuerto_destinoFK: vueloData.id_aeropuerto_destinoFK,
+            salida_programada_utc: vueloData.salida_programada_utc,
+            llegada_programada_utc: vueloData.llegada_programada_utc,
+            id_promocionFK: vueloData.id_promocionFK,
+            estado: vueloData.estado as "Programado" | "En vuelo" | "Cancelado",
+            // Datos de la noticia
+            titulo: noticiaData?.titulo || "",
+            descripcion_corta: noticiaData?.descripcion_corta || "",
+            descripcion_larga: noticiaData?.descripcion_larga || "",
+            url_imagen: noticiaData?.url_imagen || "",
+            tarifa: vueloData.tarifa.map(t => ({
+              clase: t.clase,
+              precio_base: t.precio_base
+            })),
+            // Datos de promoción de la noticia si existe
+            promocion: noticiaData?.promocion ? true : false,
+            promo_nombre: noticiaData?.promocion?.nombre || "",
+            promo_descripcion: noticiaData?.promocion?.descripcion || "",
+            descuento: noticiaData?.promocion?.descuento ? String(noticiaData.promocion.descuento * 100) : "",
+            promocion_inicio: noticiaData?.promocion?.fecha_inicio || "",
+            promocion_fin: noticiaData?.promocion?.fecha_fin || "",
+          };
+          
+          setForm(formData);
+          setSalidaDate(vueloData.salida_programada_utc ? new Date(vueloData.salida_programada_utc) : null);
+          setLlegadaDate(vueloData.llegada_programada_utc ? new Date(vueloData.llegada_programada_utc) : null);
+          
+          // Verificar si tiene ventas
+          const hayVentas = verificarVentasVuelo(vueloData);
+          setTieneVentas(hayVentas);
+          setPuedeEditar(vueloData.estado === "Programado" && !hayVentas);
         } else {
           setError("No se encontró el vuelo");
         }
@@ -70,14 +79,15 @@ export function useEditarVuelo(id: string | undefined) {
       .finally(() => {
         setLoading(false);
       });
-    */
   }, [id]);
 
   const handleTarifaChange = (clase: string, precio: number) => {
     if (!form) return;
     const tarifas = [...form.tarifa];
-    if (clase === "economica") tarifas[0].precio_base = precio;
-    if (clase === "primera_clase") tarifas[1].precio_base = precio;
+    const index = tarifas.findIndex(t => t.clase === clase);
+    if (index !== -1) {
+      tarifas[index].precio_base = precio;
+    }
     setForm({ ...form, tarifa: tarifas });
   };
 
@@ -89,41 +99,75 @@ export function useEditarVuelo(id: string | undefined) {
 
   const handleSubmit = async (
     e: React.FormEvent,
-    anunciarPromo: boolean, // Se mantiene para compatibilidad pero siempre es true
-    navigate: (url: string) => void,
+    _anunciarPromo: boolean,
+    _navigate: (url: string) => void,
     setShowConfirm: (v: boolean) => void,
     setSuccess: (msg: string) => void
   ) => {
     e.preventDefault();
-    if (!form || !id) return;
+    if (!form || !id || !salidaDate || !llegadaDate || !vueloOriginal) return;
+    
+    // Validar tiempo mínimo antes del vuelo
+    const ahora = new Date();
+    const tiempoHastaVuelo = salidaDate.getTime() - ahora.getTime();
+    
+    // Determinar si es vuelo internacional basándose en los aeropuertos
+    const ciudadOrigen = vueloOriginal.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.nombre || "";
+    const ciudadDestino = vueloOriginal.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.nombre || "";
+    
+    // Es internacional si origen o destino están en la lista de destinos internacionales
+    const esInternacional = DESTINOS_INTERNACIONALES.some(ciudad => 
+      ciudadOrigen.toLowerCase().includes(ciudad.toLowerCase()) || 
+      ciudadDestino.toLowerCase().includes(ciudad.toLowerCase())
+    );
+    
+    const tiempoMinimo = esInternacional ? TIEMPO_MINIMO_INTERNACIONAL : TIEMPO_MINIMO_NACIONAL;
+    const tipoVuelo = esInternacional ? "internacional" : "nacional";
+    const horasMinimas = esInternacional ? "3 horas" : "1 hora";
+    
+    if (tiempoHastaVuelo < tiempoMinimo) {
+      setError(`No se puede editar un vuelo ${tipoVuelo} con menos de ${horasMinimas} de anticipación. Por favor selecciona una fecha/hora posterior.`);
+      return;
+    }
+    
     setLoading(true);
     
-    // Simular edición exitosa (sin llamada real a API)
-    setTimeout(() => {
-      console.log("Simulando edición de vuelo:", form);
-      setSuccess("Vuelo editado exitosamente (modo demo)");
-      setShowConfirm(true);
-      setLoading(false);
-    }, 1500);
-    
-    // Código original comentado para cuando esté listo el backend:
-    /*
     try {
-      await editarVuelo(Number(id), form);
+      // Construir payload solo con los campos que acepta el backend
+      const updatePayload: UpdateFlightPayload = {
+        salida_programada_utc: salidaDate.toISOString(),
+        llegada_programada_utc: llegadaDate.toISOString(),
+      };
+
+      // Agregar promoción si está habilitada
+      if (form.promocion && form.promo_nombre && form.promo_descripcion && form.descuento && form.promocion_inicio && form.promocion_fin) {
+        updatePayload.promocion = {
+          nombre: form.promo_nombre,
+          descripcion: form.promo_descripcion,
+          descuento: Number(form.descuento) / 100, // Convertir porcentaje a decimal
+          fecha_inicio: form.promocion_inicio,
+          fecha_fin: form.promocion_fin,
+        };
+        
+        // Si ya existe una promoción, incluir su ID
+        if (vueloOriginal?.promocion?.id_promocion) {
+          updatePayload.promocion.id_promocion = vueloOriginal.promocion.id_promocion;
+        }
+      }
+
+      await editarVuelo(Number(id), updatePayload);
       setSuccess("Vuelo editado exitosamente");
       setShowConfirm(true);
-      // La promoción siempre se anuncia automáticamente
     } catch (error) {
       console.error("Error al editar vuelo:", error);
       setError("Error al editar el vuelo");
     } finally {
       setLoading(false);
     }
-    */
   };
 
   return {
-    vuelo,
+    vuelo: vueloOriginal,
     form,
     setForm,
     salidaDate,
@@ -137,6 +181,6 @@ export function useEditarVuelo(id: string | undefined) {
     handleChange,
     handleSubmit,
     puedeEditar,
-    cuposDisponibles,
+    tieneVentas,
   };
 }

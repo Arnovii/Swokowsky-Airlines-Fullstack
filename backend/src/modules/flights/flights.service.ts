@@ -3,22 +3,190 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SearchFlightsDto } from './dto/search-flights.dto';
 import { FlightResultDto } from './dto/flight-result.dto';
+import { UpdateFlightDto } from './dto/update-flight.dto';
+import { promocion as PromocionModel } from '@prisma/client';
+import { ticket_estado, asiento_clases } from '@prisma/client';
 
 @Injectable()
 export class FlightsService {
   constructor(private prisma: PrismaService) { }
 
   async getAllFlights() {
-    return this.prisma.vuelo.findMany({
+    const vuelos = await this.prisma.vuelo.findMany({
       include: {
         aeronave: true,
         tarifa: true,
         promocion: true,
+        noticia: true,
         aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
         aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
       },
     });
+
+    // ENUMS reales de Prisma → NO falla
+    const ESTADOS_VALIDOS = [ticket_estado.pagado, ticket_estado.usado];
+
+    const resultados = await Promise.all(
+      vuelos.map(async (vuelo) => {
+        const ocupantes = await this.prisma.ticket.groupBy({
+          by: ["asiento_clase"],
+          where: {
+            id_vueloFK: vuelo.id_vuelo,
+            estado: { in: ESTADOS_VALIDOS },
+          },
+          _count: {
+            id_ticket: true,
+          },
+        });
+
+        let ocupantes_primera_clase = 0;
+        let ocupantes_segunda_clase = 0;
+
+        for (const item of ocupantes) {
+          const cantidad = item._count.id_ticket; // ✔ siempre existe
+
+          if (item.asiento_clase === asiento_clases.primera_clase) {
+            ocupantes_primera_clase = cantidad;
+          }
+
+          if (item.asiento_clase === asiento_clases.economica) {
+            ocupantes_segunda_clase = cantidad;
+          }
+        }
+
+        return {
+          ...vuelo,
+          ocupantes_primera_clase,
+          ocupantes_segunda_clase,
+        };
+      })
+    );
+
+    return resultados;
   }
+
+
+
+
+  async getActiveFlights() {
+    return this.prisma.vuelo.findMany({
+      where: {
+        estado: {
+          not: 'Cancelado',   // ⭐ Solo devuelve vuelos activos
+        },
+      },
+    });
+  }
+
+  async updateFlight(id_vuelo: number, dto: UpdateFlightDto) {
+    return this.prisma.$transaction(async (tx) => {
+
+      let id_promocion_a_usar: number | null | undefined = undefined;
+
+      if (dto.estado !== undefined) {
+        this.deleteFlight(id_vuelo);
+      }
+
+      // Lógica de Promoción: Crear o Actualizar
+      if (dto.promocion) {
+        const promo = dto.promocion;
+
+        // Conversión de fechas y validación
+        const fechaInicio = new Date(promo.fecha_inicio);
+        const fechaFin = new Date(promo.fecha_fin);
+
+        if (fechaFin <= fechaInicio) {
+          throw new BadRequestException('fecha_fin debe ser posterior a fecha_inicio');
+        }
+
+        const dataPromocion = {
+          nombre: promo.nombre,
+          descripcion: promo.descripcion,
+          descuento: promo.descuento,
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+        };
+
+        if (promo.id_promocion) {
+          // ⭐ ACTUALIZAR promoción existente (Si viene el ID)
+          const promocionActualizada = await tx.promocion.update({
+            where: { id_promocion: promo.id_promocion },
+            data: dataPromocion,
+          });
+          id_promocion_a_usar = promocionActualizada.id_promocion;
+        } else {
+          // ⭐ CREAR nueva promoción (Si NO viene el ID)
+          const promocionCreada = await tx.promocion.create({
+            data: dataPromocion,
+          });
+          id_promocion_a_usar = promocionCreada.id_promocion;
+        }
+      }
+      // Si dto.promocion no se provee, 'id_promocion_a_usar' es 'undefined', 
+      // lo cual mantendrá la FK existente en el vuelo.
+
+      // Actualizar vuelo
+      const vueloActualizado = await tx.vuelo.update({
+        where: { id_vuelo },
+        data: {
+          salida_programada_utc: dto.salida_programada_utc,
+          llegada_programada_utc: dto.llegada_programada_utc,
+          // Asigna el ID de la promoción nueva/actualizada, o 'undefined'
+          id_promocionFK: id_promocion_a_usar,
+          estado: dto.estado,
+        },
+        include: { promocion: true }
+      });
+
+      return vueloActualizado;
+    });
+  }
+
+  async deleteFlight(id_vuelo: number) {
+    const vuelo = await this.prisma.vuelo.findUnique({
+      where: { id_vuelo },
+      include: { ticket: true }
+    });
+
+    if (!vuelo) {
+      throw new BadRequestException('El vuelo no existe.');
+    }
+
+    const hasTickets = vuelo.ticket.length > 0;
+
+    // ⭐ Si NO tiene tickets, simplemente marcar como cancelado
+    if (!hasTickets) {
+      await this.prisma.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      return { message: 'Vuelo cancelado correctamente (sin tickets).' };
+    }
+
+    // ⭐ Si tiene tickets → cancelar vuelo y tickets dentro de una transacción
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Cancelar el vuelo
+      await tx.vuelo.update({
+        where: { id_vuelo },
+        data: { estado: 'Cancelado' }
+      });
+
+      // 2. Cancelar los tickets asociados
+      await tx.ticket.updateMany({
+        where: { id_vueloFK: id_vuelo, estado: { not: 'cancelado' } },
+        data: { estado: 'cancelado' }
+      });
+    });
+
+    return {
+      message:
+        'El vuelo tenía tickets y ha sido cancelado. Los tickets fueron marcados como cancelados.'
+    };
+  }
+
+
+
 
   private dayRangeFromDateString(dateStr: string) {
     // Interpretamos dateStr como fecha (YYYY-MM-DD o ISO). Buscamos entre [00:00:00, 23:59:59] UTC
@@ -88,31 +256,86 @@ export class FlightsService {
       orderBy: { salida_programada_utc: 'asc' },
     });
 
-    // Mapear resultados y calcular available_seats + horas locales
     const results: FlightResultDto[] = [];
-    for (const v of vuelos) {
-      const { availableSeats, totalConfigured } = await this.computeAvailableSeatsForAeronave(v.id_aeronaveFK, v.id_vuelo);
 
-      const origenGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
-      const destinoGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
+    for (const v of vuelos) {
+      // ================================
+      //      CALCULAR SILLAS DISPONIBLES
+      // ================================
+      const { availableSeats, totalConfigured } = await this.computeAvailableSeatsForAeronave(
+        v.id_aeronaveFK,
+        v.id_vuelo,
+      );
+
+      // ================================
+      //       CALCULAR HORAS LOCALES
+      // ================================
+      const origenGmtOffset =
+        v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
+      const destinoGmtOffset =
+        v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
 
       const salida_local = this.formatLocalFromUtc(v.salida_programada_utc, origenGmtOffset);
       const llegada_local = this.formatLocalFromUtc(v.llegada_programada_utc, destinoGmtOffset);
 
+      // ================================
+      //       CALCULAR OCUPANTES POR CLASE
+      // ================================
+      const ocupantes = await this.prisma.ticket.groupBy({
+        by: ["asiento_clase"],
+        where: {
+          id_vueloFK: v.id_vuelo,
+          estado: { in: [ticket_estado.pagado, ticket_estado.usado] },
+        },
+        _count: { id_ticket: true },
+      });
+
+      let ocupantes_primera_clase = 0;
+      let ocupantes_segunda_clase = 0;
+
+      for (const item of ocupantes) {
+        const cantidad = item._count.id_ticket;
+
+        if (item.asiento_clase === asiento_clases.primera_clase) {
+          ocupantes_primera_clase = cantidad;
+        }
+        if (item.asiento_clase === asiento_clases.economica) {
+          ocupantes_segunda_clase = cantidad;
+        }
+      }
+
+      // ================================
+      //           ARMAR RESULTADO FINAL
+      // ================================
       results.push({
         id_vuelo: v.id_vuelo,
         estado: v.estado,
+
         salida_programada_utc: (v.salida_programada_utc as Date).toISOString(),
         llegada_programada_utc: (v.llegada_programada_utc as Date).toISOString(),
+
         salida_local,
         llegada_local,
+
         aeronave: {
           id_aeronave: v.aeronave.id_aeronave,
           modelo: v.aeronave.modelo,
           capacidad: totalConfigured,
         },
-        tarifas: v.tarifa.map((t) => ({ clase: t.clase, precio_base: t.precio_base })),
-        promocion: v.promocion ? { id_promocion: v.promocion.id_promocion, nombre: v.promocion.nombre, descuento: v.promocion.descuento } : null,
+
+        tarifas: v.tarifa.map((t) => ({
+          clase: t.clase,
+          precio_base: t.precio_base,
+        })),
+
+        promocion: v.promocion
+          ? {
+            id_promocion: v.promocion.id_promocion,
+            nombre: v.promocion.nombre,
+            descuento: v.promocion.descuento,
+          }
+          : null,
+
         aeropuerto_origen: {
           id_aeropuerto: v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.id_aeropuerto,
           nombre: v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.nombre,
@@ -130,6 +353,7 @@ export class FlightsService {
             },
           },
         },
+
         aeropuerto_destino: {
           id_aeropuerto: v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.id_aeropuerto,
           nombre: v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.nombre,
@@ -147,12 +371,18 @@ export class FlightsService {
             },
           },
         },
+
         available_seats: availableSeats,
+
+        // ⭐ CAMPOS OBLIGATORIOS DEL DTO ⭐
+        ocupantes_primera_clase,
+        ocupantes_segunda_clase,
       });
     }
 
     return results;
   }
+
 
   /**
    * Public: recibe los filtros y devuelve:

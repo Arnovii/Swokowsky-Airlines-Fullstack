@@ -4,25 +4,104 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Nueva noticia - Swokowsky Airlines</title>
+
     <style>
-      /* Estilos mínimos inline-friendly */
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; padding:0; background:#f6f7fb; color:#0e254d; }
-      .container { max-width:700px; margin:24px auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 6px 24px rgba(16,24,40,0.08); }
-      .hero { height:240px; background-size:cover; background-position:center; }
-      .content { padding:24px; }
-      h1 { margin:0 0 8px; font-size:22px; color:#081225; }
-      p.lead { margin:0 0 12px; color:#374151; }
-      .meta { font-size:13px; color:#6b7280; margin-bottom:16px; }
-      .prices { display:flex; gap:12px; margin:16px 0; }
-      .price { background:#f3f4f6; padding:10px 12px; border-radius:8px; font-weight:600; }
-      .btn { display:inline-block; margin-top:12px; padding:10px 16px; background:#0e254d; color:white; text-decoration:none; border-radius:8px; }
-      footer { font-size:12px; color:#9ca3af; text-align:center; padding:16px; }
+      /* Estilos con !important para evitar overrides de clientes de correo */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #f6f7fb !important;
+        color: #0e254d !important;
+      }
+
+      .container {
+        max-width: 700px !important;
+        margin: 24px auto !important;
+        background: #ffffff !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 6px 24px rgba(16,24,40,0.08) !important;
+      }
+
+      .hero {
+        height: 240px !important;
+        background-size: cover !important;
+        background-position: center !important;
+      }
+
+      .content {
+        padding: 24px !important;
+      }
+
+      h1 {
+        margin: 0 0 8px !important;
+        font-size: 22px !important;
+        color: #081225 !important;
+      }
+
+      p.lead {
+        margin: 0 0 12px !important;
+        color: #374151 !important;
+      }
+
+      p {
+        color: #0e254d !important;
+      }
+
+      .meta {
+        font-size: 13px !important;
+        color: #6b7280 !important;
+        margin-bottom: 16px !important;
+      }
+
+      .prices {
+        display: flex !important;
+        gap: 12px !important;
+        margin: 16px 0 !important;
+      }
+
+      .price {
+        background: #f3f4f6 !important;
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #0e254d !important;
+      }
+
+      .btn {
+        display: inline-block !important;
+        margin-top: 12px !important;
+        padding: 10px 16px !important;
+        background: #0e254d !important;
+        color: white !important;
+        text-decoration: none !important;
+        border-radius: 8px !important;
+      }
+
+      footer {
+        font-size: 12px !important;
+        color: #9ca3af !important;
+        text-align: center !important;
+        padding: 16px !important;
+      }
+
+      hr {
+        margin: 18px 0 !important;
+        border: none !important;
+        border-top: 1px solid #eef2ff !important;
+      }
+
+      a {
+        color: #0e254d !important;
+      }
     </style>
   </head>
+
   <body>
     <div class="container" role="article" aria-label="Nueva noticia">
       <!-- Banner -->
-      <div class="hero" style="background-image: url('{{bannerImageUrl}}');"></div>
+      <div class="hero" style="background-image: url('{{bannerImageUrl}}') !important;"></div>
 
       <div class="content">
         <h1>{{titulo}}</h1>
@@ -42,20 +121,27 @@
         </div>
 
         {{#if promocion}}
-          <div style="margin-top:8px; padding:12px; border-radius:8px; background:#ecfdf5; color:#065f46;">
+          <div style="
+            margin-top: 8px !important;
+            padding: 12px !important;
+            border-radius: 8px !important;
+            background: #ecfdf5 !important;
+            color: #065f46 !important;">
             <strong>Promoción: {{promocion.nombre}} — {{promocion.descuento}}% OFF</strong><br/>
-            {{promocion.descripcion}} — <small>Válida: {{promocion.periodo_lectura}}</small>
+            {{promocion.descripcion}} —
+            <small>Válida: {{promocion.periodo_lectura}}</small>
           </div>
         {{/if}}
 
         <a class="btn" href="{{frontendUrl}}noticias/vuelo/{{newsId}}">Ver detalle en Swokowsky</a>
 
-        <hr style="margin:18px 0; border:none; border-top:1px solid #eef2ff;" />
+        <hr />
 
         <footer>
-          Si no deseas recibir estos correos, puedes <a href="{{frontendUrl}}perfil">ingresar a la pestaña de "Información de contacto" y desuscribirte</a>.
+          Si no deseas recibir estos correos, puedes
+          <a href="{{frontendUrl}}perfil">ingresar a la pestaña de "Información de contacto" y desuscribirte</a>.
         </footer>
-      </div
+      </div>
     </div>
   </body>
 </html>

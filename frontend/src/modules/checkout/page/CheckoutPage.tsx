@@ -11,12 +11,14 @@ import { useCheckoutForm } from '../hooks/useCheckoutForm';
 import { usePaymentProcess } from '../hooks/usePaymentProcess';
 import { toast } from 'react-toastify';
 import { useWalletBalance } from '../hooks/useWalletBalance';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, loading: cartLoading, clearCart } = useCart();
   const { user } = useAuth();
   const { saldo } = useWalletBalance();
+  const { profile: userProfile } = useUserProfile();
   
   const [expandedFlightIndex, setExpandedFlightIndex] = useState<number | null>(0);
 
@@ -214,12 +216,17 @@ const CheckoutPage = () => {
   // Handler para cerrar modal
   const handleModalClose = () => {
     closeModal();
-    
-    // Si el pago fue exitoso, redirigir inmediatamente al home
+    // Si el pago fue exitoso, limpiar carrito pero NO redirigir
     if (paymentResult?.success) {
       clearCart();
-      navigate('/');
     }
+  };
+
+  // Handler para ver tickets después de compra exitosa
+  const handleViewTickets = () => {
+    closeModal();
+    clearCart();
+    navigate('/tickets');
   };
 
   // Loading state
@@ -321,6 +328,14 @@ const CheckoutPage = () => {
                             </svg>
                             Complete los datos de {item.cantidad_de_tickets} {item.cantidad_de_tickets === 1 ? 'pasajero' : 'pasajeros'}
                           </p>
+                          {userProfile?.dni && (
+                            <p className="text-sm text-[#39A5D8] mt-1 flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Ingresa tu cédula ({userProfile.dni}) para autocompletar tus datos
+                            </p>
+                          )}
                         </div>
                         {travelers ? (
                           Array.from({ length: item.cantidad_de_tickets }).map((_, passengerIndex) => {
@@ -334,6 +349,7 @@ const CheckoutPage = () => {
                                 initialData={initialData}
                                 onUpdate={(data) => updateTravelerInfo(formKey, data)}
                                 duplicateDocuments={duplicateDocuments}
+                                authUserProfile={userProfile}
                               />
                             );
                           })
@@ -371,6 +387,7 @@ const CheckoutPage = () => {
           message={paymentResult.message}
           transactionId={paymentResult.transactionId}
           onClose={handleModalClose}
+          onViewTickets={handleViewTickets}
         />
       )}
 

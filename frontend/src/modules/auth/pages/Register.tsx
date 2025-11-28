@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 import imagenFondo from "../../../assets/imagen_login.jpg";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiImage, FiUserPlus, FiLogIn } from "react-icons/fi";
+import { Plane } from "lucide-react";
 
 
 // Lista de nacionalidades (ejemplo, puedes ampliarla)
@@ -412,224 +413,314 @@ const handleChange = (
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen bg-cover bg-center pt-8 pb-6"
+      className="flex items-center justify-center min-h-screen bg-cover bg-center py-8 relative overflow-hidden"
       style={{
-        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.5)), url(${imagenFondo})`,
+        backgroundImage: `url(${imagenFondo})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Crear cuenta</h1>
-          <p className="text-gray-500">Completa todos los campos</p>
-        </div>
+      {/* Overlay con degradado */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#081225]/95 via-[#0a1533]/90 to-[#081225]/95 backdrop-blur-sm"></div>
+      
+      {/* Efectos decorativos */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-8 mb-6">
-          {/* DNI */}
-          <div>
-            <label className="block text-sm font-medium">DNI</label>
-            <input
-              type="number"
-              name="dni"
-              defaultValue=""
-
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-              maxLength={8}
-            />
-          </div>
-          {/* Nombre */}
-          <div>
-            <label className="block text-sm font-medium">Nombre</label>
-            <input
-              type="text"
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-              maxLength={40}
-            />
-          </div>
-          {/* Apellido */}
-          <div>
-            <label className="block text-sm font-medium">Apellido</label>
-            <input
-              type="text"
-              name="apellido"
-              value={form.apellido}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-              maxLength={20}
-            />
-          </div>
-          {/* Fecha de nacimiento */}
-          <div>
-            <label className="block text-sm font-medium">Fecha de Nacimiento</label>
-            <input
-              type="date"
-              name="fecha_nacimiento"
-              value={form.fecha_nacimiento}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-          </div>
-          {/* Nacionalidad */}
-          <div>
-            <label className="block text-sm font-medium">Lugar de Nacimiento</label>
-            <select
-              name="nacionalidad"
-              value={form.nacionalidad}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="">Seleccionar</option>
-              {NATIONALITIES.map((country) => (
-                <option key={country.value} value={country.value}>
-                  {country.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Género */}
-          <div>
-            <label className="block text-sm font-medium">Género</label>
-            <select
-              name="genero"
-              value={form.genero}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="">Seleccionar</option>
-              <option value="M">Masculino</option>
-              <option value="F">Femenino</option>
-              <option value="X">Otro</option>
-            </select>
-          </div>
-          {/* Correo */}
-          <div>
-            <label className="block text-sm font-medium">Correo</label>
-            <input
-              type="email"
-              name="correo"
-              value={form.correo}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-              maxLength={50}
-            />
-          </div>
-          {/* Username */}
-          <div>
-            <label className="block text-sm font-medium">Nombre de Usuario</label>
-            <input
-              type="text"
-              name="username"
-              value={form.username}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-              maxLength={20}
-            />
-          </div>
-          {/* Contraseña */}
-          <div>
-            <label className="block text-sm font-medium">Contraseña</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded-lg pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-              </button>
+      {/* Contenedor principal */}
+      <div className="relative z-10 w-full max-w-lg mx-4">
+        {/* Card de registro - Fondo blanco */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+          {/* Header del card */}
+          <div className="bg-gradient-to-r from-[#081225] via-[#0a1533] to-[#081225] px-8 py-6 border-b border-cyan-500/20">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-white mb-1">
+                ¡Únete a nosotros!
+              </h1>
+              <p className="text-cyan-200/80 text-sm">
+                Completa todos los campos para crear tu cuenta
+              </p>
             </div>
           </div>
 
-          {/* Confirmar Contraseña */}
-          <div>
-            <label className="block text-sm font-medium">Confirmar Contraseña</label>
-            <div className="relative">
-              <input
-                type={showConfirm ? "text" : "password"}
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded-lg pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                >
-                {showConfirm ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-              </button>
-            </div>
-          </div>
-          {/* Imagen: archivo a subir */}
-          <div>
-            <label className="block text-sm font-medium">Imagen (subir)</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              required
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-            {preview && (
-              <div className="mt-2">
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="w-32 h-32 object-cover rounded-md border"
+          {/* Formulario */}
+          <div className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* DNI */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">DNI</label>
+                <input
+                  type="number"
+                  name="dni"
+                  defaultValue=""
+                  onChange={handleChange}
+                  required
+                  placeholder="12345678"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                  maxLength={8}
                 />
               </div>
-            )}
-          </div>
-          {/* Mensajes de estado y error */}
-          {uploading && (
-            <div className="text-sm text-gray-600">
-              Subiendo imagen a Cloudinary...
-            </div>
-          )}
-          {error && (
-            <div className="text-red-600 text-sm font-medium">{error}</div>
-          )}
-          {/* Botón de envío */}
-          <button
-            type="submit"
-            disabled={loading || uploading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-50"
-          >
-            {loading ? "Registrando..." : "Registrarse"}
-          </button>
-        </form>
 
-        {/* Sección inferior */}
+              {/* Nombre y Apellido en grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Nombre</label>
+                  <input
+                    type="text"
+                    name="nombre"
+                    value={form.nombre}
+                    onChange={handleChange}
+                    required
+                    placeholder="Juan"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    maxLength={40}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Apellido</label>
+                  <input
+                    type="text"
+                    name="apellido"
+                    value={form.apellido}
+                    onChange={handleChange}
+                    required
+                    placeholder="Pérez"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+
+              {/* Fecha de nacimiento */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
+                <input
+                  type="date"
+                  name="fecha_nacimiento"
+                  value={form.fecha_nacimiento}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                />
+              </div>
+
+              {/* Nacionalidad y Género en grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Lugar de Nacimiento</label>
+                  <select
+                    name="nacionalidad"
+                    value={form.nacionalidad}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                  >
+                    <option value="">Seleccionar</option>
+                    {NATIONALITIES.map((country) => (
+                      <option key={country.value} value={country.value}>
+                        {country.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Género</label>
+                  <select
+                    name="genero"
+                    value={form.genero}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                    <option value="X">Otro</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Correo */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">Correo</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FiMail className="h-5 w-5 text-[#0a1533]" />
+                  </div>
+                  <input
+                    type="email"
+                    name="correo"
+                    value={form.correo}
+                    onChange={handleChange}
+                    required
+                    placeholder="ejemplo@correo.com"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">Nombre de Usuario</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <FiUser className="h-5 w-5 text-[#0a1533]" />
+                  </div>
+                  <input
+                    type="text"
+                    name="username"
+                    value={form.username}
+                    onChange={handleChange}
+                    required
+                    placeholder="usuario123"
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+
+              {/* Contraseñas en grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FiLock className="h-5 w-5 text-[#0a1533]" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      required
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-[#0a1533] transition-colors"
+                    >
+                      {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Confirmar</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FiLock className="h-5 w-5 text-[#0a1533]" />
+                    </div>
+                    <input
+                      type={showConfirm ? "text" : "password"}
+                      name="confirmPassword"
+                      value={form.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-[#0a1533] transition-colors"
+                    >
+                      {showConfirm ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Imagen */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-700">Foto de perfil</label>
+                <div className="flex items-center gap-4">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 border-dashed rounded-xl text-gray-500 hover:bg-gray-100 hover:border-cyan-500/50 transition-all duration-300">
+                      <FiImage className="h-5 w-5" />
+                      <span className="text-sm">{imgFile ? imgFile.name : "Seleccionar imagen..."}</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      required
+                      className="hidden"
+                    />
+                  </label>
+                  {preview && (
+                    <img
+                      src={preview}
+                      alt="preview"
+                      className="w-14 h-14 object-cover rounded-xl border-2 border-cyan-500/30"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Mensajes de estado y error */}
+              {uploading && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                  <span className="text-blue-600 text-sm">Subiendo imagen...</span>
+                </div>
+              )}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-red-600 text-sm">{error}</span>
+                </div>
+              )}
+
+              {/* Botón de envío */}
+              <button
+                type="submit"
+                disabled={loading || uploading}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#0a1533] to-[#1a3a5c] text-white py-3.5 rounded-xl font-semibold hover:from-[#0d1d40] hover:to-[#1e4470] focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 transition-all duration-300 shadow-lg shadow-[#0a1533]/25 disabled:opacity-60 disabled:cursor-not-allowed group"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Registrando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiUserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span>Crear cuenta</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Separador */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500">¿Ya tienes cuenta?</span>
+              </div>
+            </div>
+
+            {/* Botón Login */}
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="w-full flex items-center justify-center gap-2 bg-gray-50 border border-gray-200 text-[#0a1533] py-3.5 rounded-xl font-semibold hover:bg-gray-100 hover:border-cyan-500/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-300 group"
+            >
+              <FiLogIn className="w-5 h-5 text-cyan-600 group-hover:translate-x-1 transition-transform" />
+              <span>Iniciar sesión</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Footer decorativo */}
         <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm mb-2">¿Ya tienes cuenta?</p>
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            className="w-full border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition duration-300"
-          >
-            Iniciar sesión
-          </button>
+          <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
+            <Plane className="w-4 h-4" />
+            <span>Tu próxima aventura comienza aquí</span>
+          </div>
         </div>
       </div>
     </div>

@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 import { useCrearVuelo } from "../hooks/useCrearVuelo";
 import { useAeropuertoValidation, type Aeropuerto } from "../hooks/useAeropuertoValidation";
+import { obtenerDuracionVuelo, formatearDuracion } from "../flightDuration";
 
 // ================== ICONOS MODERNOS ==================
 const CalendarIcon = () => (
@@ -102,6 +103,9 @@ const ToastContainer: React.FC<{ toasts: Toast[], removeToast: (id: string) => v
   );
 };
 
+// Ciudades internacionales para validar tiempo mínimo
+const DESTINOS_INTERNACIONALES = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+
 export const CrearVueloPage: React.FC = () => {
   const [errores, setErrores] = React.useState<{ [key: string]: string }>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -187,6 +191,104 @@ export const CrearVueloPage: React.FC = () => {
   const [textoDestino, setTextoDestino] = React.useState("");
   const [escribiendoOrigen, setEscribiendoOrigen] = React.useState(false);
   const [escribiendoDestino, setEscribiendoDestino] = React.useState(false);
+  
+  // Estado para duración calculada del vuelo
+  const [duracionVuelo, setDuracionVuelo] = useState<number | null>(null);
+  
+  // Efecto para calcular la duración cuando cambian origen/destino
+  useEffect(() => {
+    if (aeropuertoOrigenSeleccionado && aeropuertoDestinoSeleccionado) {
+      const ciudadOrigen = aeropuertoOrigenSeleccionado.ciudad.nombre;
+      const ciudadDestino = aeropuertoDestinoSeleccionado.ciudad.nombre;
+      const duracion = obtenerDuracionVuelo(ciudadOrigen, ciudadDestino);
+      setDuracionVuelo(duracion);
+      
+      // Si ya hay fecha de salida, calcular automáticamente la llegada
+      if (salidaDate) {
+        const nuevaLlegada = new Date(salidaDate.getTime() + duracion * 60 * 1000);
+        setLlegadaDate(nuevaLlegada);
+      }
+    } else {
+      setDuracionVuelo(null);
+    }
+  }, [aeropuertoOrigenSeleccionado, aeropuertoDestinoSeleccionado]);
+  
+  // Efecto para recalcular llegada cuando cambia la hora de salida
+  useEffect(() => {
+    if (salidaDate && duracionVuelo !== null) {
+      const nuevaLlegada = new Date(salidaDate.getTime() + duracionVuelo * 60 * 1000);
+      setLlegadaDate(nuevaLlegada);
+    }
+  }, [salidaDate, duracionVuelo]);
+  
+  // Estados para subir imagen
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Función para subir imagen a Cloudinary
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "Swokowsky-bucket");
+    const res = await fetch(url, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(`Error al subir imagen: ${res.status} ${await res.text()}`);
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("No se recibió la URL de la imagen");
+    return data.secure_url;
+  };
+
+  // Manejar selección de archivo
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      showErrorToast('Error', 'Por favor selecciona un archivo de imagen válido');
+      return;
+    }
+
+    // Validar tamaño (máx 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showErrorToast('Error', 'La imagen no debe superar los 5MB');
+      return;
+    }
+
+    setImagenFile(file);
+    // Crear preview local
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagenPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Subir a Cloudinary
+    setSubiendoImagen(true);
+    try {
+      const cloudinaryUrl = await uploadToCloudinary(file);
+      setForm((f: typeof form) => ({ ...f, url_imagen: cloudinaryUrl }));
+      showSuccessToast('¡Éxito!', 'Imagen subida correctamente');
+    } catch (err) {
+      showErrorToast('Error', 'No se pudo subir la imagen. Intenta de nuevo.');
+      setImagenFile(null);
+      setImagenPreview(null);
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
+
+  // Eliminar imagen seleccionada
+  const handleRemoveImage = () => {
+    setImagenFile(null);
+    setImagenPreview(null);
+    setForm((f: typeof form) => ({ ...f, url_imagen: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const validarCampos = () => {
     const nuevosErrores: { [key: string]: string } = {};
@@ -211,12 +313,8 @@ export const CrearVueloPage: React.FC = () => {
       showErrorToast('Campo obligatorio', 'La descripción larga es obligatoria');
     }
     if (!form.url_imagen || form.url_imagen.trim() === "") {
-      nuevosErrores.url_imagen = "La URL de la imagen es obligatoria";
-      showErrorToast('Campo obligatorio', 'La URL de la imagen es obligatoria');
-    }
-    if (!form.id_aeronaveFK) {
-      nuevosErrores.id_aeronaveFK = "Selecciona una aeronave";
-      showErrorToast('Campo obligatorio', 'Debe seleccionar una aeronave');
+      nuevosErrores.url_imagen = "La imagen del vuelo es obligatoria";
+      showErrorToast('Campo obligatorio', 'Debes seleccionar una imagen para el vuelo');
     }
     
     if (!aeropuertoOrigenSeleccionado) {
@@ -231,6 +329,29 @@ export const CrearVueloPage: React.FC = () => {
     if (!salidaDate) {
       nuevosErrores.salida = "Selecciona la fecha de salida";
       showErrorToast('Campo obligatorio', 'Debe seleccionar la fecha de salida');
+    } else if (aeropuertoOrigenSeleccionado && aeropuertoDestinoSeleccionado) {
+      // Validar tiempo mínimo antes del vuelo según tipo (nacional/internacional)
+      const ahora = new Date();
+      const tiempoHastaSalida = salidaDate.getTime() - ahora.getTime();
+      const horasHastaSalida = tiempoHastaSalida / (1000 * 60 * 60);
+      
+      const origenCiudad = aeropuertoOrigenSeleccionado.ciudad.nombre;
+      const destinoCiudad = aeropuertoDestinoSeleccionado.ciudad.nombre;
+      const esVueloInternacional = DESTINOS_INTERNACIONALES.includes(origenCiudad) || DESTINOS_INTERNACIONALES.includes(destinoCiudad);
+      
+      if (esVueloInternacional) {
+        // Vuelo internacional: mínimo 3 horas antes
+        if (horasHastaSalida < 3) {
+          nuevosErrores.salida = "Los vuelos internacionales deben crearse con al menos 3 horas de anticipación";
+          showErrorToast('Error de validación', 'Los vuelos internacionales deben crearse con al menos 3 horas de anticipación');
+        }
+      } else {
+        // Vuelo nacional: mínimo 1 hora antes
+        if (horasHastaSalida < 1) {
+          nuevosErrores.salida = "Los vuelos nacionales deben crearse con al menos 1 hora de anticipación";
+          showErrorToast('Error de validación', 'Los vuelos nacionales deben crearse con al menos 1 hora de anticipación');
+        }
+      }
     }
     if (!llegadaDate) {
       nuevosErrores.llegada = "Selecciona la fecha de llegada";
@@ -759,40 +880,7 @@ export const CrearVueloPage: React.FC = () => {
                   <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Detalles del Vuelo</span>
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Aeronave
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="id_aeronaveFK"
-                        value={form.id_aeronaveFK}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.id_aeronaveFK ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none appearance-none text-gray-900 font-medium`}
-                      >
-                        <option value="">Seleccionar aeronave</option>
-                        {aeronaves.map((a) => (
-                          <option key={a.id_aeronave} value={a.id_aeronave}>
-                            {a.modelo} ({a.capacidad} pax)
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#select-blue-gradient)">
-                          <defs>
-                            <linearGradient id="select-blue-gradient" x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="0%" stopColor="#123361" />
-                              <stop offset="100%" stopColor="#1180B8" />
-                            </linearGradient>
-                          </defs>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </div>
-                    {errores.id_aeronaveFK && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.id_aeronaveFK}</p>}
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Aeropuerto Origen
@@ -914,225 +1002,210 @@ export const CrearVueloPage: React.FC = () => {
                   <span className="bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">Fechas y Horarios</span>
                 </h2>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Salida */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                        Salida
-                      </h3>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
-                      <div>
-                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                          
-                          Fecha de Salida
-                        </label>
-                        <div className="relative">
-                          <DatePicker
-                            selected={salidaDate}
-                            onChange={date => {
-                              if (date) {
-                                if (salidaDate) {
-                                  date.setHours(salidaDate.getHours(), salidaDate.getMinutes());
-                                } else {
-                                  date.setHours(6, 0);
-                                }
-                              }
-                              setSalidaDate(date);
-                            }}
-                            dateFormat="dd/MM/yyyy"
-                            minDate={new Date()}
-                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
-                            placeholderText="Selecciona fecha de salida"
-                            popperClassName="modern-datepicker-custom"
-                            calendarClassName="modern-calendar-custom"
-                            showMonthDropdown
-                            showYearDropdown
-                            dropdownMode="select"
-                            scrollableYearDropdown
-                            yearDropdownItemNumber={15}
-                            showPopperArrow={false}
-                          />
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-2)">
-                              <defs>
-                                <linearGradient id="gradient-icon-2" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-3)">
-                              <defs>
-                                <linearGradient id="gradient-icon-3" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
+                {/* Indicador de duración del vuelo */}
+                {duracionVuelo !== null && aeropuertoOrigenSeleccionado && aeropuertoDestinoSeleccionado && (
+                  <div className="mb-6 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-4 shadow-lg">
+                    <div className="flex items-center justify-between text-white">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-emerald-100">Duración estimada del vuelo</p>
+                          <p className="text-2xl font-black">{formatearDuracion(duracionVuelo)}</p>
                         </div>
                       </div>
-
-                      <div>
-                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                          Hora de Salida 
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="time"
-                            value={salidaDate ? salidaDate.toTimeString().substring(0, 5) : ''}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                const [hours, minutes] = e.target.value.split(':');
-                                const newDate = salidaDate ? new Date(salidaDate) : new Date();
-                                newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                                setSalidaDate(newDate);
-                              }
-                            }}
-                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium`}
-                          />
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-5)">
-                              <defs>
-                                <linearGradient id="gradient-icon-5" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-sm text-emerald-100">
+                          {aeropuertoOrigenSeleccionado.ciudad.nombre} → {aeropuertoDestinoSeleccionado.ciudad.nombre}
+                        </p>
+                       
                       </div>
                     </div>
-                    {errores.salida && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {errores.salida}
-                    </p>}
                   </div>
+                )}
 
-                  {/* Llegada */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                        Llegada
-                      </h3>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
-                      <div>
-                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                          Fecha de Llegada
-                        </label>
-                        <div className="relative">
-                          <DatePicker
-                            selected={llegadaDate}
-                            onChange={date => {
-                              if (date) {
-                                if (llegadaDate) {
-                                  date.setHours(llegadaDate.getHours(), llegadaDate.getMinutes());
-                                } else {
-                                  date.setHours(8, 0);
-                                }
-                              }
-                              setLlegadaDate(date);
-                            }}
-                            dateFormat="dd/MM/yyyy"
-                            minDate={salidaDate || new Date()}
-                            maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
-                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.llegada ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
-                            placeholderText="Selecciona fecha de llegada"
-                            popperClassName="modern-datepicker-custom"
-                            calendarClassName="modern-calendar-custom"
-                            showMonthDropdown
-                            showYearDropdown
-                            dropdownMode="select"
-                            scrollableYearDropdown
-                            yearDropdownItemNumber={15}
-                            showPopperArrow={false}
-                          />
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-7)">
-                              <defs>
-                                <linearGradient id="gradient-icon-7" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-8)">
-                              <defs>
-                                <linearGradient id="gradient-icon-8" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
-                          
-                          Hora de Llegada
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="time"
-                            value={llegadaDate ? llegadaDate.toTimeString().substring(0, 5) : ''}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                const [hours, minutes] = e.target.value.split(':');
-                                const newDate = llegadaDate ? new Date(llegadaDate) : new Date();
-                                newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                                setLlegadaDate(newDate);
-                              }
-                            }}
-                            className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.llegada ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium`}
-                          />
-                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-10)">
-                              <defs>
-                                <linearGradient id="gradient-icon-10" x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor="#0a1836" />
-                                  <stop offset="50%" stopColor="#123361" />
-                                  <stop offset="100%" stopColor="#081225" />
-                                </linearGradient>
-                              </defs>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {errores.llegada && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {!aeropuertoOrigenSeleccionado || !aeropuertoDestinoSeleccionado ? (
+                  <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
+                    <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {errores.llegada}
-                    </p>}
+                    </div>
+                    <p className="text-amber-800 font-bold text-lg mb-2">Selecciona origen y destino primero</p>
+                    <p className="text-amber-600">La duración del vuelo se calculará automáticamente cuando selecciones ambos aeropuertos</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Salida */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          🛫 Salida
+                        </h3>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200 space-y-4">
+                        <div>
+                          <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                            Fecha de Salida
+                          </label>
+                          <div className="relative">
+                            <DatePicker
+                              selected={salidaDate}
+                              onChange={date => {
+                                if (date) {
+                                  if (salidaDate) {
+                                    date.setHours(salidaDate.getHours(), salidaDate.getMinutes());
+                                  } else {
+                                    date.setHours(6, 0);
+                                  }
+                                }
+                                setSalidaDate(date);
+                              }}
+                              dateFormat="dd/MM/yyyy"
+                              minDate={new Date()}
+                              maxDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d; })()}
+                              className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium cursor-pointer`}
+                              placeholderText="Selecciona fecha de salida"
+                              popperClassName="modern-datepicker-custom"
+                              calendarClassName="modern-calendar-custom"
+                              showMonthDropdown
+                              showYearDropdown
+                              dropdownMode="select"
+                              scrollableYearDropdown
+                              yearDropdownItemNumber={15}
+                              showPopperArrow={false}
+                            />
+                            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-2)">
+                                <defs>
+                                  <linearGradient id="gradient-icon-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#0a1836" />
+                                    <stop offset="50%" stopColor="#123361" />
+                                    <stop offset="100%" stopColor="#081225" />
+                                  </linearGradient>
+                                </defs>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="flex items-center gap-2 mb-3 font-bold text-sm bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                            Hora de Salida 
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="time"
+                              value={salidaDate ? salidaDate.toTimeString().substring(0, 5) : ''}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  const [hours, minutes] = e.target.value.split(':');
+                                  const newDate = salidaDate ? new Date(salidaDate) : new Date();
+                                  newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                                  setSalidaDate(newDate);
+                                }
+                              }}
+                              className={`w-full px-4 py-3.5 pl-12 bg-white border-2 ${errores.salida ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium`}
+                            />
+                            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="url(#gradient-icon-5)">
+                                <defs>
+                                  <linearGradient id="gradient-icon-5" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#0a1836" />
+                                    <stop offset="50%" stopColor="#123361" />
+                                    <stop offset="100%" stopColor="#081225" />
+                                  </linearGradient>
+                                </defs>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {errores.salida && <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {errores.salida}
+                      </p>}
+                    </div>
+
+                    {/* Llegada - Calculada automáticamente */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="text-lg font-bold bg-gradient-to-r from-[#0a1836] via-[#123361] to-[#081225] bg-clip-text text-transparent">
+                          🛬 Llegada <span className="text-sm font-normal text-emerald-600">(calculada automáticamente)</span>
+                        </h3>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border-2 border-emerald-200 space-y-4">
+                        {llegadaDate ? (
+                          <>
+                            <div>
+                              <label className="flex items-center gap-2 mb-3 font-bold text-sm text-emerald-700">
+                                📅 Fecha de Llegada
+                              </label>
+                              <div className="relative">
+                                <div className="w-full px-4 py-3.5 pl-12 bg-white border-2 border-emerald-300 rounded-xl text-gray-900 font-bold text-lg">
+                                  {llegadaDate.toLocaleDateString('es-ES', { 
+                                    weekday: 'long', 
+                                    day: 'numeric', 
+                                    month: 'long', 
+                                    year: 'numeric' 
+                                  })}
+                                </div>
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="flex items-center gap-2 mb-3 font-bold text-sm text-emerald-700">
+                                🕐 Hora de Llegada
+                              </label>
+                              <div className="relative">
+                                <div className="w-full px-4 py-3.5 pl-12 bg-white border-2 border-emerald-300 rounded-xl text-gray-900 font-bold text-lg">
+                                  {llegadaDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                  <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Resumen del vuelo */}
+                            <div className="mt-4 pt-4 border-t-2 border-emerald-200">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-emerald-700 font-medium">Tiempo de vuelo:</span>
+                                <span className="text-emerald-800 font-bold">{duracionVuelo ? formatearDuracion(duracionVuelo) : '-'}</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className="text-emerald-700 font-medium">Selecciona la fecha y hora de salida</p>
+                            <p className="text-emerald-600 text-sm mt-1">La llegada se calculará automáticamente</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             
@@ -1147,35 +1220,101 @@ export const CrearVueloPage: React.FC = () => {
                 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    URL de la imagen
+                    Seleccionar imagen <span className="text-rose-500">*</span>
                   </label>
+                  
+                  {/* Input oculto */}
                   <input
-                    type="url"
-                    name="url_imagen"
-                    value={form.url_imagen || ""}
-                    onChange={e => setForm((f: typeof form) => ({ ...f, url_imagen: e.target.value }))}
-                    className={`w-full px-4 py-3.5 bg-gray-50 border-2 ${errores.url_imagen ? 'border-rose-500' : 'border-gray-200'} rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all duration-200 outline-none text-gray-900 font-medium placeholder:text-gray-400`}
-                    placeholder="https://ejemplo.com/imagen.jpg"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="imagen-vuelo"
                   />
-                  {errores.url_imagen && <p className="text-rose-500 text-sm mt-2 font-semibold">{errores.url_imagen}</p>}
-                  {form.url_imagen && (
-                    <div className="mt-6 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
-                      <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Vista previa:
-                      </p>
+                  
+                  {/* Zona de drop / selector */}
+                  {!imagenPreview && !form.url_imagen ? (
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`w-full px-6 py-12 bg-gray-50 border-2 border-dashed ${errores.url_imagen ? 'border-rose-500 bg-rose-50' : 'border-gray-300 hover:border-blue-400'} rounded-2xl cursor-pointer transition-all duration-200 hover:bg-blue-50 group`}
+                    >
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#0a1836] to-[#123361] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-lg font-bold text-gray-700 mb-1">
+                          {subiendoImagen ? 'Subiendo imagen...' : 'Haz clic para seleccionar una imagen'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Formatos permitidos: JPG, PNG, GIF, WEBP (máx. 5MB)
+                        </p>
+                        {subiendoImagen && (
+                          <div className="mt-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Vista previa de imagen */
+                    <div className="mt-2 bg-gradient-to-br from-[#0a1836] via-[#123361] to-[#081225] rounded-2xl p-6 border-2 border-[#123361]">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-semibold text-white flex items-center gap-2">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Vista previa
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Cambiar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveImage}
+                            className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
                       <div className="relative rounded-xl overflow-hidden shadow-2xl">
                         <img 
-                          src={form.url_imagen} 
-                          alt="Preview" 
+                          src={imagenPreview || form.url_imagen} 
+                          alt="Vista previa del vuelo" 
                           className="w-full h-64 object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                        {imagenFile && (
+                          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                            <p className="text-white text-sm font-medium">{imagenFile.name}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
+                  )}
+                  
+                  {errores.url_imagen && (
+                    <p className="text-rose-500 text-sm mt-2 font-semibold flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errores.url_imagen}
+                    </p>
                   )}
                 </div>
               </div>
