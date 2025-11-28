@@ -24,7 +24,7 @@
                      style="display:block !important;margin:0 auto 32px auto !important;max-width:90% !important;height:auto !important;">
                 <h2 style="font-size:2.3rem !important;font-weight:700 !important;color:#ffffff !important;
                            margin:0 0 18px 0 !important;">
-                  ¡Tu ticket ha sido confirmado, {{nombre}}! 🎫
+                  ¡Tu ticket ha sido confirmado
                 </h2>
                 <p style="font-size:1.18rem !important;color:#e2e8f0 !important;margin:0 0 28px 0 !important;">
                   Gracias por volar con <strong>Swokowsky Airlines</strong>. Aquí tienes los detalles de tu reserva.
@@ -41,6 +41,11 @@
                   <!-- Información del vuelo -->
                   <table cellpadding="0" cellspacing="0" width="100%" border="0"
                          style="max-width:480px !important;margin:0 auto !important;">
+                    <tr>
+                      <td style="color:#e2e8f0 !important;font-size:1.1rem !important;padding:8px 0 !important;text-align:left !important;">
+                        <strong>🧑 Pasajero:</strong> {{nombre}}! 🎫
+                      </td>
+                    </tr>
                     <tr>
                       <td style="color:#e2e8f0 !important;font-size:1.1rem !important;padding:8px 0 !important;text-align:left !important;">
                         <strong>🛫 Vuelo:</strong> {{TituloNoticiaVuelo}}

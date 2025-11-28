@@ -50,12 +50,6 @@ export class FlightsController {
 
 
 
-  @Delete(':id_vuelo')
-  @ApiOperation({ summary: 'Eliminar o cancelar un vuelo según su estado y tickets' })
-  deleteFlight(@Param('id_vuelo') id_vuelo: string) {
-    return this.flightsService.deleteFlight(Number(id_vuelo));
-  }
-
 
 
 }
