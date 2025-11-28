@@ -5,9 +5,200 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 
 // Lista de nacionalidades (recortada por brevedad)
 const NATIONALITIES = [
-  { label: "Colombia", value: "Colombia" },
+  { label: "Afganistán", value: "Afghanistan" },
+  { label: "Albania", value: "Albania" },
+  { label: "Argelia", value: "Algeria" },
+  { label: "Andorra", value: "Andorra" },
+  { label: "Angola", value: "Angola" },
+  { label: "Antigua y Barbuda", value: "AntiguaAndBarbuda" },
   { label: "Argentina", value: "Argentina" },
+  { label: "Armenia", value: "Armenia" },
+  { label: "Australia", value: "Australia" },
+  { label: "Austria", value: "Austria" },
+  { label: "Azerbaiyán", value: "Azerbaijan" },
+  { label: "Bahamas", value: "Bahamas" },
+  { label: "Baréin", value: "Bahrain" },
+  { label: "Bangladés", value: "Bangladesh" },
+  { label: "Barbados", value: "Barbados" },
+  { label: "Bielorrusia", value: "Belarus" },
+  { label: "Bélgica", value: "Belgium" },
+  { label: "Belice", value: "Belize" },
+  { label: "Benín", value: "Benin" },
+  { label: "Bután", value: "Bhutan" },
+  { label: "Bolivia", value: "Bolivia" },
+  { label: "Bosnia y Herzegovina", value: "BosniaAndHerzegovina" },
+  { label: "Botsuana", value: "Botswana" },
+  { label: "Brasil", value: "Brazil" },
+  { label: "Brunéi", value: "Brunei" },
+  { label: "Bulgaria", value: "Bulgaria" },
+  { label: "Burkina Faso", value: "BurkinaFaso" },
+  { label: "Burundi", value: "Burundi" },
+  { label: "Camboya", value: "Cambodia" },
+  { label: "Camerún", value: "Cameroon" },
+  { label: "Canadá", value: "Canada" },
+  { label: "Cabo Verde", value: "CapeVerde" },
+  { label: "República Centroafricana", value: "CentralAfricanRepublic" },
+  { label: "Chad", value: "Chad" },
+  { label: "Chile", value: "Chile" },
+  { label: "China", value: "China" },
+  { label: "Colombia", value: "Colombia" },
+  { label: "Comoras", value: "Comoros" },
+  { label: "Congo", value: "Congo" },
+  { label: "Costa Rica", value: "CostaRica" },
+  { label: "Croacia", value: "Croatia" },
+  { label: "Cuba", value: "Cuba" },
+  { label: "Chipre", value: "Cyprus" },
+  { label: "República Checa", value: "CzechRepublic" },
+  { label: "Dinamarca", value: "Denmark" },
+  { label: "Yibuti", value: "Djibouti" },
+  { label: "Dominica", value: "Dominica" },
+  { label: "República Dominicana", value: "DominicanRepublic" },
+  { label: "Ecuador", value: "Ecuador" },
+  { label: "Egipto", value: "Egypt" },
+  { label: "El Salvador", value: "ElSalvador" },
+  { label: "Guinea Ecuatorial", value: "EquatorialGuinea" },
+  { label: "Eritrea", value: "Eritrea" },
+  { label: "Estonia", value: "Estonia" },
+  { label: "Esuatini", value: "Eswatini" },
+  { label: "Etiopía", value: "Ethiopia" },
+  { label: "Fiyi", value: "Fiji" },
+  { label: "Finlandia", value: "Finland" },
+  { label: "Francia", value: "France" },
+  { label: "Gabón", value: "Gabon" },
+  { label: "Gambia", value: "Gambia" },
+  { label: "Georgia", value: "Georgia" },
+  { label: "Alemania", value: "Germany" },
+  { label: "Ghana", value: "Ghana" },
+  { label: "Grecia", value: "Greece" },
+  { label: "Granada", value: "Grenada" },
+  { label: "Guatemala", value: "Guatemala" },
+  { label: "Guinea", value: "Guinea" },
+  { label: "Guinea-Bisáu", value: "GuineaBissau" },
+  { label: "Guyana", value: "Guyana" },
+  { label: "Haití", value: "Haiti" },
+  { label: "Honduras", value: "Honduras" },
+  { label: "Hungría", value: "Hungary" },
+  { label: "Islandia", value: "Iceland" },
+  { label: "India", value: "India" },
+  { label: "Indonesia", value: "Indonesia" },
+  { label: "Irán", value: "Iran" },
+  { label: "Irak", value: "Iraq" },
+  { label: "Irlanda", value: "Ireland" },
+  { label: "Israel", value: "Israel" },
+  { label: "Italia", value: "Italy" },
+  { label: "Costa de Marfil", value: "IvoryCoast" },
+  { label: "Jamaica", value: "Jamaica" },
+  { label: "Japón", value: "Japan" },
+  { label: "Jordania", value: "Jordan" },
+  { label: "Kazajistán", value: "Kazakhstan" },
+  { label: "Kenia", value: "Kenya" },
+  { label: "Kiribati", value: "Kiribati" },
+  { label: "Kuwait", value: "Kuwait" },
+  { label: "Kirguistán", value: "Kyrgyzstan" },
+  { label: "Laos", value: "Laos" },
+  { label: "Letonia", value: "Latvia" },
+  { label: "Líbano", value: "Lebanon" },
+  { label: "Lesoto", value: "Lesotho" },
+  { label: "Liberia", value: "Liberia" },
+  { label: "Libia", value: "Libya" },
+  { label: "Liechtenstein", value: "Liechtenstein" },
+  { label: "Lituania", value: "Lithuania" },
+  { label: "Luxemburgo", value: "Luxembourg" },
+  { label: "Madagascar", value: "Madagascar" },
+  { label: "Malaui", value: "Malawi" },
+  { label: "Malasia", value: "Malaysia" },
+  { label: "Maldivas", value: "Maldives" },
+  { label: "Malí", value: "Mali" },
+  { label: "Malta", value: "Malta" },
+  { label: "Islas Marshall", value: "MarshallIslands" },
+  { label: "Mauritania", value: "Mauritania" },
+  { label: "Mauricio", value: "Mauritius" },
+  { label: "México", value: "Mexico" },
+  { label: "Micronesia", value: "Micronesia" },
+  { label: "Moldavia", value: "Moldova" },
+  { label: "Mónaco", value: "Monaco" },
+  { label: "Mongolia", value: "Mongolia" },
+  { label: "Montenegro", value: "Montenegro" },
+  { label: "Marruecos", value: "Morocco" },
+  { label: "Mozambique", value: "Mozambique" },
+  { label: "Birmania", value: "Myanmar" },
+  { label: "Namibia", value: "Namibia" },
+  { label: "Nauru", value: "Nauru" },
+  { label: "NEpal", value: "Nepa" },
+  { label: "Países Bajos", value: "Netherlands" },
+  { label: "Nueva Zelanda", value: "NewZealand" },
+  { label: "Nicaragua", value: "Nicaragua" },
+  { label: "Níger", value: "Niger" },
+  { label: "Nigeria", value: "Nigeria" },
+  { label: "Corea del Norte", value: "NorthKorea" },
+  { label: "Macedonia del Norte", value: "NorthMacedonia" },
+  { label: "Noruega", value: "Norway" },
+  { label: "Omán", value: "Oman" },
+  { label: "Pakistán", value: "Pakistan" },
+  { label: "Palaos", value: "Palau" },
+  { label: "Panamá", value: "Panama" },
+  { label: "Papúa Nueva Guinea", value: "PapuaNewGuinea" },
+  { label: "Paraguay", value: "Paraguay" },
+  { label: "Perú", value: "Peru" },
+  { label: "Filipinas", value: "Philippines" },
+  { label: "Polonia", value: "Poland" },
+  { label: "Portugal", value: "Portugal" },
+  { label: "Catar", value: "Qatar" },
+  { label: "Rumanía", value: "Romania" },
+  { label: "Rusia", value: "Russia" },
+  { label: "Ruanda", value: "Rwanda" },
+  { label: "San Cristóbal y Nieves", value: "SaintKittsAndNevis" },
+  { label: "Santa Lucía", value: "SaintLucia" },
+  { label: "San Vicente y las Granadinas", value: "SaintVincentAndGrenadines" },
+  { label: "Samoa", value: "Samoa" },
+  { label: "San Marino", value: "SanMarino" },
+  { label: "Santo Tomé y Príncipe", value: "SaoTomeAndPrincipe" },
+  { label: "Arabia Saudita", value: "SaudiArabia" },
+  { label: "Senegal", value: "Senegal" },
+  { label: "Serbia", value: "Serbia" },
+  { label: "Seychelles", value: "Seychelles" },
+  { label: "Sierra Leona", value: "SierraLeone" },
+  { label: "Singapur", value: "Singapore" },
+  { label: "Eslovaquia", value: "Slovakia" },
+  { label: "Eslovenia", value: "Slovenia" },
+  { label: "Islas Salomón", value: "SolomonIslands" },
+  { label: "Somalia", value: "Somalia" },
+  { label: "Sudáfrica", value: "SouthAfrica" },
+  { label: "Corea del Sur", value: "SouthKorea" },
+  { label: "Sudán del Sur", value: "SouthSudan" },
   { label: "España", value: "Spain" },
+  { label: "Sri Lanka", value: "SriLanka" },
+  { label: "Sudán", value: "Sudan" },
+  { label: "Surinam", value: "Suriname" },
+  { label: "Suecia", value: "Sweden" },
+  { label: "Suiza", value: "Switzerland" },
+  { label: "Siria", value: "Syria" },
+  { label: "Taiwán", value: "Taiwan" },
+  { label: "Tayikistán", value: "Tajikistan" },
+  { label: "Tanzania", value: "Tanzania" },
+  { label: "Tailandia", value: "Thailand" },
+  { label: "Timor Oriental", value: "TimorLeste" },
+  { label: "Togo", value: "Togo" },
+  { label: "Tonga", value: "Tonga" },
+  { label: "Trinidad y Tobago", value: "TrinidadAndTobago" },
+  { label: "Túnez", value: "Tunisia" },
+  { label: "Turquía", value: "Turkey" },
+  { label: "Turkmenistán", value: "Turkmenistan" },
+  { label: "Tuvalu", value: "Tuvalu" },
+  { label: "Uganda", value: "Uganda" },
+  { label: "Ucrania", value: "Ukraine" },
+  { label: "Emiratos Árabes Unidos", value: "UnitedArabEmirates" },
+  { label: "Reino Unido", value: "UnitedKingdom" },
+  { label: "Estados Unidos", value: "UnitedStates" },
+  { label: "Uruguay", value: "Uruguay" },
+  { label: "Uzbekistán", value: "Uzbekistan" },
+  { label: "Vanuatu", value: "Vanuatu" },
+  { label: "Ciudad del Vaticano", value: "VaticanCity" },
+  { label: "Venezuela", value: "Venezuela" },
+  { label: "Vietnam", value: "Vietnam" },
+  { label: "Yemen", value: "Yemen" },
+  { label: "Zambia", value: "Zambia" },
+  { label: "Zimbabue", value: "Zimbabwe" },
 ];
 
 interface Profile {
@@ -105,6 +296,13 @@ const formatCOP = (n: number) => {
     return `$${n.toLocaleString("es-CO")} COP`;
   }
 };
+
+// Clases base para los botones principales del perfil
+const MAIN_ACTION_BTN_CLASSES =
+  "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg " +
+  "hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base " +
+  "flex items-center justify-center gap-2";
+
 
 export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
@@ -507,25 +705,42 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Accesos a los tickets */}
-          {(profile.tipo_usuario === "cliente") && (
-            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
-              <button
-                type="button"
-                onClick={() => navigate("/tickets")}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
-              >
-                🎫 Ver tickets
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/foro")}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
-              >
-                💬 Mi Foro
-              </button>
-            </div>
-          )}
+          {/* Accesos principales: historial, tickets, foro */}
+          <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
+            {/* Historial siempre visible */}
+            <button
+              type="button"
+              onClick={() => navigate("/transaction-history")}
+              className={MAIN_ACTION_BTN_CLASSES}
+            >
+              <span>💳</span>
+              <span>Historial de transacciones</span>
+            </button>
+
+            {/* Solo clientes ven tickets y foro */}
+            {profile.tipo_usuario === "cliente" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate("/tickets")}
+                  className={MAIN_ACTION_BTN_CLASSES}
+                >
+                  <span>🎫</span>
+                  <span>Ver tickets</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/foro")}
+                  className={MAIN_ACTION_BTN_CLASSES}
+                >
+                  <span>💬</span>
+                  <span>Mi Foro</span>
+                </button>
+              </>
+            )}
+          </div>
+
 
           {/* Tabs */}
           <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
