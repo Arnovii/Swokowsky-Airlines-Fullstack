@@ -507,19 +507,6 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Botón historial transacciones (solo cliente) */}
-          {profile.tipo_usuario === "cliente" && (
-            <div className="mt-4 sm:mt-6 flex justify-center pb-4">
-              <button
-                type="button"
-                onClick={() => navigate("/transaction-history")}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
-              >
-                Ir a historial de transacciones
-              </button>
-            </div>
-          )}
-
           {/* Accesos a los tickets */}
           {(profile.tipo_usuario === "cliente") && (
             <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
