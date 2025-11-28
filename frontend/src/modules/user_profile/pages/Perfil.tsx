@@ -106,6 +106,13 @@ const formatCOP = (n: number) => {
   }
 };
 
+// Clases base para los botones principales del perfil
+const MAIN_ACTION_BTN_CLASSES =
+  "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg " +
+  "hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base " +
+  "flex items-center justify-center gap-2";
+
+
 export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
     NATIONALITIES.find((c) => c.value === val)?.label ?? val ?? "-";
@@ -507,25 +514,42 @@ export default function Perfil() {
             </div>
           )}
 
-          {/* Accesos a los tickets */}
-          {(profile.tipo_usuario === "cliente") && (
-            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
-              <button
-                type="button"
-                onClick={() => navigate("/tickets")}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
-              >
-                🎫 Ver tickets
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/foro")}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 font-medium text-sm sm:text-base"
-              >
-                💬 Mi Foro
-              </button>
-            </div>
-          )}
+          {/* Accesos principales: historial, tickets, foro */}
+          <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-center gap-3 pb-4">
+            {/* Historial siempre visible */}
+            <button
+              type="button"
+              onClick={() => navigate("/transaction-history")}
+              className={MAIN_ACTION_BTN_CLASSES}
+            >
+              <span>💳</span>
+              <span>Historial de transacciones</span>
+            </button>
+
+            {/* Solo clientes ven tickets y foro */}
+            {profile.tipo_usuario === "cliente" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate("/tickets")}
+                  className={MAIN_ACTION_BTN_CLASSES}
+                >
+                  <span>🎫</span>
+                  <span>Ver tickets</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/foro")}
+                  className={MAIN_ACTION_BTN_CLASSES}
+                >
+                  <span>💬</span>
+                  <span>Mi Foro</span>
+                </button>
+              </>
+            )}
+          </div>
+
 
           {/* Tabs */}
           <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">

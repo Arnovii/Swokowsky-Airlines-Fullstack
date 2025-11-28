@@ -20,6 +20,13 @@ interface Pasajero {
   fecha_nacimiento: string;
 }
 
+interface AeropuertoVuelo {
+  id_aeropuerto: number;
+  id_ciudadFK: number;
+  nombre: string;
+  codigo_iata: string;
+}
+
 interface VueloInfo {
   id_vuelo: number;
   id_aeronaveFK: number;
@@ -29,9 +36,20 @@ interface VueloInfo {
   llegada_programada_utc: string;
   id_promocionFK: number | null;
   estado: string;
+
+  // 👇 Relaciones que vienen en el GET /tickets (con codigo_iata)
+  aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?: AeropuertoVuelo;
+  aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?: AeropuertoVuelo;
 }
 
-type TicketEstado = "pagado" | "cancelado" | "pendiente" | string;
+// 👇 Incluimos explícitamente "usado" y "confirmado"
+type TicketEstado =
+  | "pagado"
+  | "cancelado"
+  | "pendiente"
+  | "usado"
+  | "confirmado"
+  | string;
 
 interface Ticket {
   id_ticket: number;
@@ -46,7 +64,11 @@ interface Ticket {
   vuelo?: VueloInfo | null; // 👈 viene del GET /api/v1/tickets
 }
 
-type FilterStatus = "todos" | "pagados" | "cancelados";
+type FilterStatus = "todos" | "pagados" | "cancelados" | "usados";
+
+// Helper para normalizar el estado
+const normalizeEstado = (estado?: string | null) =>
+  (estado || "").toLowerCase().trim();
 
 // ====== Componente principal ======
 
@@ -67,7 +89,9 @@ export default function TicketListView() {
     const fetchTickets = async () => {
       try {
         setLoading(true);
+
         const res = await api.get("/tickets");
+        console.log("RAW /tickets response:", res.data);
 
         let data = res.data;
         if (!Array.isArray(data) && data?.data) {
@@ -89,10 +113,10 @@ export default function TicketListView() {
   // ====== Helpers de cancelación ======
 
   const canCancelTicket = (ticket: Ticket): boolean => {
-    const estado = (ticket.estado || "").toLowerCase().trim();
+    const estado = normalizeEstado(ticket.estado);
 
-    // No se puede cancelar si ya está cancelado
-    if (estado === "cancelado") return false;
+    // No se puede cancelar si ya está cancelado o usado
+    if (estado === "cancelado" || estado === "usado") return false;
 
     // Solo tickets pagados / confirmados
     if (estado !== "pagado" && estado !== "confirmado") return false;
@@ -108,10 +132,14 @@ export default function TicketListView() {
   };
 
   const getCancelBlockReason = (ticket: Ticket): string | null => {
-    const estado = (ticket.estado || "").toLowerCase().trim();
+    const estado = normalizeEstado(ticket.estado);
 
     if (estado === "cancelado") {
       return "Este ticket ya está cancelado.";
+    }
+
+    if (estado === "usado") {
+      return "No se puede reembolsar un ticket que ya fue utilizado.";
     }
 
     if (!ticket.vuelo?.salida_programada_utc) {
@@ -135,7 +163,6 @@ export default function TicketListView() {
     return null;
   };
 
-
   const handleCancelTicket = async (ticket: Ticket) => {
     setGlobalMessage(null);
     setGlobalError(null);
@@ -152,7 +179,7 @@ export default function TicketListView() {
       // 👇 Ajusta esta línea si tu backend usa otra ruta/forma
       await api.patch(`/tickets/${ticket.id_ticket}`, { estado: "cancelado" });
 
-      // Actualizar estado local
+      // Actualizar estado local (el ticket sigue listado, solo cambia su estado)
       setTickets((prev) =>
         prev.map((t) =>
           t.id_ticket === ticket.id_ticket ? { ...t, estado: "cancelado" } : t
@@ -174,9 +201,9 @@ export default function TicketListView() {
   if (loading) return <div className="text-center py-10">Cargando tickets...</div>;
   if (error) return <div className="text-center text-red-500">{error}</div>;
 
-  // ====== Aplicar filtro por estado (pagados / cancelados) ======
+  // ====== Aplicar filtro por estado (pagados / cancelados / usados) ======
   const filteredTickets = tickets.filter((ticket) => {
-    const estado = (ticket.estado || "").toLowerCase().trim();
+    const estado = normalizeEstado(ticket.estado);
 
     if (filterStatus === "todos") return true;
 
@@ -186,6 +213,10 @@ export default function TicketListView() {
 
     if (filterStatus === "cancelados") {
       return estado === "cancelado";
+    }
+
+    if (filterStatus === "usados") {
+      return estado === "usado";
     }
 
     return true;
@@ -252,9 +283,9 @@ export default function TicketListView() {
             </div>
           )}
 
-          {/* FILTRO: Todos / Pagados / Cancelados */}
+          {/* FILTRO: Todos / Pagados / Cancelados / Usados */}
           <div className="flex justify-center mb-10">
-            <div className="flex space-x-4 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
+            <div className="flex flex-wrap gap-2 bg-white shadow-lg rounded-xl p-3 border border-gray-200">
               <button
                 onClick={() => setFilterStatus("todos")}
                 className={`px-5 py-2 rounded-lg font-semibold transition-all ${
@@ -286,6 +317,17 @@ export default function TicketListView() {
                 }`}
               >
                 Cancelados
+              </button>
+
+              <button
+                onClick={() => setFilterStatus("usados")}
+                className={`px-5 py-2 rounded-lg font-semibold transition-all ${
+                  filterStatus === "usados"
+                    ? "bg-purple-500 text-white shadow-md"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Usados
               </button>
             </div>
           </div>
@@ -337,7 +379,7 @@ function TicketCard({
   isCancelling,
   onCancel,
 }: TicketCardProps) {
-  const estado = (ticket.estado || "").toLowerCase().trim();
+  const estado = normalizeEstado(ticket.estado);
 
   const { badgeClasses, label } = (() => {
     if (estado === "pagado" || estado === "confirmado") {
@@ -354,12 +396,32 @@ function TicketCard({
         label: "CANCELADO",
       };
     }
+    if (estado === "usado") {
+      return {
+        badgeClasses:
+          "bg-gradient-to-r from-purple-400 to-purple-600 text-white shadow-purple-500/50",
+        label: "USADO",
+      };
+    }
     return {
       badgeClasses:
         "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-amber-500/50",
       label: (ticket.estado || "DESCONOCIDO").toUpperCase(),
     };
   })();
+
+  // 👇 Obtenemos los códigos IATA de origen y destino
+  const origenIata =
+    ticket.vuelo?.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto
+      ?.codigo_iata;
+  const destinoIata =
+    ticket.vuelo?.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto
+      ?.codigo_iata;
+
+  const routeLabel =
+    origenIata && destinoIata
+      ? `${origenIata} → ${destinoIata}`
+      : `Ticket #${ticket.id_ticket}`;
 
   return (
     <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 hover:border-[#1785BC]/30 transform hover:-translate-y-1">
@@ -387,7 +449,8 @@ function TicketCard({
               <p className="text-sm font-medium opacity-80 uppercase tracking-wider">
                 Ticket
               </p>
-              <h2 className="text-4xl font-black">#{ticket.id_ticket}</h2>
+              {/* 👇 Aquí mostramos ORIGEN → DESTINO en vez de #id */}
+              <h2 className="text-4xl font-black">{routeLabel}</h2>
             </div>
           </div>
           <div className="text-right bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/30">
