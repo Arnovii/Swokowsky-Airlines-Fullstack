@@ -22,12 +22,14 @@ interface Vuelo {
   salida_programada_utc: string;
   llegada_programada_utc: string;
   id_promocionFK: number | null;
-  estado: "Programado" | "En vuelo" | "Cancelado";
+  estado: "Programado" | "En vuelo" | "Cancelado" | "Realizado" | string;
 }
+
+type TabEstado = "Programado" | "Cancelado" | "Realizado";
 
 export const AdminPanel: React.FC = () => {
   const [busqueda, setBusqueda] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<"Todos" | Vuelo["estado"]>("Todos");
+  const [tabEstado, setTabEstado] = useState<TabEstado>("Programado");
   const [vuelos, setVuelos] = useState<Vuelo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,16 +51,15 @@ export const AdminPanel: React.FC = () => {
   const vuelosFiltrados = useMemo(() => {
     return vuelos.filter((v) => {
       const matchBusqueda = v.id_vuelo.toString().includes(busqueda);
-      const matchEstado = filtroEstado === "Todos" || v.estado === filtroEstado;
+      const matchEstado = v.estado === tabEstado;
       return matchBusqueda && matchEstado;
     });
-  }, [busqueda, filtroEstado, vuelos]);
+  }, [busqueda, tabEstado, vuelos]);
 
   const handleEditarVuelo = (id: number) => {
     navigate(`/panelAdministrador/editar-vuelo/${id}`);
   };
 
-  // 👉 abrir modal con datos del vuelo
   const handleAbrirModalEliminar = (vuelo: Vuelo) => {
     setVueloSeleccionado(vuelo);
     setShowDeleteModal(true);
@@ -69,14 +70,12 @@ export const AdminPanel: React.FC = () => {
     setVueloSeleccionado(null);
   };
 
-  // 👉 eliminar solo en frontend (más adelante se conecta al endpoint)
+  // Eliminar solo en frontend (placeholder)
   const handleConfirmarEliminarFrontend = () => {
     if (!vueloSeleccionado) return;
     setVuelos((prev) =>
       prev.filter((v) => v.id_vuelo !== vueloSeleccionado.id_vuelo)
     );
-    // aquí en el futuro: llamada DELETE al backend
-    // await axios.delete(`/api/v1/flights/${vueloSeleccionado.id_vuelo}`)
     handleCerrarModalEliminar();
   };
 
@@ -91,10 +90,11 @@ export const AdminPanel: React.FC = () => {
             Panel de Administrador
           </h1>
 
-          {/* Filtros */}
+          {/* Filtros + Tabs */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
-              <div className="flex-1 md:w-1/2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              {/* Buscador por ID */}
+              <div className="w-full md:w-1/2">
                 <div className="relative">
                   <input
                     type="text"
@@ -109,34 +109,59 @@ export const AdminPanel: React.FC = () => {
                 </div>
               </div>
 
-              <select
-                value={filtroEstado}
-                onChange={(e) => setFiltroEstado(e.target.value as any)}
-                className="md:w-1/4 pl-4 pr-10 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all duration-300 outline-none appearance-none bg-white cursor-pointer"
-              >
-                <option value="Todos">Todos los estados</option>
-                <option value="Programado">Programado</option>
-                <option value="En vuelo">En vuelo</option>
-                <option value="Cancelado">Cancelado</option>
-              </select>
-
-              <button
-                onClick={() => navigate("/panelAdministrador/crear-vuelo")}
-                className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
-              >
-                <span>➕</span>
-                <span>Crear Nuevo Vuelo</span>
-              </button>
-
-              <Link to="/perfil">
+              {/* Tabs por estado */}
+              <div className="flex items-center gap-2 md:gap-3">
                 <button
-                  onClick={() => null}
-                  className="px-6 py-3 bg-[#081225] text-white rounded-lg hover:bg-[#0F6899] transition-all duration-300 flex items-center justify-center space-x-2"
+                  onClick={() => setTabEstado("Programado")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
+                    tabEstado === "Programado"
+                      ? "bg-[#0F6899] text-white border-[#0F6899] shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                  }`}
                 >
-                  <span>👤</span>
-                  <span>Ver Perfil</span>
+                  Programados
                 </button>
-              </Link>
+                <button
+                  onClick={() => setTabEstado("Cancelado")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
+                    tabEstado === "Cancelado"
+                      ? "bg-red-600 text-white border-red-600 shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Cancelados
+                </button>
+                <button
+                  onClick={() => setTabEstado("Realizado")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
+                    tabEstado === "Realizado"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Realizados
+                </button>
+              </div>
+
+              {/* Botones de acciones globales */}
+              <div className="flex flex-wrap gap-3 justify-start md:justify-end">
+                <button
+                  onClick={() => navigate("/panelAdministrador/crear-vuelo")}
+                  className="px-6 py-3 bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white rounded-lg hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
+                >
+                  <span>➕</span>
+                  <span>Crear Nuevo Vuelo</span>
+                </button>
+
+                <Link to="/perfil">
+                  <button
+                    className="px-6 py-3 bg-[#081225] text-white rounded-lg hover:bg-[#0F6899] transition-all duration-300 flex items-center justify-center space-x-2"
+                  >
+                    <span>👤</span>
+                    <span>Ver Perfil</span>
+                  </button>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -163,84 +188,96 @@ export const AdminPanel: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {vuelosFiltrados.map((vuelo) => (
-                    <tr
-                      key={vuelo.id_vuelo}
-                      className="hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      <td className="py-4 px-6">{vuelo.id_vuelo}</td>
-                      <td className="py-4 px-6 font-medium text-[#0F6899]">
-                        {vuelo.aeronave?.modelo}
-                      </td>
-                      <td className="py-4 px-6">{vuelo.aeronave?.capacidad}</td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium">
-                            {
-                              vuelo
-                                .aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto
-                                ?.codigo_iata
-                            }
-                          </span>
-                          <span className="text-[#3B82F6]">→</span>
-                          <span className="font-medium">
-                            {
-                              vuelo
-                                .aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto
-                                ?.codigo_iata
-                            }
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        {new Date(
-                          vuelo.salida_programada_utc
-                        ).toLocaleString()}
-                      </td>
-                      <td className="py-4 px-6">
-                        {new Date(
-                          vuelo.llegada_programada_utc
-                        ).toLocaleString()}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            vuelo.estado === "Programado"
-                              ? "bg-blue-100 text-[#0F6899] border border-[#0F6899]"
-                              : vuelo.estado === "En vuelo"
-                              ? "bg-green-100 text-green-700 border border-green-700"
-                              : "bg-red-100 text-red-700 border border-red-700"
-                          }`}
-                        >
-                          {vuelo.estado}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            onClick={() => handleEditarVuelo(vuelo.id_vuelo)}
-                            className="min-w-[130px] text-center px-4 py-2 rounded-lg bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white font-medium hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
-                          >
-                            <span>✏️</span>
-                            <span>Editar</span>
-                          </button>
+                  {vuelosFiltrados.map((vuelo) => {
+                    const editable = vuelo.estado === "Programado";
 
-                          <button
-                            onClick={() => handleAbrirModalEliminar(vuelo)}
-                            className="min-w-[130px] text-center px-4 py-2 rounded-lg bg-[#081225] text-white font-medium hover:bg-red-600 transition-all duration-300 flex items-center justify-center space-x-2"
+                    return (
+                      <tr
+                        key={vuelo.id_vuelo}
+                        className="hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <td className="py-4 px-6">{vuelo.id_vuelo}</td>
+                        <td className="py-4 px-6 font-medium text-[#0F6899]">
+                          {vuelo.aeronave?.modelo}
+                        </td>
+                        <td className="py-4 px-6">{vuelo.aeronave?.capacidad}</td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">
+                              {
+                                vuelo
+                                  .aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto
+                                  ?.codigo_iata
+                              }
+                            </span>
+                            <span className="text-[#3B82F6]">→</span>
+                            <span className="font-medium">
+                              {
+                                vuelo
+                                  .aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto
+                                  ?.codigo_iata
+                              }
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          {new Date(
+                            vuelo.salida_programada_utc
+                          ).toLocaleString()}
+                        </td>
+                        <td className="py-4 px-6">
+                          {new Date(
+                            vuelo.llegada_programada_utc
+                          ).toLocaleString()}
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              vuelo.estado === "Programado"
+                                ? "bg-blue-100 text-[#0F6899] border border-[#0F6899]"
+                                : vuelo.estado === "En vuelo"
+                                ? "bg-amber-100 text-amber-700 border border-amber-700"
+                                : vuelo.estado === "Realizado"
+                                ? "bg-emerald-100 text-emerald-700 border border-emerald-700"
+                                : "bg-red-100 text-red-700 border border-red-700"
+                            }`}
                           >
-                            <span>🗑️</span>
-                            <span>Eliminar</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {vuelo.estado}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          {editable ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() => handleEditarVuelo(vuelo.id_vuelo)}
+                                className="min-w-[130px] text-center px-4 py-2 rounded-lg bg-gradient-to-r from-[#0F6899] to-[#3B82F6] text-white font-medium hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all duration-300 flex items-center justify-center space-x-2"
+                              >
+                                <span>✏️</span>
+                                <span>Editar</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleAbrirModalEliminar(vuelo)}
+                                className="min-w-[130px] text-center px-4 py-2 rounded-lg bg-[#081225] text-white font-medium hover:bg-red-600 transition-all duration-300 flex items-center justify-center space-x-2"
+                              >
+                                <span>❌</span>
+                                <span>Cancelar</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">
+                              No editable
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {vuelosFiltrados.length === 0 && (
                     <tr>
                       <td colSpan={8} className="text-center py-8 text-gray-500">
-                        No se encontraron resultados.
+                        No se encontraron resultados para este estado.
                       </td>
                     </tr>
                   )}
