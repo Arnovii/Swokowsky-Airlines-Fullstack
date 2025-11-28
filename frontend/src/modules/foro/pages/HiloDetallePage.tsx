@@ -37,8 +37,13 @@ export const HiloDetallePage = () => {
       setRespuestaError('La respuesta es obligatoria');
       return;
     }
-    if (respuesta.trim().length < 5) {
-      setRespuestaError('La respuesta debe tener al menos 5 caracteres');
+    if (respuesta.trim().length < 10) {
+      setRespuestaError('La respuesta debe tener al menos 10 caracteres');
+      return;
+    }
+
+    if (respuesta.trim().length > 500) {
+      setRespuestaError('La respuesta no puede superar los 500 caracteres');
       return;
     }
 
