@@ -25,6 +25,7 @@ import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
+import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 
 
 
@@ -149,6 +150,16 @@ export default function AppRoutes() {
           </PrivateRoute>
         }
       />
+
+      <Route
+        path="/transaction-history"
+        element={
+          <ClientRoute>
+            <TransactionHistory />
+          </ClientRoute>
+        }
+      />
+
 
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
