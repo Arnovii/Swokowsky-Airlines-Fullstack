@@ -6,6 +6,7 @@ import {
   Body,
   ParseIntPipe,
   BadRequestException,
+  Patch
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -15,6 +16,8 @@ import { ActiveUser } from '../../common/decorators/active-user.decorator';
 import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
 import { usuario_tipo_usuario } from '@prisma/client';
 import { UseGuards } from '@nestjs/common';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+
 
 
 
@@ -32,4 +35,19 @@ export class TicketController {
   async getCard(@ActiveUser() user: PayloadInterface) {
     return this.ticketService.getTicketsByUser(user.id_usuario);
   }
+
+  @Patch(':id_ticket')
+  @ApiOperation({ summary: 'Actualizar el estado de un ticket (requiere 1 hora antes del vuelo)' })
+  async updateEstadoTicket(
+    @Param('id_ticket', ParseIntPipe) id_ticket: number,
+    @ActiveUser() user: PayloadInterface,
+    @Body() dto: UpdateTicketStatusDto
+  ) {
+    return this.ticketService.updateTicketStatus(
+      id_ticket,
+      user.id_usuario,
+      dto.estado
+    );
+  }
+
 }
