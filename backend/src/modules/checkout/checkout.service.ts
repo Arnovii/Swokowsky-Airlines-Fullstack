@@ -71,6 +71,101 @@ export class CheckoutService {
   }
 
   /**
+   * Determina si un vuelo es internacional o nacional
+   * Internacional: id_aeronaveFK = 2 Y una de las ciudades es Miami, Buenos Aires, New York, Londres o Madrid
+   * Nacional: id_aeronaveFK = 1
+   */
+  private async determineFlightType(vuelo: any): Promise<'nacional' | 'internacional'> {
+    if (vuelo.id_aeronaveFK === 1) return 'nacional';
+    if (vuelo.id_aeronaveFK === 2) {
+      // Verificar si alguna ciudad del vuelo es internacional
+      const ciudadesInternacionales = ['Miami', 'Buenos Aires', 'New York', 'Londres', 'Madrid'];
+      const ciudadOrigen = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.nombre;
+      const ciudadDestino = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.nombre;
+      
+      if (ciudadesInternacionales.includes(ciudadOrigen) || ciudadesInternacionales.includes(ciudadDestino)) {
+        return 'internacional';
+      }
+    }
+    return 'nacional';
+  }
+
+  /**
+   * Genera lista de todos los asientos posibles para una clase en un vuelo
+   * Nacional primera_clase: A1 hasta A5 (25 asientos)
+   * Nacional economica: B5 hasta F25 (125 asientos)
+   * Internacional primera_clase: A1 hasta B9 (50 asientos)
+   * Internacional economica: C9 hasta D42 (200 asientos)
+   */
+  private generateAllSeatsForClass(flightType: 'nacional' | 'internacional', clase: asiento_clases): string[] {
+    const seats: string[] = [];
+    const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    if (flightType === 'nacional') {
+      if (clase === 'primera_clase') {
+        // A1 hasta A5 (25 asientos totales en una columna)
+        for (let row = 1; row <= 25; row++) {
+          seats.push(`A${row}`);
+        }
+      } else {
+        // B5 hasta F25 (125 asientos: 5 columnas x 25 filas)
+        for (let row = 1; row <= 25; row++) {
+          for (let col = 1; col < 6; col++) {
+            seats.push(`${columns[col]}${row}`);
+          }
+        }
+      }
+    } else {
+      // Internacional
+      if (clase === 'primera_clase') {
+        // A1 hasta B9 (50 asientos: 2 columnas x 25 filas)
+        for (let row = 1; row <= 25; row++) {
+          for (let col = 0; col < 2; col++) {
+            seats.push(`${columns[col]}${row}`);
+          }
+        }
+      } else {
+        // C9 hasta D42 (200 asientos: 2 columnas x 100 filas, pero el rango es C hasta D)
+        for (let row = 1; row <= 100; row++) {
+          for (let col = 2; col < 4; col++) {
+            seats.push(`${columns[col]}${row}`);
+          }
+        }
+      }
+    }
+    return seats;
+  }
+
+  /**
+   * Obtiene asientos ocupados para un vuelo y clase específicos
+   * Busca todos los tickets pagados y los retorna como set para búsqueda O(1)
+   */
+  private async getOccupiedSeats(vueloID: number, clase: asiento_clases): Promise<Set<string>> {
+    const tickets = await this.prisma.ticket.findMany({
+      where: {
+        id_vueloFK: vueloID,
+        asiento_clase: clase,
+        estado: 'pagado'
+      },
+      select: { asiento_numero: true }
+    });
+    return new Set(tickets.map(t => t.asiento_numero).filter(s => s));
+  }
+
+  /**
+   * Selecciona N asientos aleatorios de una lista de disponibles
+   * Retorna array sin duplicados y sin asientos ocupados
+   */
+  private selectRandomSeats(availableSeats: string[], count: number): string[] {
+    if (availableSeats.length < count) {
+      throw new Error(`No hay suficientes asientos disponibles. Disponibles: ${availableSeats.length}, Solicitados: ${count}`);
+    }
+
+    const shuffled = [...availableSeats].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  /**
    * processCheckout: main flow
    * - Valida usuario y saldo
    * - Calcula total (consulta tarifa)
@@ -127,9 +222,17 @@ export class CheckoutService {
     for (const vid of vueloIds) {
       const vuelo = await this.prisma.vuelo.findUnique({
         where: { id_vuelo: vid },
-        include: { aeronave: true }
+        include: {
+          aeronave: true,
+          aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: { include: { ciudad: true } },
+          aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: { include: { ciudad: true } }
+        }
       });
       if (!vuelo) throw new BadRequestException(`Vuelo ${vid} no encontrado`);
+      
+      // Determinar tipo de vuelo (nacional o internacional)
+      const flightType = await this.determineFlightType(vuelo);
+      vueloCache.set(vid, { ...vueloCache.get(vid), vuelo, flightType });
 
       // obtener configuración de asientos para esa aeronave
       const configs = await this.prisma.configuracion_asientos.findMany({
@@ -199,29 +302,41 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
       // obtener config del vuelo
       const cache = vueloCache.get(vueloID);
       if (!cache) throw new BadRequestException(`Información de vuelo ${vueloID} no cargada`);
-      const capacidadClase = cache.configPorClase[clase] ?? 0;
-
-      // obtener ocupados actuales para clase
-      const key = `${vueloID}_${clase}`;
-      let ocupados = ocupadosMap.get(key) ?? 0;
 
       // obtener tarifa por unidad
       const tarifa = await this.prisma.tarifa.findFirst({ where: { id_vueloFK: vueloID, clase } });
       if (!tarifa) throw new BadRequestException(`Tarifa no configurada para vuelo ${vueloID} clase ${clase}`);
 
-      // Asignar asientos para cada pasajero: generar números secuenciales por clase
-      // Número inicial = ocupados + 1, pero debemos asegurarnos que no superemos capacidad
-      if (ocupados + pasajeros.length > capacidadClase) {
-        throw new BadRequestException(`No hay suficientes asientos disponibles en vuelo ${vueloID} clase ${clase}`);
+      // Generar lista de todos los asientos posibles para esta clase
+      const flightType = cache.flightType;
+      const allSeatsForClass = this.generateAllSeatsForClass(flightType, clase);
+
+      // Obtener asientos ya ocupados
+      const occupiedSeats = await this.getOccupiedSeats(vueloID, clase);
+
+      // Calcular asientos disponibles (no ocupados)
+      const availableSeats = allSeatsForClass.filter(seat => !occupiedSeats.has(seat));
+
+      // Validar que hay suficientes asientos disponibles
+      if (availableSeats.length < pasajeros.length) {
+        throw new BadRequestException(
+          `No hay suficientes asientos disponibles en vuelo ${vueloID} clase ${clase}. ` +
+          `Disponibles: ${availableSeats.length}, Solicitados: ${pasajeros.length}`
+        );
       }
 
-      // asiento prefix
-      const prefix = (clase === 'primera_clase') ? 'P' : 'E';
-      // start index
-      let seatIndex = ocupados + 1;
+      // Seleccionar asientos aleatorios para los pasajeros
+      let assignedSeats: string[] = [];
+      try {
+        assignedSeats = this.selectRandomSeats(availableSeats, pasajeros.length);
+      } catch (err) {
+        throw new BadRequestException(`Error al asignar asientos: ${err?.message ?? err}`);
+      }
 
+      // Asignar asientos a pasajeros
+      let seatIndex = 0;
       for (const p of pasajeros) {
-        const seatNumber = `${prefix}-${seatIndex}`;
+        const seatNumber = assignedSeats[seatIndex];
 
         // Crear ticket con pasajero anidado
         const ticketData = {
@@ -246,12 +361,8 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
           }
         };
 
-        
-
         // push operation
-ticketDataList.push(ticketData);
-
-
+        ticketDataList.push(ticketData);
 
         // add to email notifications
         emailNotifications.push({
@@ -263,9 +374,6 @@ ticketDataList.push(ticketData);
 
         seatIndex += 1;
       }
-
-      // actualizar ocupadosMap para siguiente iteración
-      ocupadosMap.set(key, ocupados + pasajeros.length);
     }
 
     // Ejecutar creación de tickets + pasajeros y deducción de saldo en una transacción
