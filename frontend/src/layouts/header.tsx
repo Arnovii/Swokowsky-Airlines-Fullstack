@@ -10,9 +10,15 @@ export default function Header() {
   const auth = useAuth();
 
   const usernameDisplay = auth.user?.username ?? auth.user?.correo ?? "Usuario";
-  
+
   // ⭐ Verificar si el usuario es administrador
-  const isAdmin = auth.user?.tipo_usuario === "admin" || auth.user?.tipo_usuario === "root";
+  const isAdmin =
+    auth.user?.tipo_usuario === "admin" ||
+    auth.user?.tipo_usuario === "root";
+
+  const isClient = auth.user?.tipo_usuario === "cliente";
+  // Mostrar botón de Check-In solo si NO está logueado o es cliente
+  const showCheckIn = !auth.isAuthenticated || isClient;
 
   return (
     <nav className="fixed top-0 left-0 w-full bg-gradient-to-r from-[#081225] via-[#0a1533] to-[#081225] backdrop-blur-md border-b border-cyan-500/20 text-white px-6 py-4 z-50 shadow-2xl font-sans">
@@ -83,6 +89,18 @@ export default function Header() {
             </Link>
           )}
 
+          {/* ⭐ Botón Realizar Check-In! (solo clientes o no logueado) */}
+          {showCheckIn && (
+            <Link
+              to="/check-in" // cambia esta ruta si tu check-in usa otra
+              className="flex items-center px-4 py-2.5 h-11 rounded-xl bg-gradient-to-r from-emerald-400/20 to-cyan-400/20 border border-emerald-300/40 hover:from-emerald-400/30 hover:to-cyan-400/30 hover:border-emerald-300/70 transition-all duration-300 group"
+            >
+              <span className="text-sm text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold whitespace-nowrap">
+                Realizar Check-In!
+              </span>
+            </Link>
+          )}
+
           {auth.isAuthenticated ? (
             <>
               {/* User Greeting */}
@@ -91,8 +109,13 @@ export default function Header() {
                 className="flex items-center px-4 py-2.5 h-11 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 transition-all duration-300 group"
               >
                 <span className="text-sm text-cyan-200 group-hover:text-white transition-colors duration-300 whitespace-nowrap">
-                  Hola, <span className="font-semibold text-white">{usernameDisplay}</span>
-                  <span className="ml-1 inline-block group-hover:animate-bounce">👋</span>
+                  Hola,{" "}
+                  <span className="font-semibold text-white">
+                    {usernameDisplay}
+                  </span>
+                  <span className="ml-1 inline-block group-hover:animate-bounce">
+                    👋
+                  </span>
                 </span>
               </Link>
 
@@ -127,10 +150,11 @@ export default function Header() {
       </div>
 
       {/* Mobile dropdown menu */}
-      <div className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${open
-        ? 'max-h-96 opacity-100 translate-y-0'
-        : 'max-h-0 opacity-0 -translate-y-4'
-        }`}>
+      <div
+        className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${
+          open ? "max-h-96 opacity-100 translate-y-0" : "max-h-0 opacity-0 -translate-y-4"
+        }`}
+      >
         <div className="mt-6 pt-6 border-t border-cyan-500/20">
           <div className="flex flex-col space-y-3">
             {/* News Link Mobile */}
@@ -173,6 +197,19 @@ export default function Header() {
               </Link>
             )}
 
+            {/* ⭐ Botón Realizar Check-In! Mobile */}
+            {showCheckIn && (
+              <Link
+                to="/check-in" // misma ruta que en desktop
+                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
+                onClick={() => setOpen(false)}
+              >
+                <span className="text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold">
+                  Realizar Check-In!
+                </span>
+              </Link>
+            )}
+
             {auth.isAuthenticated ? (
               <>
                 <Link
@@ -181,8 +218,13 @@ export default function Header() {
                   onClick={() => setOpen(false)}
                 >
                   <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 text-center">
-                    Hola, <span className="font-semibold text-white">{usernameDisplay}</span>
-                    <span className="ml-2 inline-block group-hover:animate-bounce">👋</span>
+                    Hola,{" "}
+                    <span className="font-semibold text-white">
+                      {usernameDisplay}
+                    </span>
+                    <span className="ml-2 inline-block group-hover:animate-bounce">
+                      👋
+                    </span>
                   </span>
                 </Link>
 
