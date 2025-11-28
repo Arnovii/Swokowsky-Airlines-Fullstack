@@ -451,7 +451,7 @@ function TicketCard({
                 isCancelling ? "opacity-70 cursor-not-allowed" : ""
               }`}
             >
-              {isCancelling ? "Cancelando..." : "Cancelar ticket"}
+              {isCancelling ? "Cancelando..." : "Reembolsar ticket"}
             </button>
           ) : (
             blockReason && (
