@@ -68,20 +68,20 @@ model pais {
 }
 
 model pasajero {
-  id_pasajero      Int             @id @default(autoincrement())
-  id_ticketFK      Int             @unique                          // <- hacer UNIQUE para 1:1
-  nombre           String          @db.VarChar(255)
-  apellido         String          @db.VarChar(255)
-  dni              String          @db.VarChar(255)
-  phone            String          @db.VarChar(255)
-  email            String          @db.VarChar(255)
-  contact_name     String?          @db.VarChar(255)
-  phone_name       String?          @db.VarChar(255)
+  id_pasajero      Int            @id @default(autoincrement())
+  id_ticketFK      Int            @unique // <- hacer UNIQUE para 1:1
+  nombre           String         @db.VarChar(255)
+  apellido         String         @db.VarChar(255)
+  dni              String         @db.VarChar(255)
+  phone            String         @db.VarChar(255)
+  email            String         @db.VarChar(255)
+  contact_name     String?        @db.VarChar(255)
+  phone_name       String?        @db.VarChar(255)
   genero           usuario_genero
-  fecha_nacimiento DateTime        @db.Date
+  fecha_nacimiento DateTime       @db.Date
 
   // relación one-to-one (lado con la FK)
-  ticket           ticket          @relation("TicketPasajero", fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
+  ticket ticket @relation("TicketPasajero", fields: [id_ticketFK], references: [id_ticket], onDelete: NoAction, onUpdate: NoAction, map: "pasajero_ibfk_1")
 }
 
 model promocion {
@@ -120,13 +120,13 @@ model ticket {
   asiento_clase  asiento_clases
   precio         Float          @db.Float
   estado         ticket_estado
-  creado_en      DateTime       @db.DateTime(0) @default(now())
+  creado_en      DateTime       @default(now()) @db.DateTime(0)
 
   // relación one-to-one con pasajero (lado sin FK)
-  pasajero       pasajero?      @relation("TicketPasajero")
+  pasajero pasajero? @relation("TicketPasajero")
 
-  usuario        usuario        @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
-  vuelo          vuelo          @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
+  usuario usuario @relation(fields: [id_usuarioFK], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_1")
+  vuelo   vuelo   @relation(fields: [id_vueloFK], references: [id_vuelo], onDelete: NoAction, onUpdate: NoAction, map: "ticket_ibfk_2")
 
   @@index([id_vueloFK, estado, asiento_clase], map: "ticket_vuelo_estado_clase_idx")
   @@index([estado, creado_en])
@@ -153,10 +153,11 @@ model usuario {
   must_change_password  Boolean              @default(false)
   tarjeta               tarjeta[]
   ticket                ticket[]
-  saldo                 Float?                @default(0.0) //Solo puede ser modificado cuando se agregan tarjetas o reembolso 
-  carrito               carrito?             // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
+  saldo                 Float?               @default(0.0) //Solo puede ser modificado cuando se agregan tarjetas o reembolso 
+  carrito               carrito? // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
+  hilos                 foro_hilo[]
+  respuestas            foro_respuesta[]
 }
-
 
 model vuelo {
   id_vuelo                                             Int            @id @default(autoincrement())
@@ -235,6 +236,38 @@ model carrito_item {
   @@index([fecha_limite])
 }
 
+model foro_hilo {
+  id_hilo   Int      @id @default(autoincrement())
+  titulo    String   @db.VarChar(255)
+  contenido String
+  categoria String
+  creado_en DateTime @default(now())
+
+  autor        usuario @relation(fields: [id_usuarioFK], references: [id_usuario])
+  id_usuarioFK Int
+
+  respuestas foro_respuesta[]
+}
+
+model foro_respuesta {
+  id_respuesta Int      @id @default(autoincrement())
+  contenido    String
+  creado_en    DateTime @default(now())
+
+  hilo      foro_hilo @relation(fields: [id_hiloFK], references: [id_hilo])
+  id_hiloFK Int
+
+  usuario      usuario @relation(fields: [id_usuarioFK], references: [id_usuario])
+  id_usuarioFK Int
+}
+
+enum foro_categoria {
+  queja
+  duda
+  recomendacion
+  halago
+}
+
 enum usuario_tipo_usuario {
   root
   admin
@@ -251,7 +284,6 @@ enum ticket_estado {
   usado
   cancelado
 }
-
 
 enum tarjeta_tipo {
   credito
