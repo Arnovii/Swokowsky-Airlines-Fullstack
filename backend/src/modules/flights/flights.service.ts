@@ -5,12 +5,14 @@ import { SearchFlightsDto } from './dto/search-flights.dto';
 import { FlightResultDto } from './dto/flight-result.dto';
 import { UpdateFlightDto } from './dto/update-flight.dto';
 import { promocion as PromocionModel } from '@prisma/client';
+import { ticket_estado, asiento_clases } from '@prisma/client';
+
 @Injectable()
 export class FlightsService {
   constructor(private prisma: PrismaService) { }
 
   async getAllFlights() {
-    return this.prisma.vuelo.findMany({
+    const vuelos = await this.prisma.vuelo.findMany({
       include: {
         aeronave: true,
         tarifa: true,
@@ -19,7 +21,51 @@ export class FlightsService {
         aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
       },
     });
+
+    // ENUMS reales de Prisma → NO falla
+    const ESTADOS_VALIDOS = [ticket_estado.pagado, ticket_estado.usado];
+
+    const resultados = await Promise.all(
+      vuelos.map(async (vuelo) => {
+        const ocupantes = await this.prisma.ticket.groupBy({
+          by: ["asiento_clase"],
+          where: {
+            id_vueloFK: vuelo.id_vuelo,
+            estado: { in: ESTADOS_VALIDOS },
+          },
+          _count: {
+            id_ticket: true,
+          },
+        });
+
+        let ocupantes_primera_clase = 0;
+        let ocupantes_segunda_clase = 0;
+
+        for (const item of ocupantes) {
+          const cantidad = item._count.id_ticket; // ✔ siempre existe
+
+          if (item.asiento_clase === asiento_clases.primera_clase) {
+            ocupantes_primera_clase = cantidad;
+          }
+
+          if (item.asiento_clase === asiento_clases.economica) {
+            ocupantes_segunda_clase = cantidad;
+          }
+        }
+
+        return {
+          ...vuelo,
+          ocupantes_primera_clase,
+          ocupantes_segunda_clase,
+        };
+      })
+    );
+
+    return resultados;
   }
+
+
+
 
   async getActiveFlights() {
     return this.prisma.vuelo.findMany({
@@ -207,31 +253,86 @@ export class FlightsService {
       orderBy: { salida_programada_utc: 'asc' },
     });
 
-    // Mapear resultados y calcular available_seats + horas locales
     const results: FlightResultDto[] = [];
-    for (const v of vuelos) {
-      const { availableSeats, totalConfigured } = await this.computeAvailableSeatsForAeronave(v.id_aeronaveFK, v.id_vuelo);
 
-      const origenGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
-      const destinoGmtOffset = v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
+    for (const v of vuelos) {
+      // ================================
+      //      CALCULAR SILLAS DISPONIBLES
+      // ================================
+      const { availableSeats, totalConfigured } = await this.computeAvailableSeatsForAeronave(
+        v.id_aeronaveFK,
+        v.id_vuelo,
+      );
+
+      // ================================
+      //       CALCULAR HORAS LOCALES
+      // ================================
+      const origenGmtOffset =
+        v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
+      const destinoGmtOffset =
+        v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.gmt?.offset ?? null;
 
       const salida_local = this.formatLocalFromUtc(v.salida_programada_utc, origenGmtOffset);
       const llegada_local = this.formatLocalFromUtc(v.llegada_programada_utc, destinoGmtOffset);
 
+      // ================================
+      //       CALCULAR OCUPANTES POR CLASE
+      // ================================
+      const ocupantes = await this.prisma.ticket.groupBy({
+        by: ["asiento_clase"],
+        where: {
+          id_vueloFK: v.id_vuelo,
+          estado: { in: [ticket_estado.pagado, ticket_estado.usado] },
+        },
+        _count: { id_ticket: true },
+      });
+
+      let ocupantes_primera_clase = 0;
+      let ocupantes_segunda_clase = 0;
+
+      for (const item of ocupantes) {
+        const cantidad = item._count.id_ticket;
+
+        if (item.asiento_clase === asiento_clases.primera_clase) {
+          ocupantes_primera_clase = cantidad;
+        }
+        if (item.asiento_clase === asiento_clases.economica) {
+          ocupantes_segunda_clase = cantidad;
+        }
+      }
+
+      // ================================
+      //           ARMAR RESULTADO FINAL
+      // ================================
       results.push({
         id_vuelo: v.id_vuelo,
         estado: v.estado,
+
         salida_programada_utc: (v.salida_programada_utc as Date).toISOString(),
         llegada_programada_utc: (v.llegada_programada_utc as Date).toISOString(),
+
         salida_local,
         llegada_local,
+
         aeronave: {
           id_aeronave: v.aeronave.id_aeronave,
           modelo: v.aeronave.modelo,
           capacidad: totalConfigured,
         },
-        tarifas: v.tarifa.map((t) => ({ clase: t.clase, precio_base: t.precio_base })),
-        promocion: v.promocion ? { id_promocion: v.promocion.id_promocion, nombre: v.promocion.nombre, descuento: v.promocion.descuento } : null,
+
+        tarifas: v.tarifa.map((t) => ({
+          clase: t.clase,
+          precio_base: t.precio_base,
+        })),
+
+        promocion: v.promocion
+          ? {
+            id_promocion: v.promocion.id_promocion,
+            nombre: v.promocion.nombre,
+            descuento: v.promocion.descuento,
+          }
+          : null,
+
         aeropuerto_origen: {
           id_aeropuerto: v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.id_aeropuerto,
           nombre: v.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.nombre,
@@ -249,6 +350,7 @@ export class FlightsService {
             },
           },
         },
+
         aeropuerto_destino: {
           id_aeropuerto: v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.id_aeropuerto,
           nombre: v.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.nombre,
@@ -266,12 +368,18 @@ export class FlightsService {
             },
           },
         },
+
         available_seats: availableSeats,
+
+        // ⭐ CAMPOS OBLIGATORIOS DEL DTO ⭐
+        ocupantes_primera_clase,
+        ocupantes_segunda_clase,
       });
     }
 
     return results;
   }
+
 
   /**
    * Public: recibe los filtros y devuelve:

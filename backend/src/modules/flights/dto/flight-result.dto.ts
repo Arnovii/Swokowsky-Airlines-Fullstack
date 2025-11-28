@@ -28,4 +28,6 @@ export class FlightResultDto {
   aeropuerto_origen: FlightAirportDto;
   aeropuerto_destino: FlightAirportDto;
   available_seats: number;
+  ocupantes_primera_clase: number;
+  ocupantes_segunda_clase: number;
 }

@@ -133,6 +133,14 @@ export function useCrearVuelo(): UseCrearVueloResult {
       setLoading(false);
       return;
     }
+    // Determinar si es vuelo internacional para asignar la aeronave correcta
+    // Vuelo nacional = aeronave #1, Vuelo internacional = aeronave #2
+    const destinosInternacionales = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+    const origenCiudad = aeropuertos.find(a => a.id_aeropuerto === form.id_aeropuerto_origenFK)?.ciudad?.nombre || "";
+    const destinoCiudad = aeropuertos.find(a => a.id_aeropuerto === form.id_aeropuerto_destinoFK)?.ciudad?.nombre || "";
+    const esVueloInternacional = destinosInternacionales.includes(origenCiudad) || destinosInternacionales.includes(destinoCiudad);
+    const idAeronave = esVueloInternacional ? 2 : 1;
+
     // Construir el payload para /api/v1/news
     const payload = {
       titulo: form.titulo || "Nuevo vuelo", // Puedes ajustar el origen del título
@@ -150,7 +158,7 @@ export function useCrearVuelo(): UseCrearVueloResult {
       } : undefined,
       salida_colombia: salidaDate ? salidaDate.toISOString() : "",
       llegada_colombia: llegadaDate ? llegadaDate.toISOString() : "",
-      id_aeronaveFK: 1, // Valor fijo - la capacidad se determina por tipo de vuelo (nacional/internacional)
+      id_aeronaveFK: idAeronave, // Aeronave #1 para nacional, #2 para internacional
       id_aeropuerto_origenFK: form.id_aeropuerto_origenFK,
       id_aeropuerto_destinoFK: form.id_aeropuerto_destinoFK
     };

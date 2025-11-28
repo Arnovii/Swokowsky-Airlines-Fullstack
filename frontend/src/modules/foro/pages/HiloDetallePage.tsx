@@ -15,22 +15,6 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-const formatRelativeDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Hace un momento';
-  if (diffMins < 60) return `Hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`;
-  if (diffHours < 24) return `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-  if (diffDays < 7) return `Hace ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
-  
-  return formatDate(dateString);
-};
-
 export const HiloDetallePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,8 +25,8 @@ export const HiloDetallePage = () => {
   const [respuestaError, setRespuestaError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Solo el autor del hilo o admin/root pueden responder
-  const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
+  // Solo el autor del hilo o admin pueden responder (root NO puede)
+  const isAdmin = user?.tipo_usuario === 'admin';
   const isAuthor = hilo && user?.id_usuario === hilo.id_usuarioFK;
   const canReply = isAuthenticated && (isAuthor || isAdmin);
 
@@ -53,8 +37,13 @@ export const HiloDetallePage = () => {
       setRespuestaError('La respuesta es obligatoria');
       return;
     }
-    if (respuesta.trim().length < 5) {
-      setRespuestaError('La respuesta debe tener al menos 5 caracteres');
+    if (respuesta.trim().length < 10) {
+      setRespuestaError('La respuesta debe tener al menos 10 caracteres');
+      return;
+    }
+
+    if (respuesta.trim().length > 500) {
+      setRespuestaError('La respuesta no puede superar los 500 caracteres');
       return;
     }
 
@@ -191,7 +180,7 @@ export const HiloDetallePage = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-gray-800">
-                          {isAdmin ? 'Swokowsky Airlines' : (resp.autor ? `${resp.autor.nombre} ${resp.autor.apellido}` : 'Usuario')}
+                          {resp.autor ? `${resp.autor.nombre} ${resp.autor.apellido}` : 'Usuario'}
                         </span>
                         {isAdmin && (
                           <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
@@ -199,7 +188,7 @@ export const HiloDetallePage = () => {
                           </span>
                         )}
                         <span className="text-sm text-gray-500">
-                          • {formatRelativeDate(resp.creado_en)}
+                          • {formatDate(resp.creado_en)}
                         </span>
                       </div>
                       <p className="text-gray-700 whitespace-pre-wrap">

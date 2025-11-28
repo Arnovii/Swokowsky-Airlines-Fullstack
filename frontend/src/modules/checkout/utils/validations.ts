@@ -8,7 +8,7 @@ export const validateTravelerForm = (data: TravelerFormData): boolean => {
   return (
     !!data.numero_documento &&
     data.numero_documento.trim() !== '' &&
-    /^\d{10}$/.test(data.numero_documento.trim()) &&
+    /^\d{8,10}$/.test(data.numero_documento.trim()) &&
     !!data.primer_nombre &&
     data.primer_nombre.trim() !== '' &&
     !!data.primer_apellido &&
@@ -114,8 +114,8 @@ export const validateField = (field: keyof Pasajero, value: string): string => {
 
   switch (field) {
     case 'dni': // Documento
-      if (!/^\d{10}$/.test(trimmedValue)) {
-        return 'El documento debe tener exactamente 10 dígitos';
+      if (!/^\d{8,10}$/.test(trimmedValue)) {
+        return 'El documento debe tener entre 8 y 10 dígitos';
       }
       break;
 
