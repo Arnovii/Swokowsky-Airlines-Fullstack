@@ -17,6 +17,7 @@ export class FlightsService {
         aeronave: true,
         tarifa: true,
         promocion: true,
+        noticia: true,
         aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: true,
         aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: true,
       },

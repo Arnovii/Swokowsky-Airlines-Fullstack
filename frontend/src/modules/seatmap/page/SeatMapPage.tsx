@@ -76,38 +76,6 @@ const SeatMapPage = () => {
           </p>
         </div>
 
-        {/* Selector de tipo de vuelo */}
-        <div className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => {
-              setFlightType('nacional');
-              setSelectedSeat(null);
-              setHasChangedSeat(false);
-            }}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              flightType === 'nacional'
-                ? 'bg-gradient-to-r from-[#39A5D8] to-[#1180B8] text-white shadow-lg shadow-[#39A5D8]/30'
-                : 'bg-white/10 text-white/70 hover:bg-white/20 border border-white/20'
-            }`}
-          >
-            🇨🇴 Vuelo Nacional (150 asientos)
-          </button>
-          <button
-            onClick={() => {
-              setFlightType('internacional');
-              setSelectedSeat(null);
-              setHasChangedSeat(false);
-            }}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              flightType === 'internacional'
-                ? 'bg-gradient-to-r from-[#39A5D8] to-[#1180B8] text-white shadow-lg shadow-[#39A5D8]/30'
-                : 'bg-white/10 text-white/70 hover:bg-white/20 border border-white/20'
-            }`}
-          >
-            🌍 Vuelo Internacional (250 asientos)
-          </button>
-        </div>
-
         {/* Información del asiento seleccionado */}
         {selectedSeat && (
           <div className="bg-gradient-to-r from-[#39A5D8]/20 to-[#1180B8]/20 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-[#39A5D8]/30">

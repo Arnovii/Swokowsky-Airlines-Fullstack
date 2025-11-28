@@ -23,7 +23,6 @@ import Root from "../modules/panelAdministrador/pages/Root";
 import ChangePassword from "../modules/auth/pages/ChangePassword";
 import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
-import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
 
@@ -140,14 +139,6 @@ export default function AppRoutes() {
         />
       </Route>
 
-      <Route
-        path="/transaction-history"
-        element={
-          <ClientRoute>
-            <TransactionHistory />
-          </ClientRoute>
-        }
-      />
 
       {/* ✅ Cambio de contraseña obligatorio */}
       <Route
