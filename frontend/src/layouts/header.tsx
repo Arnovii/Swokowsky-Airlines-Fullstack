@@ -28,7 +28,7 @@ export default function Header() {
               />
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/20 to-cyan-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full blur-xl"></div>
             </div>
-            <span className="text-xl font-bold tracking-wide bg-gradient-to-r from-white via-cyan-300 to-white bg-clip-text text-transparent group-hover:from-cyan-300 group-hover:to-cyan-100 transition-all duration-300">
+            <span className="text-xl font-bold tracking-wide text-white group-hover:text-cyan-200 transition-all duration-300">
               Swokowsky Airlines
             </span>
           </Link>
@@ -51,37 +51,35 @@ export default function Header() {
 
         {/* Desktop navigation */}
         <div className="hidden lg:flex items-center space-x-3">
-          {/* News Icon */}
+          {/* News - Icono + Nombre */}
           <Link
             to="/news"
-            className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+            className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
             title="Noticias"
           >
-            <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <Newspaper className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+            <span className="text-sm font-medium">Noticias</span>
           </Link>
 
-          {/* Forum Icon - visible para todos */}
+          {/* Forum - Icono + Nombre */}
           <Link
             to="/foro"
-            className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+            className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
             title="Foro de la Comunidad"
           >
-            <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+            <span className="text-sm font-medium">Foro</span>
           </Link>
 
-          {/* ⭐ Shopping Cart Icon - SOLO VISIBLE PARA CLIENTES */}
+          {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES */}
           {!isAdmin && (
             <Link
               to="/carrito"
-              className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
+              className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
               title="Carrito de compras"
             >
-              <div className="relative w-5 h-5">
-                <ShoppingCart className="w-full h-full text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <ShoppingCart className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+              <span className="text-sm font-medium">Carrito</span>
             </Link>
           )}
 
@@ -112,15 +110,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              {/* Login Icon */}
-              <Link
-                to="/login"
-                className="flex items-center justify-center group relative overflow-hidden hover:text-cyan-300 transition-colors duration-300"
-                title="Iniciar sesión"
-              >
-                <User className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 relative z-10" />
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
+              
 
               {/* Login Text */}
               <Link
