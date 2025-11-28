@@ -6,23 +6,14 @@ interface HiloCardProps {
   hilo: Hilo;
 }
 
-const formatDate = (dateString: string): string => {
+const formatExplicitDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Hace un momento';
-  if (diffMins < 60) return `Hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`;
-  if (diffHours < 24) return `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-  if (diffDays < 7) return `Hace ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
-  
   return date.toLocaleDateString('es-ES', {
     day: 'numeric',
-    month: 'short',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
@@ -40,7 +31,7 @@ export const HiloCard = ({ hilo }: HiloCardProps) => {
           <CategoriaBadge categoria={hilo.categoria} />
           <span className="text-sm text-gray-500 flex items-center gap-1">
             <span>🕐</span>
-            {formatDate(hilo.creado_en)}
+            {formatExplicitDate(hilo.creado_en)}
           </span>
         </div>
 

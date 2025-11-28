@@ -91,12 +91,13 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
   useEffect(() => {
     // Solo autocompletar si:
     // 1. Hay datos del perfil del usuario autenticado
-    // 2. La cédula ingresada tiene exactamente 10 dígitos
+    // 2. La cédula ingresada tiene entre 8 y 10 dígitos
     // 3. La cédula coincide con la del usuario autenticado
     // 4. No se ha autocompletado previamente para esta cédula
     if (
       authUserProfile?.dni &&
-      formData.numero_documento.length === 10 &&
+      formData.numero_documento.length >= 8 &&
+      formData.numero_documento.length <= 10 &&
       formData.numero_documento === String(authUserProfile.dni) &&
       !hasAutocompletedRef.current
     ) {
@@ -160,7 +161,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
     switch (name) {
       case 'numero_documento':
         if (!value || String(value).trim() === '') return 'El número de documento es requerido';
-        if (!/^\d{10}$/.test(String(value))) return 'El documento debe tener exactamente 10 dígitos';
+        if (!/^\d{8,10}$/.test(String(value))) return 'El documento debe tener entre 8 y 10 dígitos';
         return '';
       case 'primer_nombre':
         return !value || String(value).trim() === '' ? 'El primer nombre es requerido' : '';
@@ -207,7 +208,7 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         return value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
       
       case 'numero_documento':
-        // Solo números, sin letras ni caracteres especiales (máximo 10)
+        // Solo números, sin letras ni caracteres especiales (máximo 10, mínimo 8 para validación)
         return value.replace(/[^0-9]/g, '').slice(0, 10);
       
       case 'telefono':
@@ -284,14 +285,14 @@ const TravelerForm: React.FC<TravelerFormProps> = ({ index, initialData = {}, on
         {/* Número de Documento */}
         <div className="relative">
           <label className="block text-sm font-semibold text-[#123361] mb-2">
-            Número de Documento (10 dígitos) *
+            Número de Documento (8-10 dígitos) *
           </label>
           <input
             type="text"
             name="numero_documento"
             value={formData.numero_documento}
             onChange={handleChange}
-            placeholder="1234567890"
+            placeholder="12345678"
             maxLength={10}
             className={`w-full px-4 py-3 rounded-xl border-2 ${
               errors.numero_documento || isDuplicateDocument

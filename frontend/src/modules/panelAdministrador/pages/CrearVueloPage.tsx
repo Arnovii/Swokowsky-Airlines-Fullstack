@@ -103,6 +103,9 @@ const ToastContainer: React.FC<{ toasts: Toast[], removeToast: (id: string) => v
   );
 };
 
+// Ciudades internacionales para validar tiempo mínimo
+const DESTINOS_INTERNACIONALES = ["Madrid", "Londres", "New York", "Buenos Aires", "Miami"];
+
 export const CrearVueloPage: React.FC = () => {
   const [errores, setErrores] = React.useState<{ [key: string]: string }>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -326,6 +329,29 @@ export const CrearVueloPage: React.FC = () => {
     if (!salidaDate) {
       nuevosErrores.salida = "Selecciona la fecha de salida";
       showErrorToast('Campo obligatorio', 'Debe seleccionar la fecha de salida');
+    } else if (aeropuertoOrigenSeleccionado && aeropuertoDestinoSeleccionado) {
+      // Validar tiempo mínimo antes del vuelo según tipo (nacional/internacional)
+      const ahora = new Date();
+      const tiempoHastaSalida = salidaDate.getTime() - ahora.getTime();
+      const horasHastaSalida = tiempoHastaSalida / (1000 * 60 * 60);
+      
+      const origenCiudad = aeropuertoOrigenSeleccionado.ciudad.nombre;
+      const destinoCiudad = aeropuertoDestinoSeleccionado.ciudad.nombre;
+      const esVueloInternacional = DESTINOS_INTERNACIONALES.includes(origenCiudad) || DESTINOS_INTERNACIONALES.includes(destinoCiudad);
+      
+      if (esVueloInternacional) {
+        // Vuelo internacional: mínimo 3 horas antes
+        if (horasHastaSalida < 3) {
+          nuevosErrores.salida = "Los vuelos internacionales deben crearse con al menos 3 horas de anticipación";
+          showErrorToast('Error de validación', 'Los vuelos internacionales deben crearse con al menos 3 horas de anticipación');
+        }
+      } else {
+        // Vuelo nacional: mínimo 1 hora antes
+        if (horasHastaSalida < 1) {
+          nuevosErrores.salida = "Los vuelos nacionales deben crearse con al menos 1 hora de anticipación";
+          showErrorToast('Error de validación', 'Los vuelos nacionales deben crearse con al menos 1 hora de anticipación');
+        }
+      }
     }
     if (!llegadaDate) {
       nuevosErrores.llegada = "Selecciona la fecha de llegada";
