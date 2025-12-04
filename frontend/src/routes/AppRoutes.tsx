@@ -26,6 +26,7 @@ import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
+import Checkin from "../modules/checkin/pages/checkin";
 
 
 
@@ -112,6 +113,9 @@ export default function AppRoutes() {
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
+
+        {/* Checkin */}
+        <Route path="/checkin" element={<Checkin />} />
 
         {/* Panel Admin */}
         <Route
