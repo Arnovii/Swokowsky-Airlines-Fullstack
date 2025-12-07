@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCart } from '../../../context/CartContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useFlightSearch } from '../hooks/useFlightSearch';

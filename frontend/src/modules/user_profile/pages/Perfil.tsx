@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -308,7 +308,7 @@ export default function Perfil() {
   const getNationalityLabel = (val?: string) =>
     NATIONALITIES.find((c) => c.value === val)?.label ?? val ?? "-";
 
-  const auth = useAuth();
+  useAuth(); // Verificar autenticación
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<Profile>();
@@ -571,22 +571,6 @@ export default function Perfil() {
       console.error("Error al eliminar tarjeta:", err?.response?.data || err);
       alert(err?.response?.data?.message || "No se pudo eliminar la tarjeta");
     }
-  };
-
-  const uploadToCloudinary = async (file: File): Promise<string> => {
-    const url = "https://api.cloudinary.com/v1_1/dycqxw0aj/image/upload";
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("upload_preset", "Swokowsky-bucket");
-    const res = await fetch(url, { method: "POST", body: fd });
-    if (!res.ok)
-      throw new Error(
-        `Upload a Cloudinary falló: ${res.status} ${await res.text()}`
-      );
-    const data = await res.json();
-    if (!data.secure_url)
-      throw new Error("No se recibió secure_url desde Cloudinary");
-    return data.secure_url as string;
   };
 
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);

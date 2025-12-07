@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Article } from '../services/newsService';
 import NewsCard from './NewsCard';
 

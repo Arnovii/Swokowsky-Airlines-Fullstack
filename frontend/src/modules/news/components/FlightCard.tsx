@@ -23,7 +23,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     return { text: 'Disponible', color: 'text-green-600 bg-green-50' };
   };
 
-  const availability = getAvailabilityStatus(flight.availableSeats);
+  const availability = getAvailabilityStatus(flight.availableSeats ?? 0);
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
@@ -73,7 +73,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
           </h3>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <MapPin size={14} />
-            <span className="font-sans">{flight.airline} • {flight.aircraft}</span>
+            <span className="font-sans">{flight.airline ?? flight.aircraft} • {flight.aircraft}</span>
           </div>
         </div>
 
@@ -97,7 +97,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
         <div className="flex items-center gap-2 mb-4">
           <Users size={14} className={availability.color.includes('red') ? 'text-red-600' : availability.color.includes('orange') ? 'text-orange-600' : 'text-green-600'} />
           <span className={`text-xs font-medium px-2 py-1 rounded-full ${availability.color}`}>
-            {availability.text} ({flight.availableSeats} asientos)
+            {availability.text} ({flight.availableSeats ?? 0} asientos)
           </span>
         </div>
 

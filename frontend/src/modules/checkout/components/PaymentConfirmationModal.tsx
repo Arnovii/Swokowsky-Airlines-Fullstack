@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
 
-
-import { useNavigate } from 'react-router-dom';
-
 interface PaymentConfirmationModalProps {
   success: boolean;
   message: string;

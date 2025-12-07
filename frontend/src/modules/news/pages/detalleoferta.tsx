@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Calendar, MapPin, Plane, ArrowLeft, Tag } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { usePromotions } from "../hooks/usePromotions";
-import axios from "axios";
 
 export interface Noticia {
   titulo: string;

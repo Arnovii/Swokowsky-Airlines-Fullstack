@@ -1,7 +1,6 @@
-import React from 'react';
 import AddToCartButton from '../../../common/AddToCartButton';
 import { Plane, Globe } from 'lucide-react';
-import { FlightUtils } from '../utils/flightUtils';
+import { FlightUtils, type Promotion } from '../utils/flightUtils';
 import type { Flight } from '../types/Flight';
 
 interface PromoBadgeProps {
@@ -10,7 +9,7 @@ interface PromoBadgeProps {
 
 const PromoBadge: React.FC<PromoBadgeProps> = ({ promotion }) => {
   if (!promotion) return null;
-  if (promotion.remainingSeats <= 0) {
+  if ((promotion.remainingSeats ?? 0) <= 0) {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 font-sans">
         Promoción agotada

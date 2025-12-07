@@ -1,5 +1,5 @@
 // src/layouts/Header.tsx
-import { ShoppingCart, Settings, User, Menu, X, LogOut, Newspaper, Bell, MessageCircle, Headphones } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Newspaper, MessageCircle, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { useState } from "react";

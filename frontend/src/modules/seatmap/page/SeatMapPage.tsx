@@ -5,8 +5,8 @@ import { toast } from 'react-toastify';
 
 const SeatMapPage = () => {
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
-  const [flightType, setFlightType] = useState<'nacional' | 'internacional'>('nacional');
-  const [passengerClass, setPassengerClass] = useState<'primera' | 'economica' | undefined>(undefined);
+  const [flightType, _setFlightType] = useState<'nacional' | 'internacional'>('nacional');
+  const [_passengerClass, _setPassengerClass] = useState<'primera' | 'economica' | undefined>(undefined);
   const [hasChangedSeat, setHasChangedSeat] = useState(false);
 
   // Simular asientos ocupados (en producción vendría del backend)
@@ -49,10 +49,12 @@ const SeatMapPage = () => {
     tipo: flightType,
     occupiedSeats,
     selectedSeat,
-    passengerClass,
+    passengerClass: _passengerClass,
   };
 
-  const resetSelection = () => {
+  // Función disponible para reiniciar la selección de asiento
+  // Se puede llamar desde botones de UI en el futuro
+  void function resetSelection() {
     setSelectedSeat(null);
     setHasChangedSeat(false);
     toast.info('🔄 Selección reiniciada', { position: 'top-center', autoClose: 2000 });
