@@ -1,25 +1,25 @@
+# backend/Dockerfile
 FROM node:20-alpine
 
-# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
+# Copiar package.json y package-lock.json primero (cache layer)
 COPY package*.json ./
 
-# Copiar la carpeta prisma antes de instalar dependencias
+# Copiar prisma antes de instalar (si usas prisma)
 COPY prisma ./prisma
 
 # Instalar dependencias
 RUN npm install
 
-# Copiar el resto del proyecto
+# Copiar el resto del código
 COPY . .
 
-# Compilar NestJS
+# Compilar la app (Nest)
 RUN npm run build
 
-# Exponer el puerto (Render lo detecta desde aquí)
+# Exponer puerto (solo informativo; Render usa PORT env)
 EXPOSE 3000
 
-# Comando de producción: ejecutar JS compilado
-CMD ["node", "dist/main.js"]
+# Ejecutar el main compilado (ruta: dist/src/main.js)
+CMD ["node", "dist/src/main.js"]
