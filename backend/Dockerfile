@@ -1,24 +1,25 @@
 FROM node:20-alpine
 
-# Instalar Nest CLI y nodemon globalmente (solo necesario para dev)
-RUN npm install -g @nestjs/cli nodemon
-
+# Crear directorio de trabajo
 WORKDIR /app
 
 # Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Copiar la carpeta prisma ANTES de instalar dependencias
+# Copiar la carpeta prisma antes de instalar dependencias
 COPY prisma ./prisma
 
-# Instalar dependencias (incluye prisma generate si tienes postinstall)
+# Instalar dependencias
 RUN npm install
 
-# Copiar todo el resto del código
+# Copiar el resto del proyecto
 COPY . .
 
-# Exponer puerto
+# Compilar NestJS
+RUN npm run build
+
+# Exponer el puerto (Render lo detecta desde aquí)
 EXPOSE 3000
 
-# Iniciar la app
-CMD ["npm", "run", "start:dev"]
+# Comando de producción: ejecutar JS compilado
+CMD ["node", "dist/main.js"]
