@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-# Instalar Nest CLI globalmente y nodemon para hot reload
+# Instalar Nest CLI y nodemon globalmente (solo necesario para dev)
 RUN npm install -g @nestjs/cli nodemon
 
 WORKDIR /app
@@ -8,14 +8,17 @@ WORKDIR /app
 # Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar dependencias, incluyendo devDependencies
+# Copiar la carpeta prisma ANTES de instalar dependencias
+COPY prisma ./prisma
+
+# Instalar dependencias (incluye prisma generate si tienes postinstall)
 RUN npm install
 
-# Copiar todo el código
+# Copiar todo el resto del código
 COPY . .
 
-# Exponer el puerto del backend
+# Exponer puerto
 EXPOSE 3000
 
-# Comando para desarrollo: hot reload con nodemon
+# Iniciar la app
 CMD ["npm", "run", "start:dev"]
