@@ -6,8 +6,6 @@ import { useCrearVuelo } from "../hooks/useCrearVuelo";
 import { useAeropuertoValidation, type Aeropuerto } from "../hooks/useAeropuertoValidation";
 import { obtenerDuracionVuelo, formatearDuracion } from "../flightDuration";
 
-// ================== ICONOS MODERNOS ==================
-
 const PlaneIcon = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
@@ -118,7 +116,6 @@ export const CrearVueloPage: React.FC = () => {
     addToast('success', title, message);
   }, [addToast]);
 
-
   const navigate = useNavigate();
   const [showConfirm, setShowConfirm] = React.useState(false);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -144,6 +141,7 @@ export const CrearVueloPage: React.FC = () => {
   }, []);
   
   const {
+    // aeronaves no se usa actualmente
     form,
     setForm,
     salidaDate,

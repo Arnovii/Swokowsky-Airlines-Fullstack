@@ -1,10 +1,10 @@
 // src/routes/ClientRoute.tsx
-import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import type { ReactNode } from "react";
 
 type ClientRouteProps = { 
-  children: React.JSX.Element;
+  children: ReactNode;
 };
 
 export default function ClientRoute({ children }: ClientRouteProps) {

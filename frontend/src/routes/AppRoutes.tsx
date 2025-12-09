@@ -26,6 +26,7 @@ import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
+import { ChatPage } from "../modules/chat";
 
 
 
@@ -91,6 +92,16 @@ export default function AppRoutes() {
         {/* Foro público - visible para todos, escritura solo para usuarios autenticados */}
         <Route path="/foro" element={<ForoPage />} />
         <Route path="/foro/:id" element={<HiloDetallePage />} />
+
+        {/* Chat privado de soporte - requiere autenticación */}
+        <Route
+          path="/chat"
+          element={
+            <PrivateRoute>
+              <ChatPage />
+            </PrivateRoute>
+          }
+        />
 
         <Route
           path="/checkout"

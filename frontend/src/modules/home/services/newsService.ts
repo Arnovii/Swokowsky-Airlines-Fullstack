@@ -1,5 +1,5 @@
 // services/newsService.ts
-import api from '@/api/axios'; // Importa tu instancia de axios configurada
+import api from '../../../api/axios'; // Importa tu instancia de axios configurada
 
 export interface CreateNewsData {
   title: string;

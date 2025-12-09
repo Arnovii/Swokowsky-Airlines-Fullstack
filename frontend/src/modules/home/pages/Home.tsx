@@ -1,8 +1,8 @@
 
 import React from 'react';
-import HeroBanner from '@/modules/home/components/heroBanner';
-import FeaturedDestinations from '@/modules/home/components/FeaturedDestinations'; 
-import FeaturedNews from '@/modules/home/components/FeaturedNews';
+import HeroBanner from '../components/heroBanner';
+import FeaturedDestinations from '../components/FeaturedDestinations'; 
+import FeaturedNews from '../components/FeaturedNews';
 
 const Home: React.FC = () => {
   return (

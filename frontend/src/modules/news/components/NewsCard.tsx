@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Clock, Eye, ArrowRight } from 'lucide-react';
 import type { Article } from '../services/newsService';
 
