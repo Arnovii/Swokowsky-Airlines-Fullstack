@@ -56,10 +56,26 @@
                         <strong>💺 Asiento:</strong> {{NumeroAsiento}} - {{CategoriaAsiento}}
                       </td>
                     </tr>
+                    {{#if CodigoCheckin}}
+                    <tr>
+                      <td style="color:#e2e8f0 !important;font-size:1.1rem !important;padding:8px 0 !important;text-align:left !important;">
+                        <strong>🔐 Código de Check-in:</strong> 
+                        <span style="background:#22c55e !important;color:#fff !important;padding:4px 12px !important;border-radius:6px !important;font-family:monospace !important;font-size:1.2rem !important;letter-spacing:1px !important;">
+                          {{CodigoCheckin}}
+                        </span>
+                      </td>
+                    </tr>
+                    {{/if}}
                   </table>
 
                   <!-- Separador -->
                   <div style="width:80% !important;height:1px !important;background:#23395d !important;margin:28px auto !important;"></div>
+
+                  {{#if CodigoCheckin}}
+                  <p style="font-size:1.05rem !important;color:#fbbf24 !important;margin:0 0 12px 0 !important;font-weight:bold !important;">
+                    ⚠️ Guarda tu código de check-in. Lo necesitarás para hacer el check-in online 24 horas antes de tu vuelo.
+                  </p>
+                  {{/if}}
 
                   <p style="font-size:1.05rem !important;color:#e2e8f0 !important;margin:0 0 20px 0 !important;">
                     Recuerda llegar al aeropuerto con tiempo y tener tus documentos listos.

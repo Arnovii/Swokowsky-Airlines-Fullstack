@@ -122,6 +122,12 @@ model ticket {
   estado         ticket_estado
   creado_en      DateTime       @default(now()) @db.DateTime(0)
 
+  uniqueCheckinCode  String?     // Código único enviado x email
+  checkinEnabled     Boolean     @default(false)  // Solo se activa 24h antes
+  checkinCompleted   Boolean     @default(false)
+  checkinCompletedAt DateTime?
+  asientoAsignado    String?     @db.VarChar(20)  // Ej: "12A"
+
   // relación one-to-one con pasajero (lado sin FK)
   pasajero pasajero? @relation("TicketPasajero")
 

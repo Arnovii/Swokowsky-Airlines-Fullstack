@@ -27,6 +27,8 @@ import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 import { ChatPage } from "../modules/chat";
+import Checkin from "../modules/checkin/pages/checkin";
+import CheckinConfirmation from "../modules/checkin/pages/CheckinConfirmation";
 
 
 
@@ -70,7 +72,7 @@ export default function AppRoutes() {
 
         {/* Mapa de asientos */}
         <Route
-          path="/mapa-asientos"
+          path="/mapa-asientos/:id_vuelo"
           element={
             <ClientRoute>
               <SeatMapPage />
@@ -123,6 +125,10 @@ export default function AppRoutes() {
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
+
+        {/* Checkin */}
+        <Route path="/checkin" element={<Checkin />} />
+        <Route path="/checkin/confirmacion" element={<CheckinConfirmation />} />
 
         {/* Panel Admin */}
         <Route
