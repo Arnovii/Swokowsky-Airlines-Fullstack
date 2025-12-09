@@ -7,7 +7,6 @@ import {
   LogOut,
   Newspaper,
   MessageCircle,
-  Headphones,
   PlaneTakeoff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -87,18 +86,6 @@ export default function Header() {
             <span className="text-sm font-medium">Foro</span>
           </Link>
 
-          {/* Chat de Soporte - Solo usuarios autenticados */}
-          {auth.isAuthenticated && (
-            <Link
-              to="/chat"
-              className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
-              title="Chat de Soporte"
-            >
-              <Headphones className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
-              <span className="text-sm font-medium">Soporte</span>
-            </Link>
-          )}
-
           {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES (no admin/root) */}
           {!isAdmin && (
             <Link
@@ -115,13 +102,11 @@ export default function Header() {
           {showCheckIn && (
             <Link
               to="/checkin"
-              className="flex items-center gap-2 px-4 py-2.5 h-11 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
+              className="flex items-center gap-2 px-3 py-2 text-white hover:text-emerald-300 transition-all duration-300 group"
               title="Realizar Check-In"
             >
-              <PlaneTakeoff className="h-5 w-5 text-emerald-300 group-hover:text-emerald-200 transition-colors duration-300" />
-              <span className="text-sm font-medium text-emerald-200 group-hover:text-white whitespace-nowrap">
-                Check-In
-              </span>
+              <PlaneTakeoff className="h-5 w-5 text-emerald-400 group-hover:text-emerald-300 transition-colors duration-300" />
+              <span className="text-sm font-medium">Check-In</span>
             </Link>
           )}
 
@@ -203,20 +188,6 @@ export default function Header() {
               </span>
             </Link>
 
-            {/* Chat de Soporte Mobile - Solo usuarios autenticados */}
-            {auth.isAuthenticated && (
-              <Link
-                to="/chat"
-                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-cyan-500/10 hover:border-cyan-400/30 transition-all duration-300 group"
-                onClick={() => setOpen(false)}
-              >
-                <Headphones className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
-                <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
-                  Soporte
-                </span>
-              </Link>
-            )}
-
             {/* ⭐ Shopping Cart Link Mobile - SOLO VISIBLE PARA CLIENTES */}
             {!isAdmin && (
               <Link
@@ -236,13 +207,13 @@ export default function Header() {
             {/* ⭐ Botón Realizar Check-In! Mobile */}
             {showCheckIn && (
               <Link
-                to="/checkin"  // 👈 ruta corregida
-                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
+                to="/checkin"
+                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-emerald-500/10 hover:border-emerald-400/30 transition-all duration-300 group"
                 onClick={() => setOpen(false)}
               >
-                <PlaneTakeoff className="h-5 w-5 text-emerald-300 group-hover:text-emerald-200 transition-colors duration-300 flex-shrink-0" />
-                <span className="text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold">
-                  Realizar Check-In
+                <PlaneTakeoff className="h-5 w-5 text-emerald-400 group-hover:text-emerald-300 transition-colors duration-300 flex-shrink-0" />
+                <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
+                  Check-In
                 </span>
               </Link>
             )}

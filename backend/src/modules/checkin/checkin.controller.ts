@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { CheckinService } from './checkin.service';
-import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ValidateCheckinDto } from './dto/validate-checkin.dto';
 import { AssignSeatDto } from './dto/assign-seat.dto';
 import { ConfirmCheckinDto } from './dto/confirm-checkin.dto';
 import { GenerateCodeDto } from './dto/generate-code.dto';
 
-@ApiTags('check-in (público)')
+@ApiTags('check-in')
+@ApiBearerAuth('bearerAuth')
 @Controller('checkin')
 export class CheckinController {
   constructor(private readonly service: CheckinService) {}
@@ -30,14 +31,14 @@ export class CheckinController {
   }
 
   @Post('asignar-asiento')
-  @ApiOperation({ summary: 'Asignar asiento al ticket usando código único' })
+  @ApiOperation({ summary: 'Asignar asiento al ticket usando código de reserva y ticketId' })
   async assignSeat(@Body() dto: AssignSeatDto) {
-    return this.service.assignSeat(dto.codigo_unico, dto.asiento);
+    return this.service.assignSeat(dto.codigo_unico, dto.ticketId, dto.asiento);
   }
 
   @Post('confirmar')
-  @ApiOperation({ summary: 'Confirmar check-in y deshabilitar el código' })
+  @ApiOperation({ summary: 'Confirmar check-in para un ticket específico' })
   async confirm(@Body() dto: ConfirmCheckinDto) {
-    return this.service.confirmCheckin(dto.codigo_unico);
+    return this.service.confirmCheckin(dto.codigo_unico, dto.ticketId);
   }
 }

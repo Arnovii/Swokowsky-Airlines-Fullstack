@@ -1,486 +1,510 @@
 // frontend/src/modules/checkin/pages/checkin.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-// import api from "../../../api/axios";  // 👈 lo usarás cuando el backend esté listo
+import { toast } from "react-toastify";
+import checkinService, { type CheckinSessionData } from "../services/checkinService";
 
 type Step = 1 | 2 | 3;
 
-const EXTRA_BAG_PRICE = 80000; // 💼 Precio de la maleta adicional (ajústalo a lo que uséis)
+const EXTRA_BAG_PRICE = 80000; // 💼 Precio de la maleta adicional
 
 const CheckInPage: React.FC = () => {
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
-const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(1);
+  const [loading, setLoading] = useState(false);
 
-// Paso 1: código de reserva
-const [code, setCode] = useState("");
-const [codeError, setCodeError] = useState<string | null>(null);
+  // Paso 1: código de reserva y DNI
+  const [code, setCode] = useState("");
+  const [dni, setDni] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
 
-// Paso 2: datos del pasajero
-const [firstName, setFirstName] = useState("");
-const [lastName, setLastName] = useState("");
-const [documento, setDocumento] = useState("");
-const [email, setEmail] = useState("");
-const [extraBag, setExtraBag] = useState<"no" | "yes">("no");
-const [passengerError, setPassengerError] = useState<string | null>(null);
+  // Paso 2: datos del pasajero (vienen del backend)
+  const [ticketData, setTicketData] = useState<CheckinSessionData | null>(null);
+  const [extraBag, setExtraBag] = useState<"no" | "yes">("no");
 
-// Validación simple de código por ahora
-const validateCodeFormat = (value: string) => {
+  // Recuperar sesión previa si existe
+  useEffect(() => {
+    const session = checkinService.getSession();
+    if (session) {
+      setTicketData(session);
+      setCode(session.codigo_unico);
+      setExtraBag(session.extraBag ? "yes" : "no");
+      // Si ya tiene datos válidos, ir al paso 2 o 3
+      if (session.asientoAsignado) {
+        setStep(3);
+      } else if (session.ticketId) {
+        setStep(2);
+      }
+    }
+  }, []);
+
+  // Validación de código
+  const validateCodeFormat = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return "Ingresa el código de tu reserva.";
-    if (!/^[A-Za-z0-9]{6,10}$/.test(trimmed)) {
-    return "El código debe tener entre 6 y 10 caracteres alfanuméricos.";
+    if (trimmed.length < 6 || trimmed.length > 20) {
+      return "El código debe tener entre 6 y 20 caracteres.";
     }
     return null;
-};
+  };
 
-const handleSubmitCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const error = validateCodeFormat(code);
-    if (error) {
-    setCodeError(error);
-    return;
+  const validateDniFormat = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Ingresa tu número de documento.";
+    if (!/^[A-Za-z0-9]{5,20}$/.test(trimmed)) {
+      return "El documento debe tener entre 5 y 20 caracteres alfanuméricos.";
     }
+    return null;
+  };
+
+  const handleSubmitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const codeErr = validateCodeFormat(code);
+    const dniErr = validateDniFormat(dni);
+    
+    if (codeErr) {
+      setCodeError(codeErr);
+      return;
+    }
+    if (dniErr) {
+      setCodeError(dniErr);
+      return;
+    }
+    
     setCodeError(null);
+    setLoading(true);
 
-    // 👉 Aquí se integrará el endpoint cuando exista:
-    /*
     try {
-    const res = await api.post("/checkin/validar-codigo", { codigo: code.trim() });
-    // si todo bien:
-    setStep(2);
-    } catch (err: any) {
-    setCodeError(
-        err?.response?.data?.message ||
-        "No encontramos una reserva con ese código. Verifica e inténtalo de nuevo."
-    );
+      // Llamar al endpoint de validación
+      const response = await checkinService.validateCode(code.trim(), dni.trim());
+      
+      // Guardar datos en estado y localStorage
+      const sessionData: CheckinSessionData = {
+        codigo_unico: code.trim(),
+        ticketId: response.ticketId,
+        id_vuelo: response.id_vuelo,
+        pasajero: response.pasajero,
+        asientoComprado: response.asientoComprado,
+        asientoAsignado: response.asientoAsignado,
+        salida: response.salida,
+        extraBag: false,
+      };
+      
+      setTicketData(sessionData);
+      checkinService.saveSession(sessionData);
+      
+      toast.success("✅ Código validado correctamente", { position: "top-center" });
+      setStep(2);
+      
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const message = error?.response?.data?.message || "No pudimos validar tu código. Verifica e inténtalo de nuevo.";
+      setCodeError(message);
+      toast.error(`❌ ${message}`, { position: "top-center" });
+    } finally {
+      setLoading(false);
     }
-    */
+  };
 
-    // 🔹 Mientras no haya backend: avanzar al paso 2
-    setStep(2);
-};
-
-const handleSubmitPassenger = (e: React.FormEvent) => {
+  const handleSubmitPassenger = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !documento.trim() || !email.trim()) {
-    setPassengerError("Por favor completa todos los campos obligatorios.");
-    return;
+    
+    // Guardar preferencia de maleta extra
+    if (ticketData) {
+      const updatedData = { ...ticketData, extraBag: extraBag === "yes" };
+      setTicketData(updatedData);
+      checkinService.saveSession(updatedData);
     }
-    setPassengerError(null);
-
-    // Aquí podrías guardar estos datos en contexto o en localStorage
-    // para reutilizarlos en SeatMapPage y en el flujo de cobro.
-
+    
     setStep(3);
-};
+  };
 
-const stepsConfig = [
+  const handleGoToSeatMap = () => {
+    if (!ticketData) return;
+    
+    // Navegar al mapa de asientos con el id del vuelo
+    navigate(`/mapa-asientos/${ticketData.id_vuelo}?checkin=true`);
+  };
+
+  const stepsConfig = [
     { id: 1, label: "Código de reserva" },
-    { id: 2, label: "Datos del pasajero" },
-    { id: 3, label: "Instrucciones" },
-];
+    { id: 2, label: "Verificar datos" },
+    { id: 3, label: "Seleccionar asiento" },
+  ];
 
-const wantsExtraBag = extraBag === "yes";
+  const wantsExtraBag = extraBag === "yes";
 
-return (
+  // Formatear fecha de salida
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("es-CO", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-[#050816] via-[#050b22] to-[#020617] text-white flex items-center justify-center px-4 py-16">
-    <div className="w-full max-w-3xl bg-[#050816]/80 border border-cyan-500/20 rounded-3xl shadow-[0_20px_60px_rgba(15,118,255,0.35)] overflow-hidden">
+      <div className="w-full max-w-3xl bg-[#050816]/80 border border-cyan-500/20 rounded-3xl shadow-[0_20px_60px_rgba(15,118,255,0.35)] overflow-hidden">
         {/* Header */}
         <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-cyan-500/20 bg-gradient-to-r from-[#020617] via-[#050816] to-[#020617]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Check-In en línea
-        </h1>
-        <p className="mt-2 text-sm text-slate-300">
-            Ingresa el código de tu reserva y completa los datos del pasajero
+          </h1>
+          <p className="mt-2 text-sm text-slate-300">
+            Ingresa el código de tu reserva y tu documento de identidad
             para continuar con el proceso de check-in.
-        </p>
+          </p>
         </div>
 
         {/* Stepper */}
         <div className="px-6 sm:px-8 pt-4 pb-2 bg-[#020617]/80 border-b border-cyan-500/10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
             {stepsConfig.map((s, idx) => {
-            const isActive = step === s.id;
-            const isDone = step > s.id;
-            return (
+              const isActive = step === s.id;
+              const isDone = step > s.id;
+              return (
                 <div key={s.id} className="flex items-center gap-2">
-                <div
+                  <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border transition-all ${
-                    isActive
+                      isActive
                         ? "bg-cyan-500 text-slate-900 border-cyan-300 shadow-md shadow-cyan-500/40"
                         : isDone
                         ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/60"
                         : "bg-slate-800 text-slate-300 border-slate-500/60"
                     }`}
-                >
-                    {s.id}
-                </div>
-                <span
+                  >
+                    {isDone ? "✓" : s.id}
+                  </div>
+                  <span
                     className={`text-xs sm:text-sm ${
-                    isActive
+                      isActive
                         ? "text-cyan-300 font-medium"
+                        : isDone
+                        ? "text-emerald-300"
                         : "text-slate-400"
                     }`}
-                >
+                  >
                     {s.label}
-                </span>
-                {idx < stepsConfig.length - 1 && (
+                  </span>
+                  {idx < stepsConfig.length - 1 && (
                     <div className="hidden sm:block w-6 h-px bg-slate-700 mx-1" />
-                )}
+                  )}
                 </div>
-            );
+              );
             })}
-        </div>
+          </div>
         </div>
 
         {/* Content */}
         <div className="px-6 sm:px-8 py-6 sm:py-8 space-y-6">
-        {/* Paso 1: Código de reserva */}
-        {step === 1 && (
+          {/* Paso 1: Código de reserva + DNI */}
+          {step === 1 && (
             <form onSubmit={handleSubmitCode} className="space-y-5">
-            <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5">
+              <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5">
                 <h2 className="text-lg font-semibold mb-2">
-                Paso 1: ingresa el código de tu reserva
+                  Paso 1: Valida tu reserva
                 </h2>
                 <p className="text-sm text-slate-300 mb-4">
-                Encontrarás el código de reserva en el correo de confirmación
-                que recibiste al completar tu compra. Suele tener entre{" "}
-                <span className="font-semibold text-cyan-300">
-                    6 y 10 caracteres
-                </span>{" "}
-                y puede incluir letras y números (ej:{" "}
-                <span className="font-mono text-cyan-300">AB12CD</span>).
+                  Ingresa el código de check-in que recibiste en tu correo de confirmación
+                  junto con tu número de documento de identidad.
                 </p>
 
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
-                Código de reserva
-                </label>
-                <input
-                type="text"
-                value={code}
-                onChange={(e) =>
-                    setCode(e.target.value.toUpperCase().replace(/\s/g, ""))
-                }
-                placeholder="Ej: AB12CD"
-                className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 font-mono tracking-[0.2em]"
-                />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
+                      Código de check-in
+                    </label>
+                    <input
+                      type="text"
+                      value={code}
+                      onChange={(e) =>
+                        setCode(e.target.value.toLowerCase().replace(/\s/g, ""))
+                      }
+                      placeholder="Ej: a1b2c3d4e5f6"
+                      disabled={loading}
+                      className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 font-mono tracking-[0.1em] disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
+                      Número de documento (DNI/Cédula/Pasaporte)
+                    </label>
+                    <input
+                      type="text"
+                      value={dni}
+                      onChange={(e) =>
+                        setDni(e.target.value.replace(/\s/g, ""))
+                      }
+                      placeholder="Ej: 12345678"
+                      disabled={loading}
+                      className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
                 {codeError && (
-                <p className="mt-2 text-xs text-red-400">{codeError}</p>
+                  <p className="mt-3 text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                    ⚠️ {codeError}
+                  </p>
                 )}
 
-                <div className="mt-4 flex flex-col sm:flex-row justify-between gap-3 text-xs text-slate-400">
-                <div className="flex-1">
-                    <p className="font-semibold text-slate-200 mb-1">
-                    ¿Qué debo escribir aquí?
-                    </p>
-                    <ul className="list-disc list-inside space-y-1">
-                    <li>El código exacto tal como aparece en tu correo.</li>
-                    <li>Sin espacios ni símbolos adicionales.</li>
-                    <li>Respeta mayúsculas y minúsculas si es posible.</li>
-                    </ul>
+                <div className="mt-4 text-xs text-slate-400 space-y-1">
+                  <p className="font-semibold text-slate-200">
+                    ¿Dónde encuentro el código?
+                  </p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>En el correo de confirmación de tu compra.</li>
+                    <li>El código tiene 12 caracteres alfanuméricos.</li>
+                    <li>El check-in solo está disponible 24 horas antes del vuelo.</li>
+                  </ul>
                 </div>
-                </div>
-            </div>
+              </div>
 
-            <div className="flex justify-end">
+              <div className="flex justify-end">
                 <button
-                type="submit"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-500 text-slate-900 text-sm font-semibold hover:bg-cyan-400 transition-all shadow-md shadow-cyan-500/40"
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-500 text-slate-900 text-sm font-semibold hover:bg-cyan-400 transition-all shadow-md shadow-cyan-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                Continuar con el check-in
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Validando...
+                    </>
+                  ) : (
+                    "Validar y continuar"
+                  )}
                 </button>
-            </div>
+              </div>
             </form>
-        )}
+          )}
 
-        {/* Paso 2: Datos del pasajero + maleta */}
-        {step === 2 && (
+          {/* Paso 2: Verificar datos del pasajero */}
+          {step === 2 && ticketData && (
             <form onSubmit={handleSubmitPassenger} className="space-y-5">
-            <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">
-                    Paso 2: datos del pasajero
-                </h2>
-                <span className="text-xs px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/40 text-cyan-200">
-                    Código: <span className="font-mono">{code}</span>
-                </span>
+              <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h2 className="text-lg font-semibold">
+                    Paso 2: Verifica tus datos
+                  </h2>
+                  <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/40 text-emerald-200">
+                    ✓ Código validado
+                  </span>
                 </div>
 
                 <p className="text-sm text-slate-300">
-                Completa los datos tal como aparecen en tu documento y en la
-                reserva. También podrás añadir opcionalmente una{" "}
-                <span className="font-semibold text-cyan-300">
-                    maleta adicional
-                </span>{" "}
-                que tendrá un cargo extra descontado de tu saldo disponible.
+                  Verifica que los datos de tu reserva sean correctos. Si hay algún
+                  error, contacta con soporte antes de continuar.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
-                    Nombre del pasajero
-                    </label>
-                    <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Ej: Pedro"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
-                    Apellido del pasajero
-                    </label>
-                    <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Ej: Martínez"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
-                    Número de documento
-                    </label>
-                    <input
-                    type="text"
-                    value={documento}
-                    onChange={(e) => setDocumento(e.target.value)}
-                    placeholder="Cédula / Pasaporte"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
-                    Correo electrónico de contacto
-                    </label>
-                    <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ejemplo@correo.com"
-                    className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-600 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
-                    />
-                    <p className="mt-2 text-xs text-slate-400">
-                    Usaremos este correo para enviarte confirmaciones y
-                    recordatorios del check-in.
+                  <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 mb-2 uppercase tracking-wide">
+                      Datos del pasajero
                     </p>
-                </div>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        <span className="text-slate-400">Nombre:</span>{" "}
+                        <span className="font-semibold text-white">{ticketData.pasajero.nombre}</span>
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Documento:</span>{" "}
+                        <span className="font-semibold text-white">{ticketData.pasajero.dni}</span>
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Email:</span>{" "}
+                        <span className="font-semibold text-white">{ticketData.pasajero.email}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 mb-2 uppercase tracking-wide">
+                      Datos del vuelo
+                    </p>
+                    <div className="space-y-2 text-sm">
+                      <p>
+                        <span className="text-slate-400">Ticket ID:</span>{" "}
+                        <span className="font-mono font-semibold text-white">#{ticketData.ticketId}</span>
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Salida:</span>{" "}
+                        <span className="font-semibold text-white">{formatDate(ticketData.salida)}</span>
+                      </p>
+                      {ticketData.asientoComprado && (
+                        <p>
+                          <span className="text-slate-400">Asiento comprado:</span>{" "}
+                          <span className="font-mono font-semibold text-emerald-300">{ticketData.asientoComprado}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Maleta adicional */}
-                <div className="mt-2 bg-slate-950/60 border border-slate-700/70 rounded-xl p-3 sm:p-4">
-                <p className="text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
+                <div className="bg-slate-950/60 border border-slate-700/70 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-slate-200 uppercase tracking-wide mb-2">
                     Maleta adicional (opcional)
-                </p>
-                <p className="text-xs text-slate-300 mb-3">
+                  </p>
+                  <p className="text-xs text-slate-300 mb-3">
                     Puedes añadir una maleta adicional a tu reserva. Este
                     servicio tiene un costo de{" "}
                     <span className="font-semibold text-emerald-300">
-                    ${EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP
+                      ${EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP
                     </span>{" "}
-                    que se descontará de tu saldo disponible al momento de
-                    confirmar el check-in.
-                </p>
+                    que se descontará de tu saldo disponible.
+                  </p>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <label className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
-                    <input
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
                         type="radio"
                         name="extraBag"
                         value="no"
                         checked={extraBag === "no"}
                         onChange={() => setExtraBag("no")}
                         className="accent-cyan-400"
-                    />
-                    <span>No, no deseo añadir maleta adicional</span>
+                      />
+                      <span>No deseo maleta adicional</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
-                    <input
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
                         type="radio"
                         name="extraBag"
                         value="yes"
                         checked={extraBag === "yes"}
                         onChange={() => setExtraBag("yes")}
                         className="accent-emerald-400"
-                    />
-                    <span>
-                        Sí, deseo añadir una maleta adicional (+{" "}
-                        {EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP)
-                    </span>
+                      />
+                      <span>
+                        Sí, añadir maleta (+{EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP)
+                      </span>
                     </label>
+                  </div>
                 </div>
-                </div>
+              </div>
 
-                {passengerError && (
-                <p className="text-xs text-red-400">{passengerError}</p>
-                )}
-
-                <div className="mt-3 text-xs text-slate-400 space-y-1">
-                <p className="font-semibold text-slate-200">
-                    ¿Qué debo escribir aquí?
-                </p>
-                <ul className="list-disc list-inside space-y-1">
-                    <li>
-                    Nombre y apellido tal como aparecen en tu documento de
-                    identidad.
-                    </li>
-                    <li>
-                    El número de documento con el que hiciste la compra.
-                    </li>
-                    <li>
-                    Un correo válido al que tengas acceso durante el viaje.
-                    </li>
-                    <li>
-                    Si eliges maleta adicional, asegúrate de tener saldo
-                    suficiente en tu monedero.
-                    </li>
-                </ul>
-                </div>
-            </div>
-
-            <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3">
                 <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="px-4 py-2.5 rounded-xl border border-slate-600 text-sm text-slate-200 hover:bg-slate-800/80 transition-all"
+                  type="button"
+                  onClick={() => {
+                    checkinService.clearSession();
+                    setTicketData(null);
+                    setStep(1);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-600 text-sm text-slate-200 hover:bg-slate-800/80 transition-all"
                 >
-                ← Volver al código
+                  ← Usar otro código
                 </button>
                 <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-cyan-500 text-slate-900 text-sm font-semibold hover:bg-cyan-400 transition-all shadow-md shadow-cyan-500/40"
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-cyan-500 text-slate-900 text-sm font-semibold hover:bg-cyan-400 transition-all shadow-md shadow-cyan-500/40"
                 >
-                Ver instrucciones del check-in
+                  Continuar
                 </button>
-            </div>
+              </div>
             </form>
-        )}
+          )}
 
-        {/* Paso 3: Instrucciones + resumen + continuar al mapa de asientos */}
-        {step === 3 && (
+          {/* Paso 3: Instrucciones + ir al mapa de asientos */}
+          {step === 3 && ticketData && (
             <div className="space-y-5">
-            <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 space-y-4">
+              <div className="bg-slate-900/60 border border-slate-700/60 rounded-2xl p-4 sm:p-5 space-y-4">
                 <h2 className="text-lg font-semibold">
-                Paso 3: instrucciones para completar tu check-in
+                  Paso 3: Selecciona tu asiento
                 </h2>
                 <p className="text-sm text-slate-300">
-                Ya verificamos tu código de reserva y los datos del pasajero.
-                A continuación vas a elegir tu asiento en el mapa del avión.
+                  Ya verificamos tu reserva. Ahora puedes elegir tu asiento en el
+                  mapa del avión.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-3">
-                    <p className="text-xs font-semibold text-cyan-300 mb-1 uppercase tracking-wide">
-                    Información de tu check-in
+                  <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 mb-2 uppercase tracking-wide">
+                      Resumen del check-in
                     </p>
-                    <p className="text-xs text-slate-300 space-y-1">
-                    <span className="block">
-                        Código:{" "}
-                        <span className="font-mono text-cyan-300">
-                        {code}
-                        </span>
-                    </span>
-                    <span className="block">
-                        Pasajero:{" "}
-                        <span className="font-semibold">
-                        {firstName} {lastName}
-                        </span>
-                    </span>
-                    <span className="block">
-                        Documento:{" "}
-                        <span className="font-semibold">{documento}</span>
-                    </span>
-                    <span className="block">
-                        Correo:{" "}
-                        <span className="font-semibold">{email}</span>
-                    </span>
+                    <div className="space-y-1 text-sm">
+                      <p>
+                        <span className="text-slate-400">Pasajero:</span>{" "}
+                        <span className="font-semibold">{ticketData.pasajero.nombre}</span>
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Documento:</span>{" "}
+                        <span className="font-semibold">{ticketData.pasajero.dni}</span>
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Salida:</span>{" "}
+                        <span className="font-semibold">{formatDate(ticketData.salida)}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 mb-2 uppercase tracking-wide">
+                      Servicios adicionales
                     </p>
+                    <div className="space-y-1 text-sm">
+                      <p>
+                        <span className="text-slate-400">Maleta adicional:</span>{" "}
+                        <span className={wantsExtraBag ? "text-emerald-300 font-semibold" : "font-semibold"}>
+                          {wantsExtraBag ? "Sí" : "No"}
+                        </span>
+                      </p>
+                      {wantsExtraBag && (
+                        <p className="text-xs text-slate-400">
+                          Cargo: {EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-3">
-                    <p className="text-xs font-semibold text-cyan-300 mb-1 uppercase tracking-wide">
-                    Servicios adicionales
-                    </p>
-                    <p className="text-xs text-slate-300 space-y-1">
-                    <span className="block">
-                        Maleta adicional:{" "}
-                        <span
-                        className={
-                            wantsExtraBag
-                            ? "text-emerald-300 font-semibold"
-                            : "text-slate-200 font-semibold"
-                        }
-                        >
-                        {wantsExtraBag ? "Sí" : "No"}
-                        </span>
-                    </span>
-                    {wantsExtraBag && (
-                        <span className="block">
-                        Cargo estimado:{" "}
-                        <span className="font-semibold text-emerald-300">
-                            {EXTRA_BAG_PRICE.toLocaleString("es-CO")} COP
-                        </span>
-                        <span className="block text-[11px] text-slate-400 mt-1">
-                            Este valor se descontará de tu saldo disponible al
-                            momento de confirmar definitivamente el check-in.
-                        </span>
-                        </span>
-                    )}
-                    {!wantsExtraBag && (
-                        <span className="block text-[11px] text-slate-400 mt-1">
-                        Si cambias de opinión, podrás añadir servicios
-                        adicionales antes de finalizar tu proceso.
-                        </span>
-                    )}
-                    </p>
+                <div className="bg-amber-500/10 border border-amber-400/30 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-amber-300 mb-2">
+                    ⚠️ Importante
+                  </p>
+                  <ul className="text-xs text-slate-300 list-disc list-inside space-y-1">
+                    <li>Selecciona un asiento disponible en el mapa.</li>
+                    <li>Una vez confirmado, no podrás cambiar el asiento.</li>
+                    <li>El check-in quedará completado al confirmar tu asiento.</li>
+                  </ul>
                 </div>
-                </div>
+              </div>
 
-                <div className="mt-2 text-xs text-slate-400 space-y-1">
-                <p className="font-semibold text-slate-200">
-                    ¿Qué harás en el mapa de asientos?
-                </p>
-                <ul className="list-disc list-inside space-y-1">
-                    <li>Ver el plano del avión disponible para tu vuelo.</li>
-                    <li>Elegir el asiento que prefieras entre los libres.</li>
-                    <li>
-                    Confirmar tu selección para completar el check-in y aplicar
-                    los cargos adicionales (como la maleta).
-                    </li>
-                </ul>
-                </div>
-            </div>
-
-            <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3">
                 <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="px-4 py-2.5 rounded-xl border border-slate-600 text-sm text-slate-200 hover:bg-slate-800/80 transition-all"
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-600 text-sm text-slate-200 hover:bg-slate-800/80 transition-all"
                 >
-                ← Volver a datos del pasajero
+                  ← Volver
                 </button>
                 <button
-                type="button"
-                onClick={() => navigate("/mapa-asientos")}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-900 text-sm font-semibold hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/40"
+                  type="button"
+                  onClick={handleGoToSeatMap}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-900 text-sm font-semibold hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/40"
                 >
-                Ir al mapa de asientos
+                  Ir al mapa de asientos →
                 </button>
+              </div>
             </div>
-            </div>
-        )}
+          )}
         </div>
+      </div>
     </div>
-    </div>
-);
+  );
 };
 
 export default CheckInPage;

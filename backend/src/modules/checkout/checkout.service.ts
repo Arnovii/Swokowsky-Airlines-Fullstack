@@ -8,6 +8,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { usuario, ticket_estado, asiento_clases, configuracion_asientos } from '@prisma/client';
 import type { ticket } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import * as crypto from 'crypto';
+
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
@@ -18,6 +20,26 @@ export class CheckoutService {
     private readonly userService: UsersService,
     private readonly prisma: PrismaService
   ) { }
+
+  /**
+   * Genera código único de check-in para un ticket
+   */
+  private generateCheckinCode(dni: string, vueloId: number, ticketId: number): string {
+    const base = `${dni}-${vueloId}-${ticketId}-${Date.now()}`;
+    return crypto.createHash('sha256').update(base).digest('hex').slice(0, 12);
+  }
+
+  /**
+   * Genera código de reserva único para toda una transacción/compra
+   * Este código es compartido por todos los tickets comprados en la misma transacción
+   * Formato: 6 caracteres alfanuméricos en mayúsculas (ej: ABC123)
+   */
+  private generateReservationCode(userId: number): string {
+    const base = `reservation-${userId}-${Date.now()}-${Math.random()}`;
+    const hash = crypto.createHash('sha256').update(base).digest('hex');
+    // Tomar 6 caracteres y convertir a mayúsculas para facilidad de uso
+    return hash.slice(0, 6).toUpperCase();
+  }
 
   /**
    * Calcula el total del carrito consultando tarifas actuales en DB.
@@ -344,7 +366,6 @@ export class CheckoutService {
 
       // Determinar tipo de vuelo (nacional o internacional)
       const flightType = await this.determineFlightType(vuelo);
-      vueloCache.set(vid, { ...vueloCache.get(vid), vuelo, flightType });
 
       // obtener configuración de asientos para esa aeronave
       const configs = await this.prisma.configuracion_asientos.findMany({
@@ -355,7 +376,8 @@ export class CheckoutService {
         configPorClase[c.clase] = c.cantidad;
       }
 
-      vueloCache.set(vid, { vuelo, configPorClase });
+      // Guardar todo en cache (incluyendo flightType)
+      vueloCache.set(vid, { vuelo, flightType, configPorClase });
 
       // contar tickets pagados existentes por clase
       const cuentas = await this.prisma.ticket.groupBy({
@@ -422,6 +444,10 @@ export class CheckoutService {
       // Generar lista de todos los asientos posibles para esta clase
       const flightType = cache.flightType;
       
+      // DEBUG: Log para verificar la asignación de asientos
+      this.logger.log(`🎫 Checkout - Vuelo: ${vueloID}, Clase solicitada: ${clase}, Tipo vuelo: ${flightType}`);
+      this.logger.log(`🎫 Config asientos: ${JSON.stringify(cache.configPorClase)}`);
+      
       // OPTIMIZACIÓN: Pasamos cache.configPorClase como 3er argumento
       const allSeatsForClass = await this.generateAllSeatsForClass(
         flightType,
@@ -429,8 +455,13 @@ export class CheckoutService {
         cache.configPorClase // <--- AQUÍ PASAMOS LA DATA PRE-CARGADA
       );
 
+      // DEBUG: Log de asientos generados
+      this.logger.log(`🎫 Asientos generados para clase ${clase}: primeros 5 = [${allSeatsForClass.slice(0, 5).join(', ')}], últimos 5 = [${allSeatsForClass.slice(-5).join(', ')}]`);
+      this.logger.log(`🎫 Total asientos para ${clase}: ${allSeatsForClass.length}`);
+
       // Obtener asientos ya ocupados
       const occupiedSeats = await this.getOccupiedSeats(vueloID, clase);
+      this.logger.log(`🎫 Asientos ocupados para ${clase}: ${occupiedSeats.size}`);
 
       // Calcular asientos disponibles (no ocupados)
       const availableSeats = allSeatsForClass.filter(seat => !occupiedSeats.has(seat));
@@ -447,6 +478,8 @@ export class CheckoutService {
       let assignedSeats: string[] = [];
       try {
         assignedSeats = this.selectRandomSeats(availableSeats, pasajeros.length);
+        // DEBUG: Log de asientos asignados
+        this.logger.log(`🎫 Asientos asignados para clase ${clase}: [${assignedSeats.join(', ')}]`);
       } catch (err) {
         throw new BadRequestException(`Error al asignar asientos: ${err?.message ?? err}`);
       }
@@ -496,11 +529,27 @@ export class CheckoutService {
     }
 
     // Ejecutar creación de tickets + pasajeros y deducción de saldo en una transacción
+    // Guardamos los tickets creados para luego generar códigos de check-in
+    // Tipo para tickets con pasajero incluido
+    type TicketWithPasajero = ticket & { pasajero: { dni: string; nombre: string; apellido: string } | null };
+    let createdTickets: TicketWithPasajero[] = [];
+    
+    // 🎫 GENERAR UN CÓDIGO DE RESERVA ÚNICO PARA TODA LA TRANSACCIÓN
+    // Este código será compartido por todos los tickets de esta compra
+    const transactionReservationCode = this.generateReservationCode(client.id_usuario);
+    this.logger.log(`🎫 Código de reserva generado para transacción: ${transactionReservationCode}`);
+    
     try {
-      await this.prisma.$transaction(async (tx) => {
+      createdTickets = await this.prisma.$transaction(async (tx) => {
         // crear tickets (y pasajeros nested) dentro de la transacción usando `tx`
-        const creations = ticketDataList.map(td => tx.ticket.create({ data: td }));
-        await Promise.all(creations);
+        const tickets: TicketWithPasajero[] = [];
+        for (const td of ticketDataList) {
+          const created = await tx.ticket.create({ 
+            data: td,
+            include: { pasajero: true }
+          });
+          tickets.push(created as TicketWithPasajero);
+        }
 
         // deducir saldo del usuario dentro de la misma tx
         await tx.usuario.update({
@@ -508,17 +557,33 @@ export class CheckoutService {
           data: { saldo: { decrement: total } }
         });
 
-        // (opcional) crear historiales de pago usando `tx` también
+        return tickets;
       });
 
-      // 7. Enviar correo de confirmación a cada pasajero
-      for (const note of emailNotifications) {
+      // 7. Asignar el MISMO código de reserva a TODOS los tickets de esta transacción
+      for (const ticket of createdTickets) {
+        if (ticket.pasajero) {
+          // Actualizar ticket con el código de reserva compartido
+          await this.prisma.ticket.update({
+            where: { id_ticket: ticket.id_ticket },
+            data: { uniqueCheckinCode: transactionReservationCode }
+          });
+          
+          this.logger.log(`✅ Código de reserva asignado al ticket ${ticket.id_ticket} (pasajero: ${ticket.pasajero.nombre}): ${transactionReservationCode}`);
+        }
+      }
+
+      // 8. Enviar correo de confirmación a cada pasajero con el MISMO código de reserva
+      for (let i = 0; i < emailNotifications.length; i++) {
+        const note = emailNotifications[i];
+        
         try {
           await this.mailService.sendTicketEmail(note.email, {
             nombre: note.nombre,
             TituloNoticiaVuelo: note.titulo,
             NumeroAsiento: note.asiento,
             CategoriaAsiento: note.clase,
+            CodigoCheckin: transactionReservationCode, // Mismo código para todos los pasajeros de la transacción
           });
         } catch (err) {
           this.logger.warn(`Error enviando email a ${note.email}: ${err?.message ?? err}`);

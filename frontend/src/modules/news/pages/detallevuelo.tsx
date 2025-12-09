@@ -5,6 +5,7 @@ import axios from "axios";
 import AddToCartButton from "../../../common/AddToCartButton";
 import { ClassSelectorModal } from "../../flightsearch/components/ClassSelectorModal";
 import { useCart } from "../../../context/CartContext";
+import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-toastify";
 
 export interface Noticia {
@@ -95,6 +96,7 @@ export default function DetalleVuelo() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart(); // 👈 Obtén la función addToCart de tu context
+  const { isAuthenticated } = useAuth(); // 👈 Verificar autenticación
   const [vuelo, setVuelo] = useState<Noticia | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +121,21 @@ export default function DetalleVuelo() {
   }, [id]);
 
   const handleOpenModal = () => {
+    // Verificar si el usuario está autenticado
+    if (!isAuthenticated) {
+      toast.info(
+        '🔐 Debes iniciar sesión para agregar vuelos al carrito',
+        {
+          position: "top-center",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+        }
+      );
+      navigate('/login', { state: { from: `/noticias/vuelo/${id}` } });
+      return;
+    }
     setIsModalOpen(true);
   };
 

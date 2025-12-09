@@ -554,11 +554,13 @@ export default function Perfil() {
     }
   };
 
-  const setAsDefault = (id: string) => {
+  // Función disponible para marcar una tarjeta como predeterminada
+  const _setAsDefault = (id: string) => {
     setPaymentMethods((prev) =>
       prev.map((p) => ({ ...p, isDefault: p.id === id }))
     );
   };
+  void _setAsDefault; // Evita el error de variable no utilizada
 
   const removeMethod = async (id: string) => {
     try {
