@@ -1,5 +1,15 @@
 // src/layouts/Header.tsx
-import { ShoppingCart, User, Menu, X, LogOut, Newspaper, MessageCircle, Headphones } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  Menu,
+  X,
+  LogOut,
+  Newspaper,
+  MessageCircle,
+  Headphones,
+  PlaneTakeoff,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { useState } from "react";
@@ -89,7 +99,7 @@ export default function Header() {
             </Link>
           )}
 
-          {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES */}
+          {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES (no admin/root) */}
           {!isAdmin && (
             <Link
               to="/carrito"
@@ -101,7 +111,19 @@ export default function Header() {
             </Link>
           )}
 
-
+          {/* ✈️ Check-In - visible si showCheckIn */}
+          {showCheckIn && (
+            <Link
+              to="/checkin"
+              className="flex items-center gap-2 px-4 py-2.5 h-11 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
+              title="Realizar Check-In"
+            >
+              <PlaneTakeoff className="h-5 w-5 text-emerald-300 group-hover:text-emerald-200 transition-colors duration-300" />
+              <span className="text-sm font-medium text-emerald-200 group-hover:text-white whitespace-nowrap">
+                Check-In
+              </span>
+            </Link>
+          )}
 
           {auth.isAuthenticated ? (
             <>
@@ -135,8 +157,6 @@ export default function Header() {
             </>
           ) : (
             <>
-              
-
               {/* Login Text */}
               <Link
                 to="/login"
@@ -216,12 +236,13 @@ export default function Header() {
             {/* ⭐ Botón Realizar Check-In! Mobile */}
             {showCheckIn && (
               <Link
-                to="/check-in" // misma ruta que en desktop
+                to="/checkin"  // 👈 ruta corregida
                 className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-emerald-500/10 backdrop-blur-sm border border-emerald-400/40 hover:bg-emerald-500/20 hover:border-emerald-300/70 transition-all duration-300 group"
                 onClick={() => setOpen(false)}
               >
+                <PlaneTakeoff className="h-5 w-5 text-emerald-300 group-hover:text-emerald-200 transition-colors duration-300 flex-shrink-0" />
                 <span className="text-emerald-200 group-hover:text-white transition-colors duration-300 font-semibold">
-                  Realizar Check-In!
+                  Realizar Check-In
                 </span>
               </Link>
             )}
