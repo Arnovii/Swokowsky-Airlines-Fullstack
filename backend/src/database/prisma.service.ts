@@ -1,14 +1,23 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
-// Este es un wrapper que convierte PrismaClient en un servicio inyectable de NestJS, para que lo uses en cualquier módulo con Inyección de Dependencias.
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+
+  constructor() {
+    super({
+      log: ['error', 'warn'], // menos carga
+    });
+  }
+
   async onModuleInit() {
-    await this.$connect(); // Conectar automáticamente al iniciar
+    if (!(global as any).prismaConnected) {
+      await this.$connect();
+      (global as any).prismaConnected = true;
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect(); // Cerrar conexión al apagar el módulo
+    await this.$disconnect();
   }
 }
