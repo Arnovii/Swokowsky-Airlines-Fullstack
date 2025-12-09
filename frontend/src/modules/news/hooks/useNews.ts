@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import type { Article } from '../services/newsService';
+import api from '../../../api/axios';
 
 export interface NewsApiResponse {
   id_noticia: number;
@@ -97,9 +97,7 @@ export function useNews() {
         console.log('🌐 Obteniendo noticias de la API...');
         
         // 1. Obtener datos de la API
-        const { data } = await axios.get<NewsApiResponse[]>(
-          'http://localhost:3000/api/v1/news'
-        );
+        const { data } = await api.get<NewsApiResponse[]>('/news');
         
         console.log(`📥 Total noticias recibidas: ${data.length}`);
         console.log('📋 Datos recibidos:', data);
