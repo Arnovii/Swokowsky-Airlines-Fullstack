@@ -25,10 +25,9 @@ import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
-import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
-import { ChatPage } from "../modules/chat";
 import Checkin from "../modules/checkin/pages/checkin";
 import CheckinConfirmation from "../modules/checkin/pages/CheckinConfirmation";
+import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 
 
 
@@ -90,20 +89,18 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Foro del usuario */}
-        {/* Foro público - visible para todos, escritura solo para usuarios autenticados */}
-        <Route path="/foro" element={<ForoPage />} />
-        <Route path="/foro/:id" element={<HiloDetallePage />} />
-
-        {/* Chat privado de soporte - requiere autenticación */}
-        <Route
-          path="/chat"
-          element={
-            <PrivateRoute>
-              <ChatPage />
-            </PrivateRoute>
-          }
-        />
+        {/* Foro - solo usuarios autenticados */}
+        {/* Admin/Root ven todos los hilos, clientes solo los suyos */}
+        <Route path="/foro" element={
+          <PrivateRoute>
+            <ForoPage />
+          </PrivateRoute>
+        } />
+        <Route path="/foro/:id" element={
+          <PrivateRoute>
+            <HiloDetallePage />
+          </PrivateRoute>
+        } />
 
         <Route
           path="/checkout"

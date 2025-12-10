@@ -77,7 +77,15 @@ export class CheckinService {
     const salida = new Date(ticket.vuelo.salida_programada_utc);
     const diffHours = (salida.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    if (diffHours > 24) throw new BadRequestException('El check-in solo está disponible dentro de las 24 horas antes del vuelo');
+    this.logger.log(`⏰ Hora actual (servidor): ${now.toISOString()}`);
+    this.logger.log(`✈️ Hora de salida del vuelo: ${salida.toISOString()}`);
+    this.logger.log(`⏱️ Diferencia en horas: ${diffHours.toFixed(2)}`);
+
+    // Permitir check-in si el vuelo está dentro de las próximas 24 horas
+    if (diffHours > 24) {
+      this.logger.log(`❌ Check-in rechazado: faltan más de 24 horas para el vuelo`);
+      throw new BadRequestException(`El check-in solo está disponible dentro de las 24 horas antes del vuelo. Faltan ${diffHours.toFixed(1)} horas.`);
+    }
 
     if (ticket.checkinCompleted) throw new BadRequestException('El check-in ya fue confirmado para este ticket');
 
@@ -93,6 +101,7 @@ export class CheckinService {
       asientoComprado: ticket.asiento_numero,
       asientoAsignado: ticket.asientoAsignado ?? null,
       salida: ticket.vuelo.salida_programada_utc,
+      clase: ticket.asiento_clase, // 'primera_clase' o 'economica'
     };
   }
 
@@ -203,6 +212,7 @@ export class CheckinService {
    * - ventana <=24h
    * - asiento existe en la configuración del avión
    * - asiento no esté ocupado por otro ticket (vendido o asignado)
+   * - asiento sea de la clase correspondiente al ticket
    */
   async assignSeat(codigo_unico: string, ticketId: number, asientoCodigo: string) {
     // Buscar el ticket específico que coincida con el código de reserva Y el ticketId
@@ -211,7 +221,14 @@ export class CheckinService {
         id_ticket: ticketId,
         uniqueCheckinCode: codigo_unico.toUpperCase() 
       },
-      include: { vuelo: true, pasajero: true },
+      include: { 
+        vuelo: { 
+          include: { 
+            aeronave: { include: { configuracion_asientos: true } } 
+          } 
+        }, 
+        pasajero: true 
+      },
     });
     
     if (!ticket) throw new NotFoundException('Ticket no encontrado o código de reserva inválido');
@@ -229,8 +246,39 @@ export class CheckinService {
     }
 
     const estado = seatMap[asientoCodigo];
-    if (estado !== 'Disponible') {
+    
+    // ✅ Permitir re-asignar el mismo asiento que ya tiene este ticket
+    const asientoEsDelMismoTicket = 
+      ticket.asientoAsignado === asientoCodigo || 
+      ticket.asiento_numero === asientoCodigo;
+    
+    if (estado !== 'Disponible' && !asientoEsDelMismoTicket) {
       throw new ConflictException('El asiento está ocupado');
+    }
+
+    // ✅ VALIDAR QUE EL ASIENTO SEA DE LA CLASE CORRECTA
+    const configs = ticket.vuelo.aeronave.configuracion_asientos;
+    const mapaAsientos: Record<string, number> = {};
+    configs.forEach((cfg) => {
+      mapaAsientos[cfg.clase] = cfg.cantidad;
+    });
+
+    // Generar asientos de primera clase para saber cuáles son
+    const primeraClaseSeats = this.generateAllSeatsForClass(mapaAsientos, 'primera_clase');
+    const esPrimeraClase = primeraClaseSeats.includes(asientoCodigo);
+    
+    // Verificar que la clase del asiento coincida con la clase del ticket
+    const claseTicket = ticket.asiento_clase; // 'primera_clase' o 'economica'
+    const asientoEsPrimera = esPrimeraClase;
+    const ticketEsPrimera = claseTicket === 'primera_clase';
+
+    this.logger.log(`🎫 Ticket clase: ${claseTicket}, Asiento ${asientoCodigo} es primera clase: ${asientoEsPrimera}`);
+
+    if (ticketEsPrimera && !asientoEsPrimera) {
+      throw new BadRequestException('Tu ticket es de Primera Clase. Solo puedes seleccionar asientos de Primera Clase.');
+    }
+    if (!ticketEsPrimera && asientoEsPrimera) {
+      throw new BadRequestException('Tu ticket es de Clase Económica. Solo puedes seleccionar asientos de Clase Económica.');
     }
 
     // Actualizar ticket.asientoAsignado (no confirmamos check-in aun)

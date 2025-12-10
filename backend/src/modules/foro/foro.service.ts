@@ -52,7 +52,32 @@ export class ForoService {
     });
   }
 
-  // Obtener hilo completo
+  // Obtener hilo completo con verificación de permisos
+  // Solo el autor o admin/root pueden ver el hilo
+  async getHiloCompletoConPermisos(id_hilo: number, id_usuario: number) {
+    const hilo = await this.getHiloCompleto(id_hilo);
+    
+    if (!hilo) {
+      throw new NotFoundException('Hilo no encontrado');
+    }
+
+    // Verificar permisos
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario },
+      select: { tipo_usuario: true },
+    });
+
+    const esAutor = hilo.id_usuarioFK === id_usuario;
+    const esAdmin = usuario?.tipo_usuario === 'admin' || usuario?.tipo_usuario === 'root';
+
+    if (!esAutor && !esAdmin) {
+      throw new ForbiddenException('No tienes permiso para ver este hilo');
+    }
+
+    return hilo;
+  }
+
+  // Obtener hilo completo (sin verificación de permisos - uso interno)
   async getHiloCompleto(id_hilo: number) {
     const hilo = await this.prisma.foro_hilo.findUnique({
       where: { id_hilo },
@@ -122,6 +147,38 @@ export class ForoService {
   // Todos los hilos (público y admin/root)
   async getTodosLosHilos() {
     return this.prisma.foro_hilo.findMany({
+      include: {
+        autor: {
+          select: {
+            id_usuario: true,
+            nombre: true,
+            apellido: true,
+            username: true,
+            img_url: true,
+            tipo_usuario: true,
+          },
+        },
+        _count: {
+          select: { respuestas: true },
+        },
+      },
+      orderBy: { creado_en: 'desc' },
+    });
+  }
+
+  // Obtener hilos filtrados según el tipo de usuario
+  // - Admin/Root: ven todos los hilos
+  // - Cliente: solo ven sus propios hilos
+  async getHilosFiltrados(id_usuario: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id_usuario },
+      select: { tipo_usuario: true },
+    });
+
+    const esAdmin = usuario?.tipo_usuario === 'admin' || usuario?.tipo_usuario === 'root';
+
+    return this.prisma.foro_hilo.findMany({
+      where: esAdmin ? {} : { id_usuarioFK: id_usuario },
       include: {
         autor: {
           select: {
