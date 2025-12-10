@@ -14,7 +14,7 @@ export interface ValidateCheckinResponse {
   asientoComprado: string | null;
   asientoAsignado: string | null;
   salida: string;
-  clase: 'primera' | 'economica'; // Clase del ticket
+  clase: 'primera_clase' | 'economica'; // Clase del ticket
   ciudadOrigen: string;
   ciudadDestino: string;
   codigoOrigen: string;
@@ -37,6 +37,9 @@ export interface ConfirmCheckinResponse {
   message: string;
   ticketId: number;
   asiento: string;
+  pasajero?: PassengerInfo;
+  vuelo: any;
+  codigoReserva:any;
 }
 
 // Datos guardados en localStorage durante el proceso de check-in
@@ -49,7 +52,7 @@ export interface CheckinSessionData {
   asientoAsignado: string | null;
   salida: string;
   extraBag: boolean;
-  clase: 'primera' | 'economica'; // Clase del ticket
+  clase: 'primera_clase' | 'economica'; // Clase del ticket
   ciudadOrigen?: string; // ⬅️ Asegúrate de tener esto
   ciudadDestino?: string; // ⬅️ Asegúrate de tener esto
 }

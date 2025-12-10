@@ -20,6 +20,11 @@ interface PassengerSession extends CheckinSessionData {
     ciudadOrigen?: string;
     ciudadDestino?: string;
     hasChangedSeat?: boolean;
+    codigoOrigen?: string;
+    codigoDestino?: string;
+    aeropuertoOrigen?: string;
+    aeropuertoDestino?: string;
+    llegada?: string;
 }
 
 // Estado del modal de mapa de asientos

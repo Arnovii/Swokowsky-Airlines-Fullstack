@@ -387,8 +387,8 @@ async validateCode(codigo_unico: string, dni: string) {
       dni: ticket.pasajero!.dni,
       asiento: updated.asientoAsignado ?? '',
       vuelo: String(ticket.vuelo.id_vuelo),
-      origen: origen.codigo_iata ?? '',
-      destino: destino.codigo_iata ?? '',
+      origenCiudad: origen.ciudad.nombre ?? '',
+      destinoCiudad: destino.ciudad.nombre ?? '',
       salida: ticket.vuelo.salida_programada_utc.toISOString(),
     });
     const boardingPassUrl = `${frontend}/checkin/boarding-pass?${params.toString()}`;
