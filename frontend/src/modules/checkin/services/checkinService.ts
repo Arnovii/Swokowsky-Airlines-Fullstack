@@ -15,6 +15,13 @@ export interface ValidateCheckinResponse {
   asientoAsignado: string | null;
   salida: string;
   clase: 'primera' | 'economica'; // Clase del ticket
+  ciudadOrigen: string;
+  ciudadDestino: string;
+  codigoOrigen: string;
+  codigoDestino: string;
+  aeropuertoOrigen: string;
+  aeropuertoDestino: string;
+  llegada: string;
 }
 
 export interface SeatMapResponse {
@@ -56,6 +63,7 @@ export const checkinService = {
     const response = await api.post<ValidateCheckinResponse>('/checkin/validate', {
       codigo_unico,
       dni,
+      
     });
     return response.data;
   },

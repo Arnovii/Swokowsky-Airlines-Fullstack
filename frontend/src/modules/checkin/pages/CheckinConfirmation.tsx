@@ -117,10 +117,15 @@ const CheckinConfirmation: React.FC = () => {
       dni: passengerDni || state.pasajero?.dni || '',
       asiento: seat || state.asiento,
       vuelo: (state.vuelo?.id || state.ticketId).toString(),
-      origen: state.vuelo?.origen?.codigo || '',
-      destino: state.vuelo?.destino?.codigo || '',
+      origenCodigo: state.vuelo?.origen?.codigo || '',
+      origenCiudad: state.vuelo?.origen?.ciudad || '',
+      origenAeropuerto: state.vuelo?.origen?.aeropuerto || '',
+      destinoCodigo: state.vuelo?.destino?.codigo || '',
+      destinoCiudad: state.vuelo?.destino?.ciudad || '',
+      destinoAeropuerto: state.vuelo?.destino?.aeropuerto || '',
       salida: state.vuelo?.salida || '',
-      reserva: state.codigoReserva || '',
+      llegada: state.vuelo?.llegada || '',
+      codigoReserva: state.codigoReserva || '',
     });
     return `${baseUrl}/checkin/boarding-pass?${params.toString()}`;
   };
@@ -271,6 +276,17 @@ const CheckinConfirmation: React.FC = () => {
                       key={index}
                       className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4"
                     >
+                      {/* Origen y destino arriba del QR */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-center">
+                          <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Origen</p>
+                          <p className="text-base font-bold text-emerald-300">{state.vuelo?.origen?.codigo || '---'} - {state.vuelo?.origen?.ciudad || ''}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Destino</p>
+                          <p className="text-base font-bold text-cyan-300">{state.vuelo?.destino?.codigo || '---'} - {state.vuelo?.destino?.ciudad || ''}</p>
+                        </div>
+                      </div>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">

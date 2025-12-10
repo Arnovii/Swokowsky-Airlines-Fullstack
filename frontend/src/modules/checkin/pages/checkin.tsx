@@ -134,13 +134,18 @@ try {
     asientoAsignado: response.asientoAsignado,
     salida: response.salida,
     extraBag: false,
-    clase: response.clase, // 'primera_clase' o 'economica'
-    // Inicializar selectedSeat con el asiento ya asignado (para que no sea obligatorio cambiarlo)
-    ciudadOrigen: response.ciudadOrigen, // ⬅️ Agregar esto
-    ciudadDestino: response.ciudadDestino, // ⬅️ Agregar esto
+    clase: response.clase,
+    ciudadOrigen: response.ciudadOrigen,
+    ciudadDestino: response.ciudadDestino,
+    // Agregar todos los campos del vuelo
+    codigoOrigen: response.codigoOrigen,
+    codigoDestino: response.codigoDestino,
+    aeropuertoOrigen: response.aeropuertoOrigen,
+    aeropuertoDestino: response.aeropuertoDestino,
+    llegada: response.llegada,
     selectedSeat: response.asientoAsignado || response.asientoComprado,
     }));
-
+    
     setPassengerSessions(sessions);
 
     toast.success("✅ Todos los pasajeros fueron validados correctamente", {
@@ -221,85 +226,92 @@ prev.map((p, i) =>
 const [confirmingAll, setConfirmingAll] = useState(false);
 
 const handleConfirmAllCheckins = async () => {
-// Verificar que todos tienen asiento seleccionado
-const missingSeats = passengerSessions.filter((p) => !p.selectedSeat);
-if (missingSeats.length > 0) {
-toast.warning(`⚠️ Faltan ${missingSeats.length} pasajero(s) por seleccionar asiento`, {
-    position: 'top-center',
-});
-return;
-}
-
-setConfirmingAll(true);
-
-try {
-// Procesar check-in para cada pasajero
-for (let i = 0; i < passengerSessions.length; i++) {
-    const passenger = passengerSessions[i];
-    
-    // Asignar asiento
-    await checkinService.assignSeat(
-    passenger.codigo_unico,
-    passenger.ticketId,
-    passenger.selectedSeat!
-    );
-    
-    // Confirmar check-in
-    await checkinService.confirmCheckin(
-    passenger.codigo_unico,
-    passenger.ticketId
-    );
-    
-    toast.success(`✅ Check-in completado para ${passenger.pasajero.nombre}`, {
-    position: 'top-center',
-    autoClose: 2000,
+  // Verificar que todos tienen asiento seleccionado
+  const missingSeats = passengerSessions.filter((p) => !p.selectedSeat);
+  if (missingSeats.length > 0) {
+    toast.warning(`⚠️ Faltan ${missingSeats.length} pasajero(s) por seleccionar asiento`, {
+      position: 'top-center',
     });
-}
+    return;
+  }
 
-// Navegar a la página de confirmación con los datos del primer pasajero
-// (o podrías crear una página de confirmación grupal)
-const firstPassenger = passengerSessions[0];
+  setConfirmingAll(true);
 
-// Obtener datos completos del último check-in para la página de confirmación
-const result = await checkinService.confirmCheckin(
-    firstPassenger.codigo_unico,
-    firstPassenger.ticketId
-).catch(() => null);
+  try {
+    // Procesar check-in para cada pasajero
+    for (let i = 0; i < passengerSessions.length; i++) {
+      const passenger = passengerSessions[i];
+      
+      // Asignar asiento
+      await checkinService.assignSeat(
+        passenger.codigo_unico,
+        passenger.ticketId,
+        passenger.selectedSeat!
+      );
+      
+      // Confirmar check-in
+      await checkinService.confirmCheckin(
+        passenger.codigo_unico,
+        passenger.ticketId
+      );
+      
+      toast.success(`✅ Check-in completado para ${passenger.pasajero.nombre}`, {
+        position: 'top-center',
+        autoClose: 2000,
+      });
+    }
 
-toast.success('🎉 ¡Check-in grupal completado exitosamente!', {
-    position: 'top-center',
-    autoClose: 3000,
-});
+    const firstPassenger = passengerSessions[0];
 
-// Navegar a confirmación
-navigate('/checkin/confirmacion', {
-    state: {
-    checkinCompleted: true,
-    ticketId: firstPassenger.ticketId,
-    asiento: firstPassenger.selectedSeat,
-    pasajero: firstPassenger.pasajero,
-    vuelo: result?.vuelo,
-    codigoReserva: result?.codigoReserva,
-    totalPassengers: passengerSessions.length,
-    allSeats: passengerSessions.map(p => ({
-        nombre: p.pasajero.nombre,
-        asiento: p.selectedSeat,
-        dni: p.pasajero.dni,
-        ticketId: p.ticketId,
-    })),
-    },
-    replace: true,
-});
+    toast.success('🎉 ¡Check-in grupal completado exitosamente!', {
+      position: 'top-center',
+      autoClose: 3000,
+    });
 
-} catch (err: unknown) {
-console.error('Error en check-in grupal:', err);
-const error = err as { response?: { data?: { message?: string } } };
-const message = error?.response?.data?.message || 'Error al confirmar el check-in';
-toast.error(`❌ ${message}`, { position: 'top-center' });
-} finally {
-setConfirmingAll(false);
-}
+    // Navegar a confirmación con toda la información del vuelo
+    navigate('/checkin/confirmacion', {
+      state: {
+        checkinCompleted: true,
+        ticketId: firstPassenger.ticketId,
+        asiento: firstPassenger.selectedSeat,
+        pasajero: firstPassenger.pasajero,
+        vuelo: {
+          id: firstPassenger.id_vuelo,
+          origen: {
+            codigo: firstPassenger.codigoOrigen || '',
+            ciudad: firstPassenger.ciudadOrigen || '',
+            aeropuerto: firstPassenger.aeropuertoOrigen || '',
+          },
+          destino: {
+            codigo: firstPassenger.codigoDestino || '',
+            ciudad: firstPassenger.ciudadDestino || '',
+            aeropuerto: firstPassenger.aeropuertoDestino || '',
+          },
+          salida: firstPassenger.salida,
+          llegada: firstPassenger.llegada || firstPassenger.salida,
+        },
+        codigoReserva: firstPassenger.codigo_unico,
+        totalPassengers: passengerSessions.length,
+        allSeats: passengerSessions.map(p => ({
+          nombre: p.pasajero.nombre,
+          asiento: p.selectedSeat,
+          dni: p.pasajero.dni,
+          ticketId: p.ticketId,
+        })),
+      },
+      replace: true,
+    });
+
+  } catch (err: unknown) {
+    console.error('Error en check-in grupal:', err);
+    const error = err as { response?: { data?: { message?: string } } };
+    const message = error?.response?.data?.message || 'Error al confirmar el check-in';
+    toast.error(`❌ ${message}`, { position: 'top-center' });
+  } finally {
+    setConfirmingAll(false);
+  }
 };
+
 
 const stepsConfig = [
 { id: 1, label: "Código de reserva" },
