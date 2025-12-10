@@ -19,6 +19,13 @@ interface VueloInfo {
   llegada: string;
 }
 
+interface PassengerSeat {
+  nombre: string;
+  asiento: string;
+  dni?: string;
+  ticketId?: number;
+}
+
 interface CheckinConfirmationState {
   ticketId: number;
   asiento: string;
@@ -28,6 +35,9 @@ interface CheckinConfirmationState {
   };
   vuelo?: VueloInfo;
   codigoReserva?: string;
+  // Nuevos campos para check-in grupal
+  totalPassengers?: number;
+  allSeats?: PassengerSeat[];
 }
 
 const CheckinConfirmation: React.FC = () => {
@@ -214,34 +224,79 @@ const CheckinConfirmation: React.FC = () => {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4 md:col-span-2">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pasajero</p>
-                  <p className="text-xl font-bold text-white">{state.pasajero?.nombre || 'Pasajero'}</p>
+            {/* Mostrar todos los pasajeros si hay más de uno */}
+            {state.allSeats && state.allSeats.length > 1 ? (
+              <div className="space-y-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">
+                    Pasajeros ({state.allSeats.length})
+                  </p>
+                  <p className="text-xs text-emerald-400">
+                    ✓ Todos los check-in completados
+                  </p>
                 </div>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Documento</p>
-                    <p className="text-white font-medium">{state.pasajero?.dni || '---'}</p>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {state.allSeats.map((passenger, index) => (
+                    <div 
+                      key={index}
+                      className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">
+                          <span className="text-emerald-300 font-bold text-sm">{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="text-white font-semibold text-sm">{passenger.nombre}</p>
+                          {passenger.dni && (
+                            <p className="text-slate-400 text-xs">DNI: {passenger.dni}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-400/40 rounded-xl px-4 py-2">
+                        <p className="text-xs text-emerald-300 uppercase">Asiento</p>
+                        <p className="text-xl font-bold text-white">{passenger.asiento}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-6 pt-2">
                   <div>
                     <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Vuelo</p>
                     <p className="text-white font-medium">SW-{state.vuelo?.id || state.ticketId}</p>
                   </div>
                 </div>
               </div>
+            ) : (
+              /* Vista para un solo pasajero */
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-4 md:col-span-2">
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pasajero</p>
+                    <p className="text-xl font-bold text-white">{state.pasajero?.nombre || 'Pasajero'}</p>
+                  </div>
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Documento</p>
+                      <p className="text-white font-medium">{state.pasajero?.dni || '---'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Vuelo</p>
+                      <p className="text-white font-medium">SW-{state.vuelo?.id || state.ticketId}</p>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-center md:justify-end">
-                <div className="text-center bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-2 border-emerald-400/50 rounded-2xl p-6">
-                  <p className="text-xs text-emerald-300 uppercase tracking-wider mb-2">Tu Asiento</p>
-                  <p className="text-5xl font-bold text-white mb-1">{state.asiento}</p>
-                  <p className="text-xs text-slate-400">
-                    {state.asiento.startsWith('A') && parseInt(state.asiento.slice(1)) <= 5 ? '✨ Primera Clase' : '🌿 Clase Económica'}
-                  </p>
+                <div className="flex items-center justify-center md:justify-end">
+                  <div className="text-center bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border-2 border-emerald-400/50 rounded-2xl p-6">
+                    <p className="text-xs text-emerald-300 uppercase tracking-wider mb-2">Tu Asiento</p>
+                    <p className="text-5xl font-bold text-white mb-1">{state.asiento}</p>
+                    <p className="text-xs text-slate-400">
+                      {state.asiento.startsWith('A') && parseInt(state.asiento.slice(1)) <= 5 ? '✨ Primera Clase' : '🌿 Clase Económica'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="relative my-6">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-8 bg-[#050816] rounded-r-full"></div>
