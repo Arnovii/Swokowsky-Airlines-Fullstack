@@ -8,7 +8,10 @@ export interface CheckinSeat {
   id: string;        // A1, B2, D14, etc.
   column: string;    // A, B, C, D, E, F
   row: number;       // 1, 2, 3, etc.
-  status: 'available' | 'occupied' | 'selected' | 'assigned'; // 'assigned' = asiento actual del pasajero
+  status: 'available' | 'occupied' | 'selected' | 'assigned' | 'wrong-class' | 'group-selected'; 
+  // 'assigned' = asiento actual del pasajero
+  // 'wrong-class' = asiento de otra clase (no seleccionable)
+  // 'group-selected' = ya seleccionado por otro pasajero del grupo
 }
 
 interface CheckinSeatMapProps {
@@ -17,6 +20,8 @@ interface CheckinSeatMapProps {
   currentAssignedSeat?: string | null; // Asiento asignado aleatoriamente durante la compra
   onSeatSelect: (seatId: string) => void;
   disabled?: boolean;
+  ticketClass?: 'primera_clase' | 'economica'; // Clase del ticket para filtrar asientos permitidos
+  alreadySelectedSeats?: string[]; // Asientos ya seleccionados por otros pasajeros del grupo
 }
 
 // Columnas del avión
@@ -28,6 +33,8 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
   currentAssignedSeat = null,
   onSeatSelect,
   disabled = false,
+  ticketClass = 'economica',
+  alreadySelectedSeats = [],
 }) => {
   const [hoveredSeat, setHoveredSeat] = useState<string | null>(null);
 
@@ -36,6 +43,15 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
     const seatsByRow: Map<number, CheckinSeat[]> = new Map();
     let maxRowNum = 0;
     let totalCount = 0;
+
+    // Primero contar total para determinar filas de primera clase
+    Object.keys(seatMap).forEach(() => totalCount++);
+    
+    // Determinar filas de primera clase (aprox 25 asientos = 4-5 filas)
+    // Nacional: 150 asientos total, 25 primera clase
+    // Internacional: 250 asientos total, 50 primera clase
+    const estimatedPrimera = totalCount <= 150 ? 25 : 50;
+    const primeraMaxRowCalc = Math.ceil(estimatedPrimera / 6);
 
     // Parsear cada asiento del mapa
     Object.entries(seatMap).forEach(([seatId, status]) => {
@@ -46,19 +62,39 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
       const column = match[1];
       const row = parseInt(match[2], 10);
       maxRowNum = Math.max(maxRowNum, row);
-      totalCount++;
+
+      // Determinar si este asiento es de primera clase
+      const isPrimeraClaseSeat = row <= primeraMaxRowCalc;
+      
+      // Verificar si el asiento es de la clase correcta para el pasajero
+      const passengerIsPrimera = ticketClass === 'primera_clase';
+      const seatMatchesClass = isPrimeraClaseSeat === passengerIsPrimera;
+      
+      // Verificar si ya está seleccionado por otro pasajero del grupo
+      const isGroupSelected = alreadySelectedSeats.includes(seatId);
+
+      // Determinar el estado del asiento
+      let seatStatus: CheckinSeat['status'];
+      
+      if (selectedSeat === seatId) {
+        seatStatus = 'selected';
+      } else if (currentAssignedSeat === seatId) {
+        seatStatus = 'assigned';
+      } else if (isGroupSelected) {
+        seatStatus = 'group-selected';
+      } else if (!seatMatchesClass) {
+        seatStatus = 'wrong-class';
+      } else if (status === 'Disponible') {
+        seatStatus = 'available';
+      } else {
+        seatStatus = 'occupied';
+      }
 
       const seat: CheckinSeat = {
         id: seatId,
         column,
         row,
-        status: selectedSeat === seatId 
-          ? 'selected' 
-          : currentAssignedSeat === seatId
-            ? 'assigned'
-            : status === 'Disponible' 
-              ? 'available' 
-              : 'occupied',
+        status: seatStatus,
       };
 
       if (!seatsByRow.has(row)) {
@@ -72,53 +108,67 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
       seats.sort((a, b) => COLUMNS.indexOf(a.column) - COLUMNS.indexOf(b.column));
     });
 
-    // Determinar filas de primera clase (aprox 25 asientos = 4-5 filas)
-    // Nacional: 150 asientos total, 25 primera clase
-    // Internacional: 250 asientos total, 50 primera clase
-    const estimatedPrimera = totalCount <= 150 ? 25 : 50;
-    const primeraMaxRow = Math.ceil(estimatedPrimera / 6);
-
     // Convertir a array ordenado
     const sortedRows = Array.from(seatsByRow.keys()).sort((a, b) => a - b);
     const rowsArray = sortedRows.map(rowNum => ({
       rowNum,
       seats: seatsByRow.get(rowNum)!,
-      isPrimeraClase: rowNum <= primeraMaxRow
+      isPrimeraClase: rowNum <= primeraMaxRowCalc
     }));
 
     return { 
       seatRows: rowsArray, 
-      totalSeats: totalCount
+      totalSeats: totalCount,
+      primeraMaxRow: primeraMaxRowCalc
     };
-  }, [seatMap, selectedSeat, currentAssignedSeat]);
+  }, [seatMap, selectedSeat, currentAssignedSeat, ticketClass, alreadySelectedSeats]);
 
   const handleSeatClick = (seat: CheckinSeat) => {
-    // Permitir seleccionar asientos disponibles O el asiento asignado actual
-    if (disabled || seat.status === 'occupied') return;
+    // No permitir seleccionar si está deshabilitado
+    if (disabled) return;
+    
+    // No permitir seleccionar asientos ocupados
+    if (seat.status === 'occupied') return;
+    
+    // No permitir seleccionar asientos de otra clase
+    if (seat.status === 'wrong-class') return;
+    
+    // No permitir seleccionar asientos ya seleccionados por el grupo
+    if (seat.status === 'group-selected') return;
+    
+    // Permitir seleccionar disponibles o el asiento asignado actual
     onSeatSelect(seat.id);
   };
 
   const getSeatStyle = (seat: CheckinSeat, isPrimeraClase: boolean) => {
-    const baseStyle = "w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer";
+    const baseStyle = "w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-200";
     
     if (seat.status === 'selected') {
-      return `${baseStyle} bg-emerald-500 text-white shadow-lg shadow-emerald-500/50 scale-110`;
+      return `${baseStyle} bg-emerald-500 text-white shadow-lg shadow-emerald-500/50 scale-110 cursor-pointer`;
     }
     // Asiento asignado al pasajero (verde con borde)
     if (seat.status === 'assigned') {
-      return `${baseStyle} bg-green-500/30 border-2 border-green-400 text-green-200 hover:bg-green-500/50 ring-2 ring-green-400/50 ring-offset-1 ring-offset-slate-900`;
+      return `${baseStyle} bg-green-500/30 border-2 border-green-400 text-green-200 hover:bg-green-500/50 ring-2 ring-green-400/50 ring-offset-1 ring-offset-slate-900 cursor-pointer`;
+    }
+    // Asiento ya seleccionado por otro pasajero del grupo (naranja)
+    if (seat.status === 'group-selected') {
+      return `${baseStyle} bg-orange-500/50 border-2 border-orange-400 text-orange-200 cursor-not-allowed`;
+    }
+    // Asiento de clase incorrecta (gris tachado)
+    if (seat.status === 'wrong-class') {
+      return `${baseStyle} bg-slate-700/30 border border-slate-600/30 text-slate-500 cursor-not-allowed opacity-40`;
     }
     if (seat.status === 'occupied') {
       return `${baseStyle} bg-slate-600/50 text-slate-400 cursor-not-allowed`;
     }
     if (hoveredSeat === seat.id) {
-      return `${baseStyle} bg-cyan-400 text-slate-900 scale-105`;
+      return `${baseStyle} bg-cyan-400 text-slate-900 scale-105 cursor-pointer`;
     }
     // Disponible
     if (isPrimeraClase) {
-      return `${baseStyle} bg-amber-500/20 border-2 border-amber-400/50 text-amber-200 hover:bg-amber-500/40`;
+      return `${baseStyle} bg-amber-500/20 border-2 border-amber-400/50 text-amber-200 hover:bg-amber-500/40 cursor-pointer`;
     }
-    return `${baseStyle} bg-cyan-500/20 border-2 border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/40`;
+    return `${baseStyle} bg-cyan-500/20 border-2 border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/40 cursor-pointer`;
   };
 
   const renderSeatRow = (rowData: { rowNum: number; seats: CheckinSeat[]; isPrimeraClase: boolean }) => {
@@ -128,6 +178,32 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
     const seatLookup = new Map(seats.map(s => [s.column, s]));
     const leftColumns = ['A', 'B', 'C'];
     const rightColumns = ['D', 'E', 'F'];
+
+    // Función para generar el tooltip según el estado
+    const getSeatTitle = (seat: CheckinSeat) => {
+      switch (seat.status) {
+        case 'selected':
+          return `${seat.id} - Seleccionado`;
+        case 'assigned':
+          return `${seat.id} - Tu asiento actual`;
+        case 'group-selected':
+          return `${seat.id} - Ya seleccionado por otro pasajero`;
+        case 'wrong-class':
+          return `${seat.id} - No disponible (otra clase)`;
+        case 'occupied':
+          return `${seat.id} - Ocupado`;
+        default:
+          return `${seat.id} - Disponible`;
+      }
+    };
+
+    // Función para determinar si el botón debe estar deshabilitado
+    const isSeatDisabled = (seat: CheckinSeat) => {
+      return disabled || 
+             seat.status === 'occupied' || 
+             seat.status === 'wrong-class' || 
+             seat.status === 'group-selected';
+    };
 
     return (
       <div key={`row-${rowNum}`} className="flex items-center justify-center gap-2 sm:gap-4 mb-2">
@@ -149,8 +225,8 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
                 onClick={() => handleSeatClick(seat)}
                 onMouseEnter={() => setHoveredSeat(seat.id)}
                 onMouseLeave={() => setHoveredSeat(null)}
-                disabled={disabled || seat.status === 'occupied'}
-                title={`${seat.id} - ${seat.status === 'occupied' ? 'Ocupado' : 'Disponible'}`}
+                disabled={isSeatDisabled(seat)}
+                title={getSeatTitle(seat)}
               >
                 {seat.id}
               </button>
@@ -175,8 +251,8 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
                 onClick={() => handleSeatClick(seat)}
                 onMouseEnter={() => setHoveredSeat(seat.id)}
                 onMouseLeave={() => setHoveredSeat(null)}
-                disabled={disabled || seat.status === 'occupied'}
-                title={`${seat.id} - ${seat.status === 'occupied' ? 'Ocupado' : 'Disponible'}`}
+                disabled={isSeatDisabled(seat)}
+                title={getSeatTitle(seat)}
               >
                 {seat.id}
               </button>
@@ -197,27 +273,38 @@ const CheckinSeatMap: React.FC<CheckinSeatMapProps> = ({
 
   return (
     <div className="bg-slate-900/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-slate-700/50">
+      {/* Info de clase del pasajero */}
+      <div className="text-center mb-4 p-3 rounded-lg bg-gradient-to-r from-slate-800/50 to-slate-700/50 border border-slate-600/30">
+        <span className="text-sm text-slate-300">
+          Tu ticket es de{' '}
+          <span className={`font-bold ${ticketClass === 'primera_clase' ? 'text-amber-400' : 'text-cyan-400'}`}>
+            {ticketClass === 'primera_clase' ? '✨ Primera Clase' : '🌿 Clase Económica'}
+          </span>
+          {' '}- Solo puedes seleccionar asientos de tu clase
+        </span>
+      </div>
+
       {/* Leyenda */}
-      <div className="flex flex-wrap justify-center gap-4 mb-6 pb-4 border-b border-slate-700/50">
+      <div className="flex flex-wrap justify-center gap-3 mb-6 pb-4 border-b border-slate-700/50">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-cyan-500/20 border-2 border-cyan-400/50"></div>
+          <div className={`w-5 h-5 rounded ${ticketClass === 'primera_clase' ? 'bg-amber-500/20 border-2 border-amber-400/50' : 'bg-cyan-500/20 border-2 border-cyan-400/50'}`}></div>
           <span className="text-xs text-slate-300">Disponible</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-slate-600/50"></div>
+          <div className="w-5 h-5 rounded bg-slate-600/50"></div>
           <span className="text-xs text-slate-300">Ocupado</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-green-500/30 border-2 border-green-400"></div>
-          <span className="text-xs text-slate-300">Tu asiento actual</span>
+          <div className="w-5 h-5 rounded bg-emerald-500"></div>
+          <span className="text-xs text-slate-300">Seleccionado</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-emerald-500"></div>
-          <span className="text-xs text-slate-300">Nueva selección</span>
+          <div className="w-5 h-5 rounded bg-orange-500/50 border-2 border-orange-400"></div>
+          <span className="text-xs text-slate-300">Otro pasajero</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-amber-500/20 border-2 border-amber-400/50"></div>
-          <span className="text-xs text-slate-300">Primera Clase</span>
+          <div className="w-5 h-5 rounded bg-slate-700/30 border border-slate-600/30 opacity-40"></div>
+          <span className="text-xs text-slate-300">Otra clase</span>
         </div>
       </div>
 

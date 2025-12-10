@@ -12,6 +12,8 @@ interface SeatMapModalProps {
   passengerIndex: number;
   currentAssignedSeat?: string | null;
   onSeatConfirmed: (seatId: string) => void;
+  ticketClass?: 'primera_clase' | 'economica'; // Clase del ticket del pasajero
+  alreadySelectedSeats?: string[]; // Asientos ya seleccionados por otros pasajeros del grupo
 }
 
 const SeatMapModal: React.FC<SeatMapModalProps> = ({
@@ -22,6 +24,8 @@ const SeatMapModal: React.FC<SeatMapModalProps> = ({
   passengerIndex,
   currentAssignedSeat = null,
   onSeatConfirmed,
+  ticketClass = 'economica',
+  alreadySelectedSeats = [],
 }) => {
   const [seatMapData, setSeatMapData] = useState<SeatMapResponse | null>(null);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(currentAssignedSeat);
@@ -163,6 +167,8 @@ const SeatMapModal: React.FC<SeatMapModalProps> = ({
                 currentAssignedSeat={currentAssignedSeat}
                 onSeatSelect={handleSeatSelect}
                 disabled={confirming}
+                ticketClass={ticketClass}
+                alreadySelectedSeats={alreadySelectedSeats}
               />
 
               {/* Asiento seleccionado */}

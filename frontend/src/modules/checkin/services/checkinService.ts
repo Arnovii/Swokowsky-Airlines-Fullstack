@@ -14,6 +14,7 @@ export interface ValidateCheckinResponse {
   asientoComprado: string | null;
   asientoAsignado: string | null;
   salida: string;
+  clase: 'primera' | 'economica'; // Clase del ticket
 }
 
 export interface SeatMapResponse {
@@ -41,6 +42,7 @@ export interface CheckinSessionData {
   asientoAsignado: string | null;
   salida: string;
   extraBag: boolean;
+  clase: 'primera' | 'economica'; // Clase del ticket
 }
 
 const CHECKIN_SESSION_KEY = 'checkin_session';
