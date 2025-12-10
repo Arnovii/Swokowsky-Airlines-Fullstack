@@ -5,12 +5,20 @@ import hbs from 'nodemailer-express-handlebars';
 import { resolve } from 'path';
 import { PrismaService } from '../database/prisma.service';
 
+interface MailAttachment {
+  filename: string;
+  content: Buffer | string;
+  cid?: string; // usar para inline images: <img src="cid:...">
+  contentType?: string;
+}
+
 type MailOptions = {
   to: string;
   subject: string;
   template?: string;
   context?: Record<string, any>;
   text?: string;
+  attachments?: MailAttachment[];
 };
 
 type BulkOptions = {
@@ -25,7 +33,7 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
 
   constructor(private config: ConfigService,
-      private readonly prisma: PrismaService) {
+    private readonly prisma: PrismaService) {
     this.transporter = nodemailer.createTransport({
       host: config.get<string>('EMAIL_HOST'),
       port: Number(config.get<string>('EMAIL_PORT')),
@@ -51,12 +59,20 @@ export class MailService {
     );
   }
 
-  // envío atómico 1:1 (ya existente)
-  async sendMail({ to, subject, template, context, text }: MailOptions) {
+
+
+  // envío atómico 1:1 (actualizado para soportar attachments)
+  async sendMail({ to, subject, template, context, text, attachments }: MailOptions) {
     const from = this.config.get<string>('EMAIL_FROM');
     const mailOptions: any = { from, to, subject, template, context, text };
+
+    if (attachments && attachments.length) {
+      mailOptions.attachments = attachments;
+    }
+
     return await this.transporter.sendMail(mailOptions);
   }
+
 
   async sendWelcomeEmail(to: string, data: { name: string; username?: string }) {
     return this.sendMail({
@@ -175,16 +191,29 @@ export class MailService {
     });
   }
 
-  async sendCheckinConfirmationEmail(
-    to: string,
-    data: { clientName: string; origin: string; destination: string; departureDate: string; arrivalDate: string; seatNumber: string; qrCodeData: string; }){
-      return this.sendMail({
-        to,
-        subject: 'Confirmación de Check-in - Swokowsky Airlines',
-        template: 'checkin-confirmation',
-        context: data,
-      });
-    }
+async sendCheckinConfirmationEmail(
+  to: string,
+  data: {
+    clientName: string;
+    origin: string;
+    destination: string;
+    departureDate: string;
+    arrivalDate: string;
+    seatNumber: string;
+    boardingPassUrl?: string;
+  },
+  attachments?: MailAttachment[],
+) {
+  return this.sendMail({
+    to,
+    subject: 'Confirmación de Check-in - Swokowsky Airlines',
+    template: 'checkin-confirmation',
+    context: data,
+    attachments,
+  });
+}
+
+
 
 
   /**
