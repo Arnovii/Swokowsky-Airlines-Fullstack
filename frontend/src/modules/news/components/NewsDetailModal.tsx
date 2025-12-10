@@ -36,7 +36,10 @@ export default function NewsDetailModal({ article, isOpen, onClose, isAuth }: Ne
         <div className="p-8">
           <h2 className="text-3xl font-bold text-[#0e254d] mb-4">{article.title}</h2>
           <p className="text-gray-500 text-sm mb-6">
-            Publicado el {new Date(article.publishDate).toLocaleString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {article.publishDate 
+              ? `Publicado el ${new Date(article.publishDate).toLocaleString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
+              : ''
+            }
           </p>
           <div 
             className="prose max-w-none text-gray-800"

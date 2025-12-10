@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useNews } from "../hooks/useNews";
 import type { Article } from '../services/newsService';

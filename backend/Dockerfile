@@ -1,21 +1,25 @@
+# backend/Dockerfile
 FROM node:20-alpine
-
-# Instalar Nest CLI globalmente y nodemon para hot reload
-RUN npm install -g @nestjs/cli nodemon
 
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
+# Copiar package.json y package-lock.json primero (cache layer)
 COPY package*.json ./
 
-# Instalar dependencias, incluyendo devDependencies
+# Copiar prisma antes de instalar (si usas prisma)
+COPY prisma ./prisma
+
+# Instalar dependencias
 RUN npm install
 
-# Copiar todo el código
+# Copiar el resto del código
 COPY . .
 
-# Exponer el puerto del backend
+# Compilar la app (Nest)
+RUN npm run build
+
+# Exponer puerto (solo informativo; Render usa PORT env)
 EXPOSE 3000
 
-# Comando para desarrollo: hot reload con nodemon
-CMD ["npm", "run", "start:dev"]
+# Ejecutar el main compilado (ruta: dist/src/main.js)
+CMD ["node", "dist/src/main.js"]

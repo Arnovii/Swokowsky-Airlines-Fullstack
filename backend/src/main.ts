@@ -58,6 +58,8 @@ async function bootstrap() {
     console.log('Swagger disponible en: /api/docs');
 
 
-  await app.listen(process.env.PORT ?? 3000);
+  const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+  await app.listen(PORT);
+  console.log(`🚀Server running on port ${PORT}`);
 } 
 bootstrap();

@@ -4,11 +4,12 @@ export interface Aeropuerto {
   id_ciudadFK: number;
   nombre: string;
   codigo_iata: string;
+  pais?: string;
 }
 
 // Puedes ajustar este tipo si conoces la estructura real de metadata
 type Metadata = Record<string, unknown>;
-import api from '@/api/axios';
+import api from '../../../api/axios';
 
 export interface NormalizedFlight {
   id: number | null;

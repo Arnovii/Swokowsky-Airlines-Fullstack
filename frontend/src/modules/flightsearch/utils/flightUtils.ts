@@ -7,7 +7,7 @@ import type { Flight } from '../types/Flight';
 export interface Promotion {
   name: string;
   discount: number;
-  remainingSeats: number;
+  remainingSeats?: number;
 }
 
 export interface FlightFilters {
@@ -27,7 +27,9 @@ export const FlightUtils = {
       if (filters.precio.max > 0 && finalPrice > filters.precio.max) return false;
 
       if (filters.horaSalida.length > 0) {
-        const departureHour = new Date(flight.departureTimeUTC).getUTCHours();
+        const departureTime = flight.departureTimeUTC || flight.salidaProgramadaUtc;
+        if (!departureTime) return false;
+        const departureHour = new Date(departureTime).getUTCHours();
         const matchesHour = filters.horaSalida.some(slot => {
           if (slot === 'manana') return departureHour >= 5 && departureHour < 12;
           if (slot === 'tarde') return departureHour >= 12 && departureHour < 18;
@@ -69,18 +71,19 @@ export const FlightUtils = {
   },
 
   calculateFinalPrice: (flight: Flight): number => {
+    const basePrice = flight.price ?? flight.precioEconomica ?? 0;
     // Verifica que la promoción exista Y tenga asientos disponibles
-    if (flight.promotion && flight.promotion.remainingSeats > 0) {
+    if (flight.promotion && (flight.promotion.remainingSeats ?? 0) > 0) {
       const discount = flight.promotion.discount;
-      const finalPrice = flight.price * (1 - discount);
+      const finalPrice = basePrice * (1 - discount);
       console.log('🎯 Aplicando promoción:', {
-        precioOriginal: flight.price,
+        precioOriginal: basePrice,
         descuento: discount,
         precioFinal: Math.round(finalPrice)
       });
       return Math.round(finalPrice);
     }
-    return Math.round(flight.price);
+    return Math.round(basePrice);
   },
 
   sortFlights: (flights: Flight[], sortBy: SortBy): Flight[] => {
@@ -89,9 +92,12 @@ export const FlightUtils = {
         case 'precio':
           return FlightUtils.calculateFinalPrice(a) - FlightUtils.calculateFinalPrice(b);
         case 'duracion':
-          return a.durationMinutes - b.durationMinutes;
-        case 'salida':
-          return new Date(a.departureTimeUTC).getTime() - new Date(b.departureTimeUTC).getTime();
+          return (a.durationMinutes ?? 0) - (b.durationMinutes ?? 0);
+        case 'salida': {
+          const aTime = a.departureTimeUTC || a.salidaProgramadaUtc || '';
+          const bTime = b.departureTimeUTC || b.salidaProgramadaUtc || '';
+          return new Date(aTime).getTime() - new Date(bTime).getTime();
+        }
         default:
           return 0;
       }
