@@ -1,12 +1,33 @@
 import { BadRequestException, Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../mail/mail.service';
 import * as crypto from 'crypto';
+import QRCode from 'qrcode';
+import { ConfigService } from '@nestjs/config';
+
 
 @Injectable()
 export class CheckinService {
   private readonly logger = new Logger(CheckinService.name);
-  
-  constructor(private readonly prisma: PrismaService) {}
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService
+  ) { }
+
+  private formatDateCO(date: Date): string {
+    return new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(date);
+  }
+
 
   /**
    * Genera y guarda código único en el ticket
@@ -235,20 +256,20 @@ async validateCode(codigo_unico: string, dni: string) {
   async assignSeat(codigo_unico: string, ticketId: number, asientoCodigo: string) {
     // Buscar el ticket específico que coincida con el código de reserva Y el ticketId
     const ticket = await this.prisma.ticket.findFirst({
-      where: { 
+      where: {
         id_ticket: ticketId,
-        uniqueCheckinCode: codigo_unico.toUpperCase() 
+        uniqueCheckinCode: codigo_unico.toUpperCase()
       },
-      include: { 
-        vuelo: { 
-          include: { 
-            aeronave: { include: { configuracion_asientos: true } } 
-          } 
-        }, 
-        pasajero: true 
+      include: {
+        vuelo: {
+          include: {
+            aeronave: { include: { configuracion_asientos: true } }
+          }
+        },
+        pasajero: true
       },
     });
-    
+
     if (!ticket) throw new NotFoundException('Ticket no encontrado o código de reserva inválido');
     if (!ticket.pasajero) throw new BadRequestException('Ticket sin pasajero');
 
@@ -264,12 +285,12 @@ async validateCode(codigo_unico: string, dni: string) {
     }
 
     const estado = seatMap[asientoCodigo];
-    
+
     // ✅ Permitir re-asignar el mismo asiento que ya tiene este ticket
-    const asientoEsDelMismoTicket = 
-      ticket.asientoAsignado === asientoCodigo || 
+    const asientoEsDelMismoTicket =
+      ticket.asientoAsignado === asientoCodigo ||
       ticket.asiento_numero === asientoCodigo;
-    
+
     if (estado !== 'Disponible' && !asientoEsDelMismoTicket) {
       throw new ConflictException('El asiento está ocupado');
     }
@@ -284,7 +305,7 @@ async validateCode(codigo_unico: string, dni: string) {
     // Generar asientos de primera clase para saber cuáles son
     const primeraClaseSeats = this.generateAllSeatsForClass(mapaAsientos, 'primera_clase');
     const esPrimeraClase = primeraClaseSeats.includes(asientoCodigo);
-    
+
     // Verificar que la clase del asiento coincida con la clase del ticket
     const claseTicket = ticket.asiento_clase; // 'primera_clase' o 'economica'
     const asientoEsPrimera = esPrimeraClase;
@@ -317,12 +338,12 @@ async validateCode(codigo_unico: string, dni: string) {
    */
   async confirmCheckin(codigo_unico: string, ticketId: number) {
     const ticket = await this.prisma.ticket.findFirst({
-      where: { 
+      where: {
         id_ticket: ticketId,
-        uniqueCheckinCode: codigo_unico.toUpperCase() 
+        uniqueCheckinCode: codigo_unico.toUpperCase()
       },
-      include: { 
-        pasajero: true, 
+      include: {
+        pasajero: true,
         vuelo: {
           include: {
             aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: {
@@ -332,10 +353,10 @@ async validateCode(codigo_unico: string, dni: string) {
               include: { ciudad: true }
             },
           }
-        } 
+        }
       },
     });
-    
+
     if (!ticket) throw new NotFoundException('Ticket no encontrado o código de reserva inválido');
 
     if (!ticket.asientoAsignado) throw new BadRequestException('Debe seleccionar un asiento antes de confirmar el check-in');
@@ -355,6 +376,61 @@ async validateCode(codigo_unico: string, dni: string) {
     // Extraer información del vuelo
     const origen = ticket.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto;
     const destino = ticket.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto;
+
+    // construir boardingPassUrl (igual que antes)
+    let envFront = this.configService.get<string>('FRONTEND_QR_CODE_URL') || '';
+    const frontend = envFront.replace(/\/$/, '');
+    console.log('🌐 FRONTEND URL:', frontend);
+    const params = new URLSearchParams({
+      ticketId: String(updated.id_ticket),
+      pasajero: `${ticket.pasajero!.nombre} ${ticket.pasajero!.apellido}`.trim(),
+      dni: ticket.pasajero!.dni,
+      asiento: updated.asientoAsignado ?? '',
+      vuelo: String(ticket.vuelo.id_vuelo),
+      origen: origen.codigo_iata ?? '',
+      destino: destino.codigo_iata ?? '',
+      salida: ticket.vuelo.salida_programada_utc.toISOString(),
+    });
+    const boardingPassUrl = `${frontend}/checkin/boarding-pass?${params.toString()}`;
+    console.log('🔗 Boarding Pass URL:', boardingPassUrl);
+
+    // generar QR buffer
+    const qrBuffer = await QRCode.toBuffer(boardingPassUrl, {
+      type: 'png',
+      width: 600,
+      margin: 1,
+    });
+
+    // preparar attachment inline con CID
+    const attachments = [
+      {
+        filename: 'boarding-pass-qr.png',
+        content: qrBuffer,
+        cid: 'boardingpass_qr@swokowsky', // debe coincidir con la plantilla
+        contentType: 'image/png',
+      },
+    ];
+
+    // formatear fechas en hora Colombia (usa tu helper)
+    const departureCO = this.formatDateCO(ticket.vuelo.salida_programada_utc);
+    const arrivalCO = this.formatDateCO(ticket.vuelo.llegada_programada_utc);
+
+    // enviar correo con attachment inline
+    await this.mailService.sendCheckinConfirmationEmail(
+      ticket.pasajero!.email,
+      {
+        clientName: `${ticket.pasajero!.nombre} ${ticket.pasajero!.apellido}`.trim(),
+        origin: `${origen.ciudad.nombre} (${origen.codigo_iata})`,
+        destination: `${destino.ciudad.nombre} (${destino.codigo_iata})`,
+        departureDate: departureCO,
+        arrivalDate: arrivalCO,
+        seatNumber: updated.asientoAsignado ?? '',
+        boardingPassUrl,
+      },
+      attachments,
+    );
+
+
 
     return {
       message: 'Check-in confirmado con éxito',
