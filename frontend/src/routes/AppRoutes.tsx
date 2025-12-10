@@ -27,6 +27,7 @@ import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
 import Checkin from "../modules/checkin/pages/checkin";
 import CheckinConfirmation from "../modules/checkin/pages/CheckinConfirmation";
+import BoardingPass from "../modules/checkin/pages/BoardingPass";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
 
 
@@ -126,6 +127,7 @@ export default function AppRoutes() {
         {/* Checkin */}
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/checkin/confirmacion" element={<CheckinConfirmation />} />
+        <Route path="/checkin/boarding-pass" element={<BoardingPass />} />
 
         {/* Panel Admin */}
         <Route
