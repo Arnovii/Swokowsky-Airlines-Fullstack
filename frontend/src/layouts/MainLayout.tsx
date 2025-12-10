@@ -1,7 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Header from "./header";
 import Footer from "./footer";
-import FloatingSupportButton from "../components/FloatingSupportButton";
 
 export default function MainLayout() {
   return (
@@ -11,9 +10,6 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <Footer />
-      
-      {/* Botón flotante de soporte */}
-      <FloatingSupportButton />
     </div>
   );
 }

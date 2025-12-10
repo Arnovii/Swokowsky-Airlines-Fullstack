@@ -21,7 +21,6 @@ import { TicketModule } from './modules/ticket/ticket.module';
 import { PasajeroModule } from './modules/pasajero/pasajero.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { ForoModule } from './modules/foro/foro.module';
-import { ChatModule } from './modules/chat/chat.module';
 import { CheckinModule } from './modules/checkin/checkin.module';
 
 
@@ -51,7 +50,6 @@ import { CheckinModule } from './modules/checkin/checkin.module';
     CheckoutModule,
     HistoryModule,
     ForoModule,
-    ChatModule,
     CheckinModule,
   ],
   controllers: [AppController],

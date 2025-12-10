@@ -76,15 +76,17 @@ export default function Header() {
             <span className="text-sm font-medium">Noticias</span>
           </Link>
 
-          {/* Forum - Icono + Nombre */}
-          <Link
-            to="/foro"
-            className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
-            title="Foro de la Comunidad"
-          >
-            <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
-            <span className="text-sm font-medium">Foro</span>
-          </Link>
+          {/* Forum - Icono + Nombre - Solo visible para usuarios autenticados */}
+          {auth.isAuthenticated && (
+            <Link
+              to="/foro"
+              className="flex items-center gap-2 px-3 py-2 text-white hover:text-cyan-300 transition-all duration-300 group"
+              title="Foro de la Comunidad"
+            >
+              <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300" />
+              <span className="text-sm font-medium">Foro</span>
+            </Link>
+          )}
 
           {/* ⭐ Shopping Cart - SOLO VISIBLE PARA CLIENTES (no admin/root) */}
           {!isAdmin && (
@@ -176,17 +178,19 @@ export default function Header() {
               </span>
             </Link>
 
-            {/* Forum Link Mobile - visible para todos */}
-            <Link
-              to="/foro"
-              className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-cyan-500/10 hover:border-cyan-400/30 transition-all duration-300 group"
-              onClick={() => setOpen(false)}
-            >
-              <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
-              <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
-                Foro
-              </span>
-            </Link>
+            {/* Forum Link Mobile - Solo visible para usuarios autenticados */}
+            {auth.isAuthenticated && (
+              <Link
+                to="/foro"
+                className="flex items-center space-x-3 p-4 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-cyan-500/10 hover:border-cyan-400/30 transition-all duration-300 group"
+                onClick={() => setOpen(false)}
+              >
+                <MessageCircle className="h-5 w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors duration-300 flex-shrink-0" />
+                <span className="text-cyan-200 group-hover:text-white transition-colors duration-300 font-medium">
+                  Foro
+                </span>
+              </Link>
+            )}
 
             {/* ⭐ Shopping Cart Link Mobile - SOLO VISIBLE PARA CLIENTES */}
             {!isAdmin && (
