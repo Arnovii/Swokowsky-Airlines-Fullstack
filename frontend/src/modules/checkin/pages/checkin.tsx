@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import checkinService, { type CheckinSessionData } from "../services/checkinService";
+import SeatMapModal from "../../seatmap/components/SeatMapModal";
 
 type Step = 1 | 2 | 3;
 
@@ -15,6 +16,13 @@ dni: string;
 
 interface PassengerSession extends CheckinSessionData {
 extraBag: boolean; // maleta adicional por pasajero
+selectedSeat?: string | null; // asiento seleccionado en el modal
+}
+
+// Estado del modal de mapa de asientos
+interface SeatModalState {
+  isOpen: boolean;
+  passengerIndex: number | null;
 }
 
 const CheckInPage: React.FC = () => {
@@ -34,6 +42,12 @@ const [passengerForms, setPassengerForms] = useState<PassengerFormRow[]>([
 
 // Datos devueltos por el backend por pasajero
 const [passengerSessions, setPassengerSessions] = useState<PassengerSession[]>([]);
+
+// Estado del modal de mapa de asientos
+const [seatModal, setSeatModal] = useState<SeatModalState>({
+  isOpen: false,
+  passengerIndex: null,
+});
 
 // --- Helpers de validación ---
 
@@ -157,25 +171,114 @@ e.preventDefault();
 setStep(3);
 };
 
-// --- Paso 3: ir al mapa de asientos POR PASAJERO ---
+// --- Paso 3: abrir modal de mapa de asientos POR PASAJERO ---
 
-const handleGoToSeatMapForPassenger = (index: number) => {
-const passenger = passengerSessions[index];
-if (!passenger) return;
-
-// Guardamos la sesión SOLO de este pasajero
-checkinService.saveSession({
-    codigo_unico: passenger.codigo_unico,
-    ticketId: passenger.ticketId,
-    id_vuelo: passenger.id_vuelo,
-    pasajero: passenger.pasajero,
-    asientoComprado: passenger.asientoComprado,
-    asientoAsignado: passenger.asientoAsignado,
-    salida: passenger.salida,
-    extraBag: passenger.extraBag,
+const handleOpenSeatModal = (index: number) => {
+setSeatModal({
+  isOpen: true,
+  passengerIndex: index,
 });
+};
 
-navigate(`/mapa-asientos/${passenger.id_vuelo}?checkin=true`);
+const handleCloseSeatModal = () => {
+setSeatModal({
+  isOpen: false,
+  passengerIndex: null,
+});
+};
+
+// Cuando el pasajero confirma un asiento en el modal
+const handleSeatConfirmed = (seatId: string) => {
+if (seatModal.passengerIndex === null) return;
+
+const index = seatModal.passengerIndex;
+setPassengerSessions((prev) =>
+  prev.map((p, i) =>
+    i === index ? { ...p, selectedSeat: seatId } : p
+  )
+);
+};
+
+// Confirmar check-in final para todos los pasajeros
+const [confirmingAll, setConfirmingAll] = useState(false);
+
+const handleConfirmAllCheckins = async () => {
+// Verificar que todos tienen asiento seleccionado
+const missingSeats = passengerSessions.filter((p) => !p.selectedSeat);
+if (missingSeats.length > 0) {
+  toast.warning(`⚠️ Faltan ${missingSeats.length} pasajero(s) por seleccionar asiento`, {
+    position: 'top-center',
+  });
+  return;
+}
+
+setConfirmingAll(true);
+
+try {
+  // Procesar check-in para cada pasajero
+  for (let i = 0; i < passengerSessions.length; i++) {
+    const passenger = passengerSessions[i];
+    
+    // Asignar asiento
+    await checkinService.assignSeat(
+      passenger.codigo_unico,
+      passenger.ticketId,
+      passenger.selectedSeat!
+    );
+    
+    // Confirmar check-in
+    await checkinService.confirmCheckin(
+      passenger.codigo_unico,
+      passenger.ticketId
+    );
+    
+    toast.success(`✅ Check-in completado para ${passenger.pasajero.nombre}`, {
+      position: 'top-center',
+      autoClose: 2000,
+    });
+  }
+
+  // Navegar a la página de confirmación con los datos del primer pasajero
+  // (o podrías crear una página de confirmación grupal)
+  const firstPassenger = passengerSessions[0];
+  
+  // Obtener datos completos del último check-in para la página de confirmación
+  const result = await checkinService.confirmCheckin(
+    firstPassenger.codigo_unico,
+    firstPassenger.ticketId
+  ).catch(() => null);
+
+  toast.success('🎉 ¡Check-in grupal completado exitosamente!', {
+    position: 'top-center',
+    autoClose: 3000,
+  });
+
+  // Navegar a confirmación
+  navigate('/checkin/confirmacion', {
+    state: {
+      checkinCompleted: true,
+      ticketId: firstPassenger.ticketId,
+      asiento: firstPassenger.selectedSeat,
+      pasajero: firstPassenger.pasajero,
+      vuelo: result?.vuelo,
+      codigoReserva: result?.codigoReserva,
+      totalPassengers: passengerSessions.length,
+      allSeats: passengerSessions.map(p => ({
+        nombre: p.pasajero.nombre,
+        asiento: p.selectedSeat,
+      })),
+    },
+    replace: true,
+  });
+
+} catch (err: unknown) {
+  console.error('Error en check-in grupal:', err);
+  const error = err as { response?: { data?: { message?: string } } };
+  const message = error?.response?.data?.message || 'Error al confirmar el check-in';
+  toast.error(`❌ ${message}`, { position: 'top-center' });
+} finally {
+  setConfirmingAll(false);
+}
 };
 
 const stepsConfig = [
@@ -620,7 +723,11 @@ return (
                 {passengerSessions.map((p, index) => (
                 <div
                     key={p.ticketId}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/60 border border-slate-700/60 rounded-xl px-4 py-3"
+                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl px-4 py-3 ${
+                      p.selectedSeat 
+                        ? 'bg-emerald-950/40 border border-emerald-500/40' 
+                        : 'bg-slate-950/60 border border-slate-700/60'
+                    }`}
                 >
                     <div>
                     <p className="text-sm font-semibold text-white">
@@ -629,21 +736,60 @@ return (
                     <p className="text-xs text-slate-400">
                         Documento: {p.pasajero.dni}
                     </p>
-                    {p.asientoAsignado && (
-                        <p className="text-xs text-emerald-300">
-                        Asiento asignado: {p.asientoAsignado}
+                    {p.selectedSeat ? (
+                        <p className="text-xs text-emerald-300 font-semibold">
+                        ✓ Asiento seleccionado: <span className="text-emerald-200 font-mono text-sm">{p.selectedSeat}</span>
+                        </p>
+                    ) : p.asientoAsignado ? (
+                        <p className="text-xs text-amber-300">
+                        Asiento actual: {p.asientoAsignado}
+                        </p>
+                    ) : (
+                        <p className="text-xs text-slate-500">
+                        Sin asiento seleccionado
                         </p>
                     )}
                     </div>
                     <button
                     type="button"
-                    onClick={() => handleGoToSeatMapForPassenger(index)}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-900 text-xs sm:text-sm font-semibold hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/40"
+                    onClick={() => handleOpenSeatModal(index)}
+                    className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-md ${
+                      p.selectedSeat
+                        ? 'bg-slate-600 text-white hover:bg-slate-500 shadow-slate-500/30'
+                        : 'bg-emerald-500 text-slate-900 hover:bg-emerald-400 shadow-emerald-500/40'
+                    }`}
                     >
-                    Seleccionar asiento para {p.pasajero.nombre}
+                    {p.selectedSeat ? 'Cambiar asiento' : 'Seleccionar asiento'}
                     </button>
                 </div>
                 ))}
+            </div>
+
+            {/* Progreso de selección */}
+            <div className="bg-slate-950/60 border border-slate-700/60 rounded-xl p-4 mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">
+                    Progreso de selección
+                  </p>
+                  <p className="text-sm font-semibold">
+                    <span className={passengerSessions.filter(p => p.selectedSeat).length === passengerSessions.length ? 'text-emerald-400' : 'text-amber-400'}>
+                      {passengerSessions.filter(p => p.selectedSeat).length}
+                    </span>
+                    <span className="text-slate-400"> / {passengerSessions.length}</span>
+                  </p>
+                </div>
+                <div className="w-full bg-slate-700/50 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      passengerSessions.filter(p => p.selectedSeat).length === passengerSessions.length 
+                        ? 'bg-emerald-500' 
+                        : 'bg-cyan-500'
+                    }`}
+                    style={{ 
+                      width: `${(passengerSessions.filter(p => p.selectedSeat).length / passengerSessions.length) * 100}%` 
+                    }}
+                  ></div>
+                </div>
             </div>
 
             <div className="bg-amber-500/10 border border-amber-400/30 rounded-xl p-4 mt-4">
@@ -651,14 +797,12 @@ return (
                 ⚠️ Importante
                 </p>
                 <ul className="text-xs text-slate-300 list-disc list-inside space-y-1">
-                <li>Selecciona asientos disponibles en el mapa.</li>
+                <li>Selecciona un asiento para cada pasajero antes de confirmar.</li>
                 <li>
-                    El mapa se abrirá una vez por pasajero para que cada uno
-                    tenga su asiento.
+                    Puedes cambiar el asiento de cualquier pasajero antes de finalizar.
                 </li>
                 <li>
-                    El check-in de cada pasajero quedará completado al
-                    confirmar su asiento.
+                    El check-in quedará completado al confirmar todos los asientos.
                 </li>
                 </ul>
             </div>
@@ -672,11 +816,41 @@ return (
             >
                 ← Volver
             </button>
-            {/* No botón global de ir al mapa, ahora es por pasajero */}
+            <button
+                type="button"
+                onClick={handleConfirmAllCheckins}
+                disabled={confirmingAll || passengerSessions.some(p => !p.selectedSeat)}
+                className="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-900 text-sm font-semibold hover:bg-emerald-400 transition-all shadow-md shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {confirmingAll ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Procesando check-in...
+                  </>
+                ) : (
+                  `Confirmar check-in (${passengerSessions.length} pasajero${passengerSessions.length > 1 ? 's' : ''})`
+                )}
+            </button>
             </div>
         </div>
         )}
     </div>
+
+    {/* Modal del mapa de asientos */}
+    {seatModal.passengerIndex !== null && (
+      <SeatMapModal
+        isOpen={seatModal.isOpen}
+        onClose={handleCloseSeatModal}
+        idVuelo={passengerSessions[seatModal.passengerIndex]?.id_vuelo}
+        passengerName={passengerSessions[seatModal.passengerIndex]?.pasajero.nombre || ''}
+        passengerIndex={seatModal.passengerIndex}
+        currentAssignedSeat={passengerSessions[seatModal.passengerIndex]?.asientoAsignado}
+        onSeatConfirmed={handleSeatConfirmed}
+      />
+    )}
     </div>
 </div>
 );
