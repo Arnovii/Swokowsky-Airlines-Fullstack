@@ -175,6 +175,17 @@ export class MailService {
     });
   }
 
+  async sendCheckinConfirmationEmail(
+    to: string,
+    data: { clientName: string; origin: string; destination: string; departureDate: string; arrivalDate: string; seatNumber: string; qrCodeData: string; }){
+      return this.sendMail({
+        to,
+        subject: 'Confirmación de Check-in - Swokowsky Airlines',
+        template: 'checkin-confirmation',
+        context: data,
+      });
+    }
+
 
   /**
    * Envía una notificación (plantilla new-notification) a múltiples destinatarios.
