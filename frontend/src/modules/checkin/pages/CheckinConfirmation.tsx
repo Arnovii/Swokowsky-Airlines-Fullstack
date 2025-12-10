@@ -109,24 +109,48 @@ const CheckinConfirmation: React.FC = () => {
     return window.location.origin;
   };
 
-  const generateBoardingPassUrl = (passengerName?: string, passengerDni?: string, seat?: string, ticketId?: number) => {
+const generateBoardingPassUrl = (passengerName?: string, passengerDni?: string, seat?: string, ticketId?: number) => {
     const baseUrl = getBaseUrl();
-    const params = new URLSearchParams({
-      ticketId: (ticketId || state.ticketId).toString(),
-      pasajero: encodeURIComponent(passengerName || state.pasajero?.nombre || 'Pasajero'),
-      dni: passengerDni || state.pasajero?.dni || '',
-      asiento: seat || state.asiento,
-      vuelo: (state.vuelo?.id || state.ticketId).toString(),
-      origenCodigo: state.vuelo?.origen?.codigo || '',
-      origenCiudad: state.vuelo?.origen?.ciudad || '',
-      origenAeropuerto: state.vuelo?.origen?.aeropuerto || '',
-      destinoCodigo: state.vuelo?.destino?.codigo || '',
-      destinoCiudad: state.vuelo?.destino?.ciudad || '',
-      destinoAeropuerto: state.vuelo?.destino?.aeropuerto || '',
-      salida: state.vuelo?.salida || '',
-      llegada: state.vuelo?.llegada || '',
-      codigoReserva: state.codigoReserva || '',
-    });
+    const params = new URLSearchParams();
+    
+    // Parámetros básicos
+    params.append('ticketId', (ticketId || state.ticketId).toString());
+    params.append('pasajero', passengerName || state.pasajero?.nombre || 'Pasajero');
+    params.append('asiento', seat || state.asiento);
+    params.append('vuelo', (state.vuelo?.id || state.ticketId).toString());
+    
+    // Parámetros opcionales - solo agregar si tienen valor
+    if (passengerDni || state.pasajero?.dni) {
+      params.append('dni', passengerDni || state.pasajero?.dni || '');
+    }
+    if (state.vuelo?.origen?.codigo) {
+      params.append('origenCodigo', state.vuelo.origen.codigo);
+    }
+    if (state.vuelo?.origen?.ciudad) {
+      params.append('origenCiudad', state.vuelo.origen.ciudad);
+    }
+    if (state.vuelo?.origen?.aeropuerto) {
+      params.append('origenAeropuerto', state.vuelo.origen.aeropuerto);
+    }
+    if (state.vuelo?.destino?.codigo) {
+      params.append('destinoCodigo', state.vuelo.destino.codigo);
+    }
+    if (state.vuelo?.destino?.ciudad) {
+      params.append('destinoCiudad', state.vuelo.destino.ciudad);
+    }
+    if (state.vuelo?.destino?.aeropuerto) {
+      params.append('destinoAeropuerto', state.vuelo.destino.aeropuerto);
+    }
+    if (state.vuelo?.salida) {
+      params.append('salida', state.vuelo.salida);
+    }
+    if (state.vuelo?.llegada) {
+      params.append('llegada', state.vuelo.llegada);
+    }
+    if (state.codigoReserva) {
+      params.append('codigoReserva', state.codigoReserva);
+    }
+    
     return `${baseUrl}/checkin/boarding-pass?${params.toString()}`;
   };
 
@@ -280,11 +304,11 @@ const CheckinConfirmation: React.FC = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-center">
                           <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Origen</p>
-                          <p className="text-base font-bold text-emerald-300">{state.vuelo?.origen?.codigo || '---'} - {state.vuelo?.origen?.ciudad || ''}</p>
+                          <p className="text-base font-bold text-emerald-300">{state.vuelo?.origen?.codigo} - {state.vuelo?.origen?.ciudad || ''}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Destino</p>
-                          <p className="text-base font-bold text-cyan-300">{state.vuelo?.destino?.codigo || '---'} - {state.vuelo?.destino?.ciudad || ''}</p>
+                          <p className="text-base font-bold text-cyan-300">{state.vuelo?.destino?.codigo} - {state.vuelo?.destino?.ciudad || ''}</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-4">
@@ -304,12 +328,18 @@ const CheckinConfirmation: React.FC = () => {
                           <p className="text-xl font-bold text-white">{passenger.asiento}</p>
                         </div>
                       </div>
+
                       {/* QR individual para cada pasajero */}
                       <div className="flex justify-center pt-2 border-t border-slate-700/50">
                         <div className="flex flex-col items-center mt-3">
                           <div className="bg-white p-2 rounded-lg">
                             <QRCodeSVG 
-                              value={generateBoardingPassUrl(passenger.nombre, passenger.dni, passenger.asiento, passenger.ticketId)} 
+                              value={generateBoardingPassUrl(
+                                passenger.nombre, 
+                                passenger.dni, 
+                                passenger.asiento, 
+                                passenger.ticketId || state.ticketId
+                              )} 
                               size={80} 
                               level="M" 
                               includeMargin={false} 
@@ -372,9 +402,9 @@ const CheckinConfirmation: React.FC = () => {
               <div className="grid grid-cols-5 gap-4 items-center mb-6">
                 <div className="col-span-2 text-center">
                   <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Origen</p>
-                  <p className="text-3xl font-bold text-white mb-1">{state.vuelo.origen?.codigo || '---'}</p>
+                  <p className="text-3xl font-bold text-white mb-1">{state.vuelo.origen?.codigo }</p>
                   <p className="text-emerald-400 font-medium text-sm">{state.vuelo.origen?.ciudad || 'Ciudad'}</p>
-                  <p className="text-slate-500 text-xs truncate" title={state.vuelo.origen?.aeropuerto}>{state.vuelo.origen?.aeropuerto || 'Aeropuerto'}</p>
+              
                   <p className="text-cyan-300 font-mono text-lg mt-2">{formatTime(state.vuelo.salida)}</p>
                 </div>
 
@@ -391,10 +421,9 @@ const CheckinConfirmation: React.FC = () => {
 
                 <div className="col-span-2 text-center">
                   <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Destino</p>
-                  <p className="text-3xl font-bold text-white mb-1">{state.vuelo.destino?.codigo || '---'}</p>
+                  <p className="text-3xl font-bold text-white mb-1">{state.vuelo.destino?.codigo}</p>
                   <p className="text-cyan-400 font-medium text-sm">{state.vuelo.destino?.ciudad || 'Ciudad'}</p>
-                  <p className="text-slate-500 text-xs truncate" title={state.vuelo.destino?.aeropuerto}>{state.vuelo.destino?.aeropuerto || 'Aeropuerto'}</p>
-                  <p className="text-cyan-300 font-mono text-lg mt-2">{formatTime(state.vuelo.llegada)}</p>
+                  
                 </div>
               </div>
             )}
@@ -406,13 +435,16 @@ const CheckinConfirmation: React.FC = () => {
               </div>
             )}
 
-            <div className="flex flex-col items-center">
-              <div className="bg-white p-4 rounded-xl shadow-lg">
-                <QRCodeSVG value={qrUrl} size={140} level="H" includeMargin={false} bgColor="#ffffff" fgColor="#0a1628" />
+             {/* QR grande solo para un pasajero individual */}
+            {(!state.allSeats || state.allSeats.length <= 1) && (
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-xl shadow-lg">
+                  <QRCodeSVG value={qrUrl} size={140} level="H" includeMargin={false} bgColor="#ffffff" fgColor="#0a1628" />
+                </div>
+                <p className="text-center text-xs text-slate-500 mt-3">Escanea este código para ver tu tarjeta de embarque</p>
+                <p className="text-center text-xs text-slate-600 mt-1">Ticket #{state.ticketId}</p>
               </div>
-              <p className="text-center text-xs text-slate-500 mt-3">Escanea este código para ver tu tarjeta de embarque</p>
-              <p className="text-center text-xs text-slate-600 mt-1">Ticket #{state.ticketId}</p>
-            </div>
+            )}
           </div>
         </div>
 
