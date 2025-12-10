@@ -134,8 +134,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     try {
       await cartService.removeItem(itemId);
       await refreshCart();
-    } catch (error) {
-      console.error('Error al eliminar item:', error);
+    } catch (error: any) {
+      // Ignorar errores 404 (item ya no existe, probablemente eliminado por checkout)
+      if (error?.response?.status === 404) {
+        console.log(`Item ${itemId} ya no existe en el carrito`);
+        await refreshCart(); // Refrescar para sincronizar estado
+      } else {
+        console.error('Error al eliminar item:', error);
+      }
     } finally {
       setLoading(false);
     }

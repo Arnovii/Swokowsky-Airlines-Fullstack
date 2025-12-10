@@ -21,8 +21,9 @@ export const useForo = (): UseForoReturn => {
     setLoading(true);
     setError(null);
     try {
-      // Siempre obtener todos los hilos públicos (para todos los usuarios)
-      const data = await foroService.getHilosPublicos();
+      // Obtener hilos filtrados según el tipo de usuario
+      // Admin/Root ven todos, clientes solo los suyos
+      const data = await foroService.getHilosFiltrados();
       setHilos(data);
     } catch (err: any) {
       console.error('Error al obtener hilos:', err);

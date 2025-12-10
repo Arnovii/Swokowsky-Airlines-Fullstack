@@ -1,7 +1,7 @@
 import { PlaneTakeoff, PlaneLanding } from "lucide-react";
-import CalendarioRango from "@/modules/home/components/CalendarioRango";
-import { useFlightSearch } from "@/modules/home/hooks/useFlightSearch";
-import { TimeFilter } from "@/modules/home/components/TimeFilter";
+import CalendarioRango from "./CalendarioRango";
+import { useFlightSearch } from "../hooks/useFlightSearch";
+import { TimeFilter } from "./TimeFilter";
 // ================== ICONOS SVG ==================
 const ChevronDownIcon = ({ className = "" }: { className?: string }) => (
   <svg
@@ -91,42 +91,6 @@ const PlusIcon = () => (
   </svg>
 );
 
-const DollarIcon = () => (
-  <svg
-    className="w-5 h-5 text-[#0e254d]"
-    aria-hidden="true"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M12 6v13m0-13c-2.8-.8-4.7-1-6-1v13c1.3 0 3.2.2 6 1m0-13c2.8-.8 4.7-1 6-1v13c-1.3 0-3.2.2-6 1"
-    />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg
-    className="w-5 h-5 text-[#0e254d]"
-    aria-hidden="true"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <path
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-    />
-  </svg>
-);
-
 
 
 // ================== COMPONENTE PRINCIPAL ==================
@@ -153,8 +117,8 @@ export default function FilterSearchBar() {
   precioMax,
   horaIdaInicio,           
   horaIdaFin,             
-  horaVueltaInicio,        
-  horaVueltaFin,          
+  horaVueltaInicio: _horaVueltaInicio,        
+  horaVueltaFin: _horaVueltaFin,          
   mostrarHorarios,
   origenRef,
   destinoRef,
@@ -176,8 +140,8 @@ export default function FilterSearchBar() {
   handlePrecioChange,
   setHoraIdaInicio,        
   setHoraIdaFin,           
-  setHoraVueltaInicio,   
-  setHoraVueltaFin,       
+  setHoraVueltaInicio: _setHoraVueltaInicio,   
+  setHoraVueltaFin: _setHoraVueltaFin,       
   setPrecioMin,
   setPrecioMax,
 } = useFlightSearch();
@@ -396,8 +360,8 @@ export default function FilterSearchBar() {
                 modo={modo}
                 isOpen={mostrarCalendario}
                 onOpenChange={setMostrarCalendario}
-                fechaInicial={ida}
-                fechaFinal={vuelta}
+                fechaInicial={ida || null}
+                fechaFinal={vuelta || null}
                 onChange={actualizarFechas}
               />
             </div>

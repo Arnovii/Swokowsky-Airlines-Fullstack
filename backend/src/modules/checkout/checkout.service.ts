@@ -1,13 +1,15 @@
-import { Injectable, BadRequestException, Logger , forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, forwardRef } from '@nestjs/common';
 import { CheckoutDto } from './dto/checkout.dto';
 import { MailService } from '../../mail/mail.service';
 import { CartService } from '../cart/cart.service';
 import { UsersService } from '../users/users.service';
 import type { PayloadInterface } from 'src/common/interfaces/payload.interface';
 import { PrismaService } from '../../database/prisma.service';
-import { usuario, ticket_estado, asiento_clases } from '@prisma/client';
+import { usuario, ticket_estado, asiento_clases, configuracion_asientos } from '@prisma/client';
 import type { ticket } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import * as crypto from 'crypto';
+
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
@@ -18,6 +20,26 @@ export class CheckoutService {
     private readonly userService: UsersService,
     private readonly prisma: PrismaService
   ) { }
+
+  /**
+   * Genera código único de check-in para un ticket
+   */
+  private generateCheckinCode(dni: string, vueloId: number, ticketId: number): string {
+    const base = `${dni}-${vueloId}-${ticketId}-${Date.now()}`;
+    return crypto.createHash('sha256').update(base).digest('hex').slice(0, 12);
+  }
+
+  /**
+   * Genera código de reserva único para toda una transacción/compra
+   * Este código es compartido por todos los tickets comprados en la misma transacción
+   * Formato: 6 caracteres alfanuméricos en mayúsculas (ej: ABC123)
+   */
+  private generateReservationCode(userId: number): string {
+    const base = `reservation-${userId}-${Date.now()}-${Math.random()}`;
+    const hash = crypto.createHash('sha256').update(base).digest('hex');
+    // Tomar 6 caracteres y convertir a mayúsculas para facilidad de uso
+    return hash.slice(0, 6).toUpperCase();
+  }
 
   /**
    * Calcula el total del carrito consultando tarifas actuales en DB.
@@ -82,7 +104,7 @@ export class CheckoutService {
       const ciudadesInternacionales = ['Miami', 'Buenos Aires', 'New York', 'Londres', 'Madrid'];
       const ciudadOrigen = vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto?.ciudad?.nombre;
       const ciudadDestino = vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto?.ciudad?.nombre;
-      
+
       if (ciudadesInternacionales.includes(ciudadOrigen) || ciudadesInternacionales.includes(ciudadDestino)) {
         return 'internacional';
       }
@@ -97,44 +119,156 @@ export class CheckoutService {
    * Internacional primera_clase: A1 hasta B9 (50 asientos)
    * Internacional economica: C9 hasta D42 (200 asientos)
    */
-  private generateAllSeatsForClass(flightType: 'nacional' | 'internacional', clase: asiento_clases): string[] {
+  private async generateAllSeatsForClass(
+    flightType: 'nacional' | 'internacional',
+    claseTarget: asiento_clases,
+    preLoadedConfig?: Record<string, number> // <--- Nuevo parámetro opcional
+  ): Promise<string[]> {
     const seats: string[] = [];
     const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const totalColumns = columns.length;
 
-    if (flightType === 'nacional') {
-      if (clase === 'primera_clase') {
-        // A1 hasta A5 (25 asientos totales en una columna)
-        for (let row = 1; row <= 25; row++) {
-          seats.push(`A${row}`);
-        }
-      } else {
-        // B5 hasta F25 (125 asientos: 5 columnas x 25 filas)
-        for (let row = 1; row <= 25; row++) {
-          for (let col = 1; col < 6; col++) {
-            seats.push(`${columns[col]}${row}`);
-          }
-        }
-      }
+    let mapaAsientos: Record<string, number>;
+
+    // OPTIMIZACIÓN: Si ya nos pasan la config, la usamos. Si no, vamos a la BD.
+    if (preLoadedConfig) {
+      mapaAsientos = preLoadedConfig;
     } else {
-      // Internacional
-      if (clase === 'primera_clase') {
-        // A1 hasta B9 (50 asientos: 2 columnas x 25 filas)
-        for (let row = 1; row <= 25; row++) {
-          for (let col = 0; col < 2; col++) {
-            seats.push(`${columns[col]}${row}`);
-          }
-        }
-      } else {
-        // C9 hasta D42 (200 asientos: 2 columnas x 100 filas, pero el rango es C hasta D)
-        for (let row = 1; row <= 100; row++) {
-          for (let col = 2; col < 4; col++) {
-            seats.push(`${columns[col]}${row}`);
-          }
-        }
+      // --- Lógica original de acceso a BD (Fallback) ---
+
+      // 1. Determinar ID del avión
+      const idAirplane = flightType === 'nacional' ? 1 : 2;
+
+      // 2. Obtener configuración
+      let configuracionesDB: configuracion_asientos[] = [];
+      try {
+        configuracionesDB = await this.prisma.configuracion_asientos.findMany({
+          where: { id_aeronaveFK: idAirplane },
+          orderBy: { id_configuracion: 'asc' }
+        });
+
+        if (!configuracionesDB.length) throw new Error('Aeronave sin configuración.');
+      } catch (error) {
+        console.error('Error al obtener configuraciones:', error);
+        throw error;
       }
+
+      // 3. Crear el Mapa
+      mapaAsientos = configuracionesDB.reduce((acc, curr) => {
+        acc[curr.clase] = curr.cantidad;
+        return acc;
+      }, {} as Record<string, number>);
     }
+
+    // --- De aquí en adelante la lógica de cálculo matemático es IDÉNTICA ---
+
+    // Validamos que exista la clase
+    if (mapaAsientos[claseTarget] === undefined) {
+      throw new Error(`La clase ${claseTarget} no existe en esta aeronave.`);
+    }
+
+    // 4. Calcular dinámicamente el inicio
+    let firstRow = 1;
+    let firstColumnIndex = 0;
+
+    if (claseTarget === 'economica') {
+      const asientosPrevios = mapaAsientos['primera_clase'] || 0;
+      firstRow = Math.floor(asientosPrevios / totalColumns) + 1;
+      firstColumnIndex = asientosPrevios % totalColumns;
+    }
+
+    // 5. Calcular límites y generar
+    const cantidadAsientosA_Generar = mapaAsientos[claseTarget];
+    let asientosGeneradosCount = 0;
+    let currentRow = firstRow;
+    let currentStartCol = firstColumnIndex;
+
+    while (asientosGeneradosCount < cantidadAsientosA_Generar) {
+      for (let col = currentStartCol; col < totalColumns; col++) {
+        if (asientosGeneradosCount >= cantidadAsientosA_Generar) break;
+
+        seats.push(`${columns[col]}${currentRow}`);
+        asientosGeneradosCount++;
+      }
+      currentStartCol = 0;
+      currentRow++;
+    }
+
     return seats;
   }
+  // private async generateAllSeatsForClass(flightType: 'nacional' | 'internacional', clase: asiento_clases): Promise<string[]> {
+  //   const seats: string[] = [];
+  //   const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  //   const idAirplane = flightType === 'nacional' ? 1 : 2;
+  //   let configuracion: configuracion_asientos | null = null;
+
+  //   //Configuración de asientos según tipo de vuelo y clase
+  //   try {
+  //     configuracion = await this.prisma.configuracion_asientos.findFirst({
+  //       where: {
+  //         id_aeronaveFK: idAirplane,  // Filtramos por id_aeronave
+  //         clase: clase                 // Filtramos por clase de asiento
+  //       }
+  //     });
+  //     if (!configuracion) throw new Error('No se encontró configuración de asientos para la aeronave y clase especificadas.');
+  //   }catch (error) {
+  //     console.error('Error al obtener configuración de asientos:', error);
+  //     throw error;
+  //   }
+
+  //   //Calcular la última fila y su cantidad de asientos 
+  //   const totalSeats = configuracion.cantidad;
+  //   const totalColumns = columns.length;
+  //   const lastRow = Math.ceil(totalSeats/totalColumns);
+
+  //   const firstRow:number = flightType === 'nacional' ? (clase === 'primera_clase' ? 1 : 5) : (clase === 'primera_clase' ? 1 : 9);
+  //   const firstColumnIndex:number = flightType === 'nacional' ? (clase === 'primera_clase' ? 0 : 1) : (clase === 'primera_clase' ? 0 : 2);
+
+  //   if (flightType === 'nacional') {
+  //     if (clase === 'primera_clase') {
+  //       // A1 hasta A5 (25 asientos totales. 4 filas x 6 columnas = 24 asientos + 1 asiento en fila 5)
+  //       for (let row = firstRow; row <= lastRow; row++) {
+  //         for(let col = firstColumnIndex; col < totalColumns; col++) {
+  //           if (seats.length >= totalSeats) break;
+  //           seats.push(`${columns[col]}${row}`);
+  //         }
+  //       }
+  //     } else {
+  //       // B5 hasta F25 (125 asientos totales. 21 filas. primer fila 5 asientos, luego 20 filas completas) 
+  //       for (let row = firstRow; row <= lastRow; row++) {
+  //         for (let col = firstColumnIndex; col < totalColumns; col++) {
+  //           if (seats.length >= totalSeats) break;
+
+  //           //agregar condicion de primera fila (ya que nunca es completa debido a la primera clase)
+  //           seats.push(`${columns[col]}${row}`);
+  //         }
+  //       }
+  //     }
+  //   } else {
+  //     // Internacional
+  //     if (clase === 'primera_clase') {
+  //       // A1 hasta B9 (50 asientos: 2 columnas x 25 filas) // 🔴 (6 columnas x 8 filas. La novena fila solo 2 columnas)
+
+
+  //       //Desde configuración de asientos determinados 
+
+  //       for (let row = 1; row <= 25; row++) {
+  //         for (let col = 0; col < 2; col++) { 
+  //           seats.push(`${columns[col]}${row}`);
+  //         }
+  //       }
+  //     } else {
+  //       // C9 hasta D42 (200 asientos: 2 columnas x 100 filas, pero el rango es C hasta D)
+  //       for (let row = 1; row <= 100; row++) {
+  //         for (let col = 2; col < 4; col++) {
+  //           seats.push(`${columns[col]}${row}`);
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return seats;
+  // }
 
   /**
    * Obtiene asientos ocupados para un vuelo y clase específicos
@@ -229,10 +363,9 @@ export class CheckoutService {
         }
       });
       if (!vuelo) throw new BadRequestException(`Vuelo ${vid} no encontrado`);
-      
+
       // Determinar tipo de vuelo (nacional o internacional)
       const flightType = await this.determineFlightType(vuelo);
-      vueloCache.set(vid, { ...vueloCache.get(vid), vuelo, flightType });
 
       // obtener configuración de asientos para esa aeronave
       const configs = await this.prisma.configuracion_asientos.findMany({
@@ -243,7 +376,8 @@ export class CheckoutService {
         configPorClase[c.clase] = c.cantidad;
       }
 
-      vueloCache.set(vid, { vuelo, configPorClase });
+      // Guardar todo en cache (incluyendo flightType)
+      vueloCache.set(vid, { vuelo, flightType, configPorClase });
 
       // contar tickets pagados existentes por clase
       const cuentas = await this.prisma.ticket.groupBy({
@@ -274,8 +408,8 @@ export class CheckoutService {
 
     // 6.b Crear operaciones en transacción
     //vamos a darle un type para evitar errores
-const ticketDataList: any[] = []; // <-- acumula solo los objetos data
-    const emailNotifications: Array<{ email: string, nombre: string, titulo: string, asiento: string }> = [];
+    const ticketDataList: any[] = []; // <-- acumula solo los objetos data
+    const emailNotifications: Array<{ email: string, nombre: string, titulo: string, asiento: string,clase: string }> = [];
 
     // Para cada item en el checkoutDto (item1, item2, ...), localizar la correspondencia en carrito
     // Si hay mismatch entre cart item qty y DTO CantidadDePasajeros no se bloquea (pero validamos)
@@ -309,10 +443,25 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
 
       // Generar lista de todos los asientos posibles para esta clase
       const flightType = cache.flightType;
-      const allSeatsForClass = this.generateAllSeatsForClass(flightType, clase);
+      
+      // DEBUG: Log para verificar la asignación de asientos
+      this.logger.log(`🎫 Checkout - Vuelo: ${vueloID}, Clase solicitada: ${clase}, Tipo vuelo: ${flightType}`);
+      this.logger.log(`🎫 Config asientos: ${JSON.stringify(cache.configPorClase)}`);
+      
+      // OPTIMIZACIÓN: Pasamos cache.configPorClase como 3er argumento
+      const allSeatsForClass = await this.generateAllSeatsForClass(
+        flightType,
+        clase,
+        cache.configPorClase // <--- AQUÍ PASAMOS LA DATA PRE-CARGADA
+      );
+
+      // DEBUG: Log de asientos generados
+      this.logger.log(`🎫 Asientos generados para clase ${clase}: primeros 5 = [${allSeatsForClass.slice(0, 5).join(', ')}], últimos 5 = [${allSeatsForClass.slice(-5).join(', ')}]`);
+      this.logger.log(`🎫 Total asientos para ${clase}: ${allSeatsForClass.length}`);
 
       // Obtener asientos ya ocupados
       const occupiedSeats = await this.getOccupiedSeats(vueloID, clase);
+      this.logger.log(`🎫 Asientos ocupados para ${clase}: ${occupiedSeats.size}`);
 
       // Calcular asientos disponibles (no ocupados)
       const availableSeats = allSeatsForClass.filter(seat => !occupiedSeats.has(seat));
@@ -329,6 +478,8 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
       let assignedSeats: string[] = [];
       try {
         assignedSeats = this.selectRandomSeats(availableSeats, pasajeros.length);
+        // DEBUG: Log de asientos asignados
+        this.logger.log(`🎫 Asientos asignados para clase ${clase}: [${assignedSeats.join(', ')}]`);
       } catch (err) {
         throw new BadRequestException(`Error al asignar asientos: ${err?.message ?? err}`);
       }
@@ -369,7 +520,8 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
           email: p.email,
           nombre: `${p.nombre} ${p.apellido}`,
           titulo: (cache.vuelo.noticia?.titulo ?? `Vuelo #${vueloID}`) as string,
-          asiento: seatNumber
+          asiento: seatNumber,
+          clase
         });
 
         seatIndex += 1;
@@ -377,29 +529,61 @@ const ticketDataList: any[] = []; // <-- acumula solo los objetos data
     }
 
     // Ejecutar creación de tickets + pasajeros y deducción de saldo en una transacción
-try {
-  await this.prisma.$transaction(async (tx) => {
-    // crear tickets (y pasajeros nested) dentro de la transacción usando `tx`
-    const creations = ticketDataList.map(td => tx.ticket.create({ data: td }));
-    await Promise.all(creations);
+    // Guardamos los tickets creados para luego generar códigos de check-in
+    // Tipo para tickets con pasajero incluido
+    type TicketWithPasajero = ticket & { pasajero: { dni: string; nombre: string; apellido: string } | null };
+    let createdTickets: TicketWithPasajero[] = [];
+    
+    // 🎫 GENERAR UN CÓDIGO DE RESERVA ÚNICO PARA TODA LA TRANSACCIÓN
+    // Este código será compartido por todos los tickets de esta compra
+    const transactionReservationCode = this.generateReservationCode(client.id_usuario);
+    this.logger.log(`🎫 Código de reserva generado para transacción: ${transactionReservationCode}`);
+    
+    try {
+      createdTickets = await this.prisma.$transaction(async (tx) => {
+        // crear tickets (y pasajeros nested) dentro de la transacción usando `tx`
+        const tickets: TicketWithPasajero[] = [];
+        for (const td of ticketDataList) {
+          const created = await tx.ticket.create({ 
+            data: td,
+            include: { pasajero: true }
+          });
+          tickets.push(created as TicketWithPasajero);
+        }
 
-    // deducir saldo del usuario dentro de la misma tx
-    await tx.usuario.update({
-      where: { id_usuario: client.id_usuario },
-      data: { saldo: { decrement: total } }
-    });
+        // deducir saldo del usuario dentro de la misma tx
+        await tx.usuario.update({
+          where: { id_usuario: client.id_usuario },
+          data: { saldo: { decrement: total } }
+        });
 
-    // (opcional) crear historiales de pago usando `tx` también
-  });
+        return tickets;
+      });
 
-      // 7. Enviar correo de confirmación a cada pasajero
-      for (const note of emailNotifications) {
+      // 7. Asignar el MISMO código de reserva a TODOS los tickets de esta transacción
+      for (const ticket of createdTickets) {
+        if (ticket.pasajero) {
+          // Actualizar ticket con el código de reserva compartido
+          await this.prisma.ticket.update({
+            where: { id_ticket: ticket.id_ticket },
+            data: { uniqueCheckinCode: transactionReservationCode }
+          });
+          
+          this.logger.log(`✅ Código de reserva asignado al ticket ${ticket.id_ticket} (pasajero: ${ticket.pasajero.nombre}): ${transactionReservationCode}`);
+        }
+      }
+
+      // 8. Enviar correo de confirmación a cada pasajero con el MISMO código de reserva
+      for (let i = 0; i < emailNotifications.length; i++) {
+        const note = emailNotifications[i];
+        
         try {
-          // Asumo que sendTicketEmail espera receptorEmail y un objeto con nombre, TituloNoticiaVuelo, NumeroAsiento
           await this.mailService.sendTicketEmail(note.email, {
             nombre: note.nombre,
             TituloNoticiaVuelo: note.titulo,
             NumeroAsiento: note.asiento,
+            CategoriaAsiento: note.clase,
+            CodigoCheckin: transactionReservationCode, // Mismo código para todos los pasajeros de la transacción
           });
         } catch (err) {
           this.logger.warn(`Error enviando email a ${note.email}: ${err?.message ?? err}`);
@@ -433,90 +617,3 @@ try {
 }
 
 
-
-// @Injectable()
-// export class CheckoutService {
-//   constructor(
-//     private readonly mailService: MailService,
-//     private readonly cartService: CartService,
-//     private readonly userService: UsersService,
-//     private readonly prisma: PrismaService
-//   ) { }
-
-
-//   calculateTotalCart = (cartItemsList) => {
-//     let total = 0;
-//     for (const item of cartItemsList) {
-
-//     return total;
-//   }
-
-//   deleteItemsCart = async (idCarrito: number | null) => {
-//     if (idCarrito) {
-//       await this.prisma.carrito_item.deleteMany({ where: { id_carritoFK: idCarrito } });
-//     }
-//     else {
-//       throw new BadRequestException('Carrito no existente');
-//     }
-//   }
-
-//   getCarritoIdByUsuarioId = async (idUsuario: number) => {
-//     let carrito = await this.prisma.carrito.findUnique({ where: { id_usuarioFK: idUsuario } });
-//     return carrito ? carrito.id_carrito : null;
-//   }
-
-//   async function processCheckout(userPayload: PayloadInterface, checkoutDto: CheckoutDto) {
-
-//     //1. Determinar usuario
-//     const client: usuario | null = await this.userService.findUserByEmail(userPayload.email);
-//     if (!client) throw new BadRequestException('Cliente no existente');
-
-//     //2. Determinar carrito con items válidos
-//     const cartItemsList = await this.cartService.getCart(userPayload)
-
-//     //3. Calcular total a pagar 
-//     const total = this.calculateTotalCart(cartItemsList.items);
-
-//     //4. Saldo del usuario
-//     const saldo = client.saldo ? client.saldo : 0;
-
-
-//     //5. Validar que el saldo es suficiente
-
-//     if (saldo < total) {
-//       throw new BadRequestException('Saldo insuficiente');
-//     }
-
-//     //6. Crear tickets y pasajeros segun la información recibida del frontend
-//      //Generar Número de asiento dependiendo de la clase seleccionada (economica o  primera_clase)
-//      //a. Obtener la aeronave asociada al vuelo
-//      //b. Buscar la configuración de asientos por clase
-//      //c. Obtener asientos ya ocupados en ese vuelo y clase (ticket_estado.pagado) y carrito_item cuyo id_vueloFK es el vuelo actual y fecha_limite > hoy
-//      //d. Generar número de asiento único (no repetido) para cada pasajero (P-1, P-2, E-15, E-16, etc). Los primeros asientos del avión son de primera clase, luego los de económica
-//      //e. Crear el ticket y el pasajero asociado
-
-  
-//     //7. Enviar correo de confirmación a cada uno de los pasajeros de su ticket y su respectivo asiento
-//     let receptorEmail = ""
-//     this.mailService.sendTicketEmail(receptorEmail, {
-//       nombre: ,
-//       TituloNoticiaVuelo: ,
-//       NumeroAsiento: ,
-//     });
-
-
-
-//     // Vaciar carrito del usuario (elimina todos los items del carrito )
-//     this.deleteItemsCart(cartItemsList.id_carrito);
-
-//     if (cartItemsList.id_carrito) {
-//       // Usar PrismaService directamente para vaciar el carrito
-//       const prisma = (this.cartService as any).prisma;
-//       if (prisma && prisma.carrito_item) {
-//         await prisma.carrito_item.deleteMany({ where: { id_carritoFK: cartItemsList.id_carrito } });
-//       }
-//     }
-
-//     return { success: true, message: 'Pago realizado y tickets generados correctamente.' };
-//   }
-// }

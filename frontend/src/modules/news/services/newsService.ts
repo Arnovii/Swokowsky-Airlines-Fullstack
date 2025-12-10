@@ -7,6 +7,7 @@ export interface Article {
   content: string;
   imageUrl: string;
   isFeatured: boolean;
+  publishDate?: string;
 }
 
 const mockArticles: Article[] = [

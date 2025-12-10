@@ -17,6 +17,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsEnum(usuario_tipo_usuario)
   tipo_usuario?: usuario_tipo_usuario;
 
+  @IsOptional()
+  @IsString()
+  password_bash?: string;
+
   // 🚫 No incluyas tarjeta[] ni ticket[] aquí (Todo lo que sea una llave foranea)
   // Si necesitas gestionar tarjetas/tickets, crea DTOs y endpoints aparte.
 }

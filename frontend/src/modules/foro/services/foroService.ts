@@ -51,9 +51,16 @@ export interface CreateRespuestaDto {
 
 // Servicio del Foro
 const foroService = {
-  // Obtener hilos públicos (sin autenticación requerida)
+  // Obtener hilos filtrados (requiere autenticación)
+  // Admin/Root ven todos, clientes solo los suyos
+  getHilosFiltrados: async (): Promise<Hilo[]> => {
+    const response = await api.get('/foro/filtrados');
+    return response.data;
+  },
+
+  // DEPRECATED: Ya no se usa el endpoint público
   getHilosPublicos: async (): Promise<Hilo[]> => {
-    const response = await api.get('/foro/publico');
+    const response = await api.get('/foro/filtrados');
     return response.data;
   },
 

@@ -126,7 +126,7 @@ export class MailService {
 
   async sendTicketEmail(
     to: string,
-    data: { nombre: string; TituloNoticiaVuelo: string; NumeroAsiento: string }
+    data: { nombre: string; TituloNoticiaVuelo: string; NumeroAsiento: string, CategoriaAsiento: string, CodigoCheckin?: string }
   ) {
     // Extraer el número real del vuelo: "Vuelo #1234" => 1234
     const idVueloRaw = data.TituloNoticiaVuelo;
@@ -162,7 +162,10 @@ export class MailService {
     const ciudadDestino = destino.ciudad.nombre;
 
     // Cambiar el título para el correo
-    data.TituloNoticiaVuelo = `${ciudadOrigen} => ${ciudadDestino}`;
+    data.TituloNoticiaVuelo = `${ciudadOrigen} ➡ ${ciudadDestino}`;
+
+    // Debug: log para verificar que el código de check-in se está pasando
+    this.logger.log(`📧 Enviando email a ${to} con código de check-in: ${data.CodigoCheckin || 'NO INCLUIDO'}`);
 
     return this.sendMail({
       to,

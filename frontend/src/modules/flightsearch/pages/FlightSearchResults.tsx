@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCart } from '../../../context/CartContext';
+import { useAuth } from '../../../context/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useFlightSearch } from '../hooks/useFlightSearch';
 import { FlightCard } from '../components/FlightCard';
@@ -7,12 +8,14 @@ import { LoadingState, ErrorState, NoFlightsFound } from '../components/EmptySta
 import { ClassSelectorModal } from '../components/ClassSelectorModal';
 import type { Flight } from '../types/Flight';
 import { toCardFlight } from '../types/Flight';
+import { toast } from 'react-toastify';
 
 
 export function FlightSearchResults() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
   
   // Estado para el modal y vuelo seleccionado
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +55,22 @@ export function FlightSearchResults() {
 
   // : Abrir modal al hacer clic en agregar al carrito
   const handleSelectFlight = (flight: Flight, isOutbound?: boolean) => {
+    // Verificar si el usuario está autenticado
+    if (!isAuthenticated) {
+      toast.info(
+        '🔐 Debes iniciar sesión para agregar vuelos al carrito',
+        {
+          position: "top-center",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+        }
+      );
+      navigate('/login', { state: { from: window.location.pathname + window.location.search } });
+      return;
+    }
+
     if (searchCriteria.roundTrip && isOutbound !== undefined) {
       // Para viajes de ida y vuelta
       if (isOutbound) {

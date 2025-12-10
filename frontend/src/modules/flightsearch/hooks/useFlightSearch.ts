@@ -31,8 +31,8 @@ const normalizeApiResponse = (data: any = {}): FlightSearchNormalized => {
     const inbound = Array.isArray(data.inbound) ? data.inbound : [];
       return {
         type: 'roundtrip',
-        outbound: outbound.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
-        inbound: inbound.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
+        outbound: outbound.map((f: FlightSearchResult, i: number) => ({ ...f, id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo })),
+        inbound: inbound.map((f: FlightSearchResult, i: number) => ({ ...f, id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo })),
         metadata: data.metadata ?? {},
       };
   }
@@ -42,7 +42,7 @@ const normalizeApiResponse = (data: any = {}): FlightSearchNormalized => {
     const arr = Array.isArray(data.results) ? data.results : (data.outbound || []);
     return {
       type: 'oneway',
-      outbound: arr.map((f, i) => ({ id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo, ...f })),
+      outbound: arr.map((f: FlightSearchResult, i: number) => ({ ...f, id: f.id_vuelo || f.id || generateFlightId(f, i), id_vuelo: f.id_vuelo })),
       inbound: [],
       metadata: data.metadata ?? {},
     };
@@ -131,10 +131,7 @@ export const useFlightSearch = (
 
       console.log('[useFlightSearch] Enviando búsqueda con filtros:', searchParams);
 
-      const rawResponse = await FlightService.searchFlights(searchParams, { signal });
-
-      // Manejo: si FlightService devuelve un AxiosResponse, extraemos .data
-      const payload = rawResponse && rawResponse.data ? rawResponse.data : rawResponse;
+      const payload = await FlightService.searchFlights(searchParams, { signal });
 
       // Loguea la respuesta cruda (mira la consola del navegador)
       console.debug('[useFlightSearch] payload recibido:', payload);
@@ -145,12 +142,13 @@ export const useFlightSearch = (
       console.debug('[useFlightSearch] payload normalizado:', normalized);
 
       setResults(normalized);
-    } catch (err) {
+    } catch (err: unknown) {
       if (signal.aborted) return;
 
       // Si es un error de axios, muestra más info
       console.error('[useFlightSearch] error buscando vuelos:', err);
-      setError(err?.message || (err?.toString ? err.toString() : 'Error al buscar vuelos'));
+      const errorMessage = err instanceof Error ? err.message : 'Error al buscar vuelos';
+      setError(errorMessage);
       setResults({ type: 'oneway', outbound: [], inbound: [], metadata: {} });
     } finally {
       if (!signal.aborted) setLoading(false);

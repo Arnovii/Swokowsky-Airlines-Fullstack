@@ -6,8 +6,8 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app # monta el código local
-      - /app/node_modules # evita conflictos con node_modules
+      - ./frontend:/app 
+      - /app/node_modules 
     command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend
@@ -22,42 +22,14 @@ services:
     networks:
       - appnet
     env_file:
-      - ./backend/.env # ⬅️ usa el nombre real del archivo
-    environment:
-      # variables propias del backend además de las del env_file
-      DATABASE_HOST: db
-      DATABASE_PORT: 3306
-      DATABASE_USER: ${MYSQL_USER}
-      DATABASE_PASSWORD: ${MYSQL_PASSWORD}
-      DATABASE_NAME: ${MYSQL_DATABASE}
-    depends_on:
-      db:
-        condition: service_healthy
+      - ./backend/.env
     volumes:
-      - ./backend:/app # tu código local
-      - /app/node_modules # evita conflictos con node_modules. Evita sobrescribir los node_modules del contenedor
+      - ./backend:/app 
+      - /app/node_modules 
     command: npm run start:dev
-
-  db:
-    image: mysql:8.0
-    restart: always
-    env_file:
-      - ./backend/.env # ⬅️ variables para MySQL
-    ports:
-      - "3308:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      - appnet
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   db_data:
-
 
 networks:
   appnet:

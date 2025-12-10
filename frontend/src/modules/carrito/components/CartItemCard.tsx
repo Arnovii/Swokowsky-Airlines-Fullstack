@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import cartService from '../service/cartService';
 import type { CartItem } from '../service/cartService';
 import { useCountdown } from '../hooks/useCountdown';

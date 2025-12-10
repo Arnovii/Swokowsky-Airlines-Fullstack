@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { Clock } from 'lucide-react';
 
+interface TimeInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
 // Componente de Input de Hora Moderno
-const TimeInput = ({ label, value, onChange, placeholder = "HH:MM" }) => {
+const TimeInput: React.FC<TimeInputProps> = ({ label, value, onChange, placeholder = "HH:MM" }) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleTimeChange = (e) => {
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     
     // Permitir solo números y dos puntos
