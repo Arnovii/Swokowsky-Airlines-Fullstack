@@ -38,72 +38,90 @@ export class CheckinService {
    * Ahora el código es compartido por todos los tickets de una transacción,
    * por lo que usamos código + DNI para identificar al pasajero específico
    */
-  async validateCode(codigo_unico: string, dni: string) {
-    this.logger.log(`🔍 Validando check-in - Código de reserva: ${codigo_unico}, DNI: ${dni}`);
-    
-    // Buscar el ticket que coincida con el código Y cuyo pasajero tenga ese DNI
-    const ticket = await this.prisma.ticket.findFirst({
-      where: { 
-        uniqueCheckinCode: codigo_unico.toUpperCase(), // Código en mayúsculas
-        pasajero: {
-          dni: dni
-        }
-      },
-      include: { pasajero: true, vuelo: true },
-    });
-
-    this.logger.log(`🔍 Ticket encontrado: ${ticket ? `ID ${ticket.id_ticket}` : 'NO ENCONTRADO'}`);
-    
-    if (!ticket) {
-      // Verificar si el código existe pero el DNI no coincide
-      const ticketWithCode = await this.prisma.ticket.findFirst({
-        where: { uniqueCheckinCode: codigo_unico.toUpperCase() },
-        include: { pasajero: true }
-      });
-      
-      if (ticketWithCode) {
-        this.logger.log(`🔍 El código existe pero el DNI no coincide`);
-        throw new BadRequestException('El DNI no coincide con ningún pasajero de esta reserva');
-      }
-      
-      throw new NotFoundException('Código de reserva inválido');
-    }
-    
-    if (!ticket.pasajero) throw new BadRequestException('Ticket sin pasajero asociado');
-    
-    this.logger.log(`🔍 Pasajero encontrado: ${ticket.pasajero.nombre} ${ticket.pasajero.apellido}`);
-
-    const now = new Date();
-    const salida = new Date(ticket.vuelo.salida_programada_utc);
-    const diffHours = (salida.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    this.logger.log(`⏰ Hora actual (servidor): ${now.toISOString()}`);
-    this.logger.log(`✈️ Hora de salida del vuelo: ${salida.toISOString()}`);
-    this.logger.log(`⏱️ Diferencia en horas: ${diffHours.toFixed(2)}`);
-
-    // Permitir check-in si el vuelo está dentro de las próximas 24 horas
-    if (diffHours > 24) {
-      this.logger.log(`❌ Check-in rechazado: faltan más de 24 horas para el vuelo`);
-      throw new BadRequestException(`El check-in solo está disponible dentro de las 24 horas antes del vuelo. Faltan ${diffHours.toFixed(1)} horas.`);
-    }
-
-    if (ticket.checkinCompleted) throw new BadRequestException('El check-in ya fue confirmado para este ticket');
-
-    // Retornar datos útiles para frontend
-    return {
-      ticketId: ticket.id_ticket,
-      id_vuelo: ticket.id_vueloFK,
+async validateCode(codigo_unico: string, dni: string) {
+  this.logger.log(`🔍 Validando check-in - Código de reserva: ${codigo_unico}, DNI: ${dni}`);
+  
+  // Buscar el ticket que coincida con el código Y cuyo pasajero tenga ese DNI
+  const ticket = await this.prisma.ticket.findFirst({
+    where: { 
+      uniqueCheckinCode: codigo_unico.toUpperCase(), // Código en mayúsculas
       pasajero: {
-        nombre: `${ticket.pasajero.nombre} ${ticket.pasajero.apellido}`,
-        dni: ticket.pasajero.dni,
-        email: ticket.pasajero.email,
-      },
-      asientoComprado: ticket.asiento_numero,
-      asientoAsignado: ticket.asientoAsignado ?? null,
-      salida: ticket.vuelo.salida_programada_utc,
-      clase: ticket.asiento_clase, // 'primera_clase' o 'economica'
-    };
+        dni: dni
+      }
+    },
+    include: { 
+      pasajero: true, 
+      vuelo: {
+        include: {
+          aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto: {
+            include: {
+              ciudad: true
+            }
+          },
+          aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto: {
+            include: {
+              ciudad: true
+            }
+          }
+        }
+      }
+    },
+  });
+
+  this.logger.log(`🔍 Ticket encontrado: ${ticket ? `ID ${ticket.id_ticket}` : 'NO ENCONTRADO'}`);
+  
+  if (!ticket) {
+    // Verificar si el código existe pero el DNI no coincide
+    const ticketWithCode = await this.prisma.ticket.findFirst({
+      where: { uniqueCheckinCode: codigo_unico.toUpperCase() },
+      include: { pasajero: true }
+    });
+    
+    if (ticketWithCode) {
+      this.logger.log(`🔍 El código existe pero el DNI no coincide`);
+      throw new BadRequestException('El DNI no coincide con ningún pasajero de esta reserva');
+    }
+    
+    throw new NotFoundException('Código de reserva inválido');
   }
+  
+  if (!ticket.pasajero) throw new BadRequestException('Ticket sin pasajero asociado');
+  
+  this.logger.log(`🔍 Pasajero encontrado: ${ticket.pasajero.nombre} ${ticket.pasajero.apellido}`);
+
+  const now = new Date();
+  const salida = new Date(ticket.vuelo.salida_programada_utc);
+  const diffHours = (salida.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  this.logger.log(`⏰ Hora actual (servidor): ${now.toISOString()}`);
+  this.logger.log(`✈️ Hora de salida del vuelo: ${salida.toISOString()}`);
+  this.logger.log(`⏱️ Diferencia en horas: ${diffHours.toFixed(2)}`);
+
+  // Permitir check-in si el vuelo está dentro de las próximas 24 horas
+  if (diffHours > 24) {
+    this.logger.log(`❌ Check-in rechazado: faltan más de 24 horas para el vuelo`);
+    throw new BadRequestException(`El check-in solo está disponible dentro de las 24 horas antes del vuelo. Faltan ${diffHours.toFixed(1)} horas.`);
+  }
+
+  if (ticket.checkinCompleted) throw new BadRequestException('El check-in ya fue confirmado para este ticket');
+
+  // Retornar datos útiles para frontend
+  return {
+    ticketId: ticket.id_ticket,
+    id_vuelo: ticket.id_vueloFK,
+    pasajero: {
+      nombre: `${ticket.pasajero.nombre} ${ticket.pasajero.apellido}`,
+      dni: ticket.pasajero.dni,
+      email: ticket.pasajero.email,
+    },
+    asientoComprado: ticket.asiento_numero,
+    asientoAsignado: ticket.asientoAsignado ?? null,
+    salida: ticket.vuelo.salida_programada_utc,
+    clase: ticket.asiento_clase, // 'primera_clase' o 'economica'
+    ciudadOrigen: ticket.vuelo.aeropuerto_vuelo_id_aeropuerto_origenFKToaeropuerto.ciudad.nombre,
+    ciudadDestino: ticket.vuelo.aeropuerto_vuelo_id_aeropuerto_destinoFKToaeropuerto.ciudad.nombre,
+  };
+}
 
   /**
    * Genera todos los asientos para una clase específica usando el mismo
