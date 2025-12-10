@@ -8,13 +8,15 @@ import type { CategoriaHilo } from '../services/foroService';
 
 export const ForoPage = () => {
   const { hilos, loading, error, crearHilo, creatingHilo, refetch } = useForo();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const [showCrearForm, setShowCrearForm] = useState(false);
   const [filtroCategoria, setFiltroCategoria] = useState<CategoriaHilo | 'todas'>('todas');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Solo clientes pueden crear publicaciones (no admins ni visitantes)
-  const canPost = isAuthenticated && user?.tipo_usuario === 'cliente';
+  // Solo clientes pueden crear publicaciones (no admins ni root)
+  const canPost = user?.tipo_usuario === 'cliente';
+  // Admin y root ven todos los hilos
+  const isAdmin = user?.tipo_usuario === 'admin' || user?.tipo_usuario === 'root';
 
   const handleCrearHilo = async (data: Parameters<typeof crearHilo>[0]) => {
     await crearHilo(data);
@@ -40,24 +42,22 @@ export const ForoPage = () => {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-[#0e254d] via-[#1a3a6e] to-[#0e254d] text-white">
         <div className="max-w-6xl mx-auto px-4 py-12">
-          {isAuthenticated && (
-            <div className="flex items-center gap-3 mb-2">
-              <Link to="/perfil" className="text-blue-200 hover:text-white transition-colors flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Mi Perfil
-              </Link>
-            </div>
-          )}
+          <div className="flex items-center gap-3 mb-2">
+            <Link to="/perfil" className="text-blue-200 hover:text-white transition-colors flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Mi Perfil
+            </Link>
+          </div>
           <h1 className="text-4xl font-bold flex items-center gap-3">
             <span className="text-5xl">💬</span>
             Foro de la Comunidad
           </h1>
           <p className="text-blue-200 mt-2 text-lg">
-            {isAuthenticated 
-              ? 'Comparte tus dudas, quejas, recomendaciones y halagos con nosotros'
-              : 'Conoce las opiniones de nuestra comunidad de viajeros'}
+            {isAdmin 
+              ? 'Visualiza todas las publicaciones de los usuarios'
+              : 'Comparte tus dudas, quejas, recomendaciones y halagos con nosotros'}
           </p>
         </div>
       </div>
@@ -106,33 +106,6 @@ export const ForoPage = () => {
           </div>
         )}
 
-        {/* Mensaje para visitantes */}
-        {!isAuthenticated && (
-          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4">
-            <span className="text-4xl">👋</span>
-            <div className="flex-1 text-center sm:text-left">
-              <h3 className="font-semibold text-blue-900 mb-1">¿Quieres participar en el foro?</h3>
-              <p className="text-blue-700 text-sm">
-                Inicia sesión o regístrate para poder crear publicaciones y responder a otros usuarios.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                to="/login"
-                className="px-6 py-2 bg-[#0e254d] text-white rounded-lg font-medium hover:bg-[#0a1a3a] transition-colors"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                to="/registro"
-                className="px-6 py-2 border-2 border-[#0e254d] text-[#0e254d] rounded-lg font-medium hover:bg-[#0e254d] hover:text-white transition-colors"
-              >
-                Registrarse
-              </Link>
-            </div>
-          </div>
-        )}
-
         {/* Formulario de crear hilo - solo para clientes autenticados */}
         {canPost && showCrearForm && (
           <div className="mb-8 animate-fade-in">
@@ -169,7 +142,9 @@ export const ForoPage = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#0e254d] border-t-transparent mb-4"></div>
-            <p className="text-gray-600 font-medium">Cargando tus publicaciones...</p>
+            <p className="text-gray-600 font-medium">
+              {isAdmin ? 'Cargando publicaciones...' : 'Cargando tus publicaciones...'}
+            </p>
           </div>
         ) : hilosFiltrados.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
@@ -178,13 +153,13 @@ export const ForoPage = () => {
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">
               {filtroCategoria === 'todas' 
-                ? 'Aún no hay publicaciones'
+                ? (isAdmin ? 'No hay publicaciones en el foro' : 'Aún no tienes publicaciones')
                 : `No hay publicaciones de tipo "${categoriasFiltro.find(c => c.value === filtroCategoria)?.label}"`
               }
             </h3>
             <p className="text-gray-600 mb-6">
               {filtroCategoria === 'todas'
-                ? (canPost ? 'Sé el primero en compartir tu opinión con la comunidad' : 'Vuelve pronto para ver las opiniones de nuestra comunidad')
+                ? (canPost ? 'Sé el primero en compartir tu opinión con la comunidad' : (isAdmin ? 'Los usuarios aún no han creado publicaciones' : 'Crea tu primera publicación para compartir con nosotros'))
                 : 'Intenta con otro filtro'
               }
             </p>
@@ -194,7 +169,7 @@ export const ForoPage = () => {
                 className="px-6 py-3 bg-gradient-to-r from-[#0e254d] to-[#1a3a6e] text-white rounded-xl font-semibold hover:from-[#0a1a3a] hover:to-[#152d5a] transition-all inline-flex items-center gap-2"
               >
                 <span>✍️</span>
-                <span>Crear la primera publicación</span>
+                <span>Crear mi primera publicación</span>
               </button>
             )}
           </div>

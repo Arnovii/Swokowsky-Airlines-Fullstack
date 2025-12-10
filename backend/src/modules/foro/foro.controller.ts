@@ -27,16 +27,25 @@ import {
 export class ForoController {
   constructor(private readonly foroService: ForoService) {}
 
-  // ✅ PÚBLICO: Ver todos los hilos (para visitantes)
-  @Public()
-  @Get('publico')
+  // ✅ PÚBLICO: Ver todos los hilos (para visitantes) - DESHABILITADO
+  // Ahora el foro requiere autenticación
+  // @Public()
+  // @Get('publico')
+  // getHilosPublicos() {
+  //   return this.foroService.getTodosLosHilos();
+  // }
+
+  // Obtener hilos filtrados según el usuario
+  // - Admin/Root: ven todos los hilos
+  // - Cliente: solo ven sus propios hilos
+  @Get('filtrados')
   @ApiOperation({
-    summary: 'Obtener todos los hilos del foro (público).',
+    summary: 'Obtener hilos del foro filtrados según el usuario.',
     description:
-      'Ruta pública sin autenticación. Cualquier visitante puede ver los hilos del foro.',
+      'Requiere autenticación. Admin/Root ven todos los hilos, clientes solo ven los suyos.',
   })
-  getHilosPublicos() {
-    return this.foroService.getTodosLosHilos();
+  getHilosFiltrados(@Req() req) {
+    return this.foroService.getHilosFiltrados(req.user.id_usuario);
   }
 
   // Crear hilo (cliente + admin + root)
@@ -77,21 +86,21 @@ export class ForoController {
     return this.foroService.responderHilo(+id_hilo, dto, req.user.id_usuario);
   }
 
-  // Ver detalle del hilo con respuestas (PÚBLICO)
-  @Public()
+  // Ver detalle del hilo con respuestas (requiere autenticación)
+  // Solo el autor del hilo o admin/root pueden ver el detalle
   @Get('hilos/:id_hilo')
   @ApiOperation({
     summary: 'Obtener el detalle completo de un hilo.',
     description:
-      'Ruta pública. Incluye el autor del hilo y la lista de todas sus respuestas.',
+      'Requiere autenticación. Solo el autor del hilo o admin/root pueden acceder.',
   })
   @ApiParam({
     name: 'id_hilo',
     description: 'ID del hilo a consultar.',
     type: 'integer',
   })
-  getHilo(@Param('id_hilo') id_hilo: string) {
-    return this.foroService.getHiloCompleto(+id_hilo);
+  getHilo(@Param('id_hilo') id_hilo: string, @Req() req) {
+    return this.foroService.getHiloCompletoConPermisos(+id_hilo, req.user.id_usuario);
   }
 
   // Ver hilos de un usuario

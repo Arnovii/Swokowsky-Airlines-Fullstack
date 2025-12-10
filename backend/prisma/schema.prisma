@@ -122,6 +122,12 @@ model ticket {
   estado         ticket_estado
   creado_en      DateTime       @default(now()) @db.DateTime(0)
 
+  uniqueCheckinCode  String?     // Código único enviado x email
+  checkinEnabled     Boolean     @default(false)  // Solo se activa 24h antes
+  checkinCompleted   Boolean     @default(false)
+  checkinCompletedAt DateTime?
+  asientoAsignado    String?     @db.VarChar(20)  // Ej: "12A"
+
   // relación one-to-one con pasajero (lado sin FK)
   pasajero pasajero? @relation("TicketPasajero")
 
@@ -157,8 +163,6 @@ model usuario {
   carrito               carrito? // 1:1 opcional — un único carrito por usuario. Se crea cuando se intenta agregar un item al carrito la primera vez.
   hilos                 foro_hilo[]
   respuestas            foro_respuesta[]
-  conversaciones        chat_conversacion[] @relation("ConversacionesUsuario")
-  mensajes_enviados     chat_mensaje[]      @relation("MensajesAutor")
 }
 
 model vuelo {
@@ -261,41 +265,6 @@ model foro_respuesta {
 
   usuario      usuario @relation(fields: [id_usuarioFK], references: [id_usuario])
   id_usuarioFK Int
-}
-
-// ==================== CHAT PRIVADO ====================
-model chat_conversacion {
-  id_conversacion Int                      @id @default(autoincrement())
-  asunto          String                   @db.VarChar(255)
-  estado          chat_estado              @default(abierto)
-  creado_en       DateTime                 @default(now())
-  actualizado_en  DateTime                 @updatedAt
-
-  // Usuario que inicia la conversación
-  usuario         usuario                  @relation("ConversacionesUsuario", fields: [id_usuarioFK], references: [id_usuario])
-  id_usuarioFK    Int
-
-  mensajes        chat_mensaje[]
-}
-
-model chat_mensaje {
-  id_mensaje      Int               @id @default(autoincrement())
-  contenido       String            @db.Text
-  creado_en       DateTime          @default(now())
-  leido           Boolean           @default(false)
-
-  // Conversación a la que pertenece
-  conversacion    chat_conversacion @relation(fields: [id_conversacionFK], references: [id_conversacion], onDelete: Cascade)
-  id_conversacionFK Int
-
-  // Usuario que envía el mensaje (puede ser cliente o admin)
-  autor           usuario           @relation("MensajesAutor", fields: [id_autorFK], references: [id_usuario])
-  id_autorFK      Int
-}
-
-enum chat_estado {
-  abierto
-  cerrado
 }
 
 enum foro_categoria {

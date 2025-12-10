@@ -25,8 +25,10 @@ import CreateAdmin from "../modules/panelAdministrador/pages/CreateAdmin";
 import TicketPage from "../modules/user_profile/pages/TicketPage";
 import SeatMapPage from "../modules/seatmap/page/SeatMapPage";
 import { ForoPage, HiloDetallePage } from "../modules/foro";
+import Checkin from "../modules/checkin/pages/checkin";
+import CheckinConfirmation from "../modules/checkin/pages/CheckinConfirmation";
+import BoardingPass from "../modules/checkin/pages/BoardingPass";
 import TransactionHistory from "../modules/user_profile/pages/TrasnsactionHistory";
-import { ChatPage } from "../modules/chat";
 
 
 
@@ -70,7 +72,7 @@ export default function AppRoutes() {
 
         {/* Mapa de asientos */}
         <Route
-          path="/mapa-asientos"
+          path="/mapa-asientos/:id_vuelo"
           element={
             <ClientRoute>
               <SeatMapPage />
@@ -88,20 +90,18 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Foro del usuario */}
-        {/* Foro público - visible para todos, escritura solo para usuarios autenticados */}
-        <Route path="/foro" element={<ForoPage />} />
-        <Route path="/foro/:id" element={<HiloDetallePage />} />
-
-        {/* Chat privado de soporte - requiere autenticación */}
-        <Route
-          path="/chat"
-          element={
-            <PrivateRoute>
-              <ChatPage />
-            </PrivateRoute>
-          }
-        />
+        {/* Foro - solo usuarios autenticados */}
+        {/* Admin/Root ven todos los hilos, clientes solo los suyos */}
+        <Route path="/foro" element={
+          <PrivateRoute>
+            <ForoPage />
+          </PrivateRoute>
+        } />
+        <Route path="/foro/:id" element={
+          <PrivateRoute>
+            <HiloDetallePage />
+          </PrivateRoute>
+        } />
 
         <Route
           path="/checkout"
@@ -123,6 +123,11 @@ export default function AppRoutes() {
         <Route path="/news" element={<News />} />
         <Route path="/noticias/oferta/:id" element={<DetalleOferta />} />
         <Route path="/noticias/vuelo/:id" element={<DetalleVuelo />} />
+
+        {/* Checkin */}
+        <Route path="/checkin" element={<Checkin />} />
+        <Route path="/checkin/confirmacion" element={<CheckinConfirmation />} />
+        <Route path="/checkin/boarding-pass" element={<BoardingPass />} />
 
         {/* Panel Admin */}
         <Route
