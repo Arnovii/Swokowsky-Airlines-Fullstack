@@ -9,10 +9,15 @@ interface BoardingPassData {
   dni: string;
   asiento: string;
   vuelo: string;
-  origen: string;
-  destino: string;
+  origenCodigo: string;
+  origenCiudad: string;
+  origenAeropuerto: string;
+  destinoCodigo: string;
+  destinoCiudad: string;
+  destinoAeropuerto: string;
   salida: string;
-  reserva: string;
+  llegada: string;
+  codigoReserva: string;
 }
 
 const BoardingPass: React.FC = () => {
@@ -26,22 +31,32 @@ const BoardingPass: React.FC = () => {
     const dni = searchParams.get('dni') || '';
     const asiento = searchParams.get('asiento') || '';
     const vuelo = searchParams.get('vuelo') || '';
-    const origen = searchParams.get('origen') || '';
-    const destino = searchParams.get('destino') || '';
+    const origenCodigo = searchParams.get('origenCodigo') || '';
+    const origenCiudad = searchParams.get('origenCiudad') || '';
+    const origenAeropuerto = searchParams.get('origenAeropuerto') || '';
+    const destinoCodigo = searchParams.get('destinoCodigo') || '';
+    const destinoCiudad = searchParams.get('destinoCiudad') || '';
+    const destinoAeropuerto = searchParams.get('destinoAeropuerto') || '';
     const salida = searchParams.get('salida') || '';
-    const reserva = searchParams.get('reserva') || '';
+    const llegada = searchParams.get('llegada') || '';
+    const codigoReserva = searchParams.get('codigoReserva') || '';
 
     if (ticketId && pasajero) {
       setData({
         ticketId,
-        pasajero: decodeURIComponent(pasajero),
+        pasajero,
         dni,
         asiento,
         vuelo,
-        origen,
-        destino,
+        origenCodigo,
+        origenCiudad,
+        origenAeropuerto,
+        destinoCodigo,
+        destinoCiudad,
+        destinoAeropuerto,
         salida,
-        reserva,
+        llegada,
+        codigoReserva,
       });
     }
   }, [searchParams]);
@@ -117,7 +132,7 @@ const BoardingPass: React.FC = () => {
               <div className="text-right">
                 <p className="text-emerald-100 text-xs">Reserva</p>
                 <p className="text-white font-mono font-bold tracking-wider">
-                  {data.reserva.toUpperCase() || `#${data.ticketId}`}
+                  {data.codigoReserva.toUpperCase() || `#${data.ticketId}`}
                 </p>
               </div>
             </div>
@@ -128,14 +143,18 @@ const BoardingPass: React.FC = () => {
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pasajero</p>
               <p className="text-xl font-bold text-white">{data.pasajero}</p>
-              <p className="text-slate-400 text-sm">DNI: {data.dni}</p>
+              {data.dni && <p className="text-slate-400 text-sm">DNI: {data.dni}</p>}
             </div>
 
-            {/* Ruta */}
+            {/* Ruta con ciudades */}
             <div className="grid grid-cols-5 gap-2 items-center">
               <div className="col-span-2 text-center">
                 <p className="text-xs text-slate-400 uppercase">Origen</p>
-                <p className="text-3xl font-bold text-white">{data.origen}</p>
+                <p className="text-3xl font-bold text-white mb-1">{data.origenCodigo}</p>
+                <p className="text-emerald-400 text-xs font-medium">{data.origenCiudad}</p>
+                {data.origenAeropuerto && (
+                  <p className="text-slate-500 text-xs mt-1">{data.origenAeropuerto}</p>
+                )}
               </div>
               <div className="col-span-1 flex justify-center">
                 <div className="flex items-center">
@@ -148,7 +167,11 @@ const BoardingPass: React.FC = () => {
               </div>
               <div className="col-span-2 text-center">
                 <p className="text-xs text-slate-400 uppercase">Destino</p>
-                <p className="text-3xl font-bold text-white">{data.destino}</p>
+                <p className="text-3xl font-bold text-white mb-1">{data.destinoCodigo}</p>
+                <p className="text-cyan-400 text-xs font-medium">{data.destinoCiudad}</p>
+                {data.destinoAeropuerto && (
+                  <p className="text-slate-500 text-xs mt-1">{data.destinoAeropuerto}</p>
+                )}
               </div>
             </div>
 
@@ -166,7 +189,7 @@ const BoardingPass: React.FC = () => {
                 <p className="text-lg font-bold text-white">SW-{data.vuelo}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-slate-400 uppercase">Hora</p>
+                <p className="text-xs text-slate-400 uppercase">Salida</p>
                 <p className="text-lg font-bold text-cyan-300">{formatTime(data.salida)}</p>
               </div>
               <div className="text-center">
