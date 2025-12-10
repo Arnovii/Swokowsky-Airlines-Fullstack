@@ -136,6 +136,8 @@ try {
     extraBag: false,
     clase: response.clase, // 'primera_clase' o 'economica'
     // Inicializar selectedSeat con el asiento ya asignado (para que no sea obligatorio cambiarlo)
+    ciudadOrigen: response.ciudadOrigen, // ⬅️ Agregar esto
+    ciudadDestino: response.ciudadDestino, // ⬅️ Agregar esto
     selectedSeat: response.asientoAsignado || response.asientoComprado,
     }));
 
@@ -540,6 +542,26 @@ return (
                 Revisa que los datos de cada pasajero sean correctos. Si hay
                 algún error, contacta con soporte antes de continuar.
             </p>
+
+            {/* Información del vuelo (común para todos) */}
+                {passengerSessions[0] && (
+                    <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide mb-2">
+                        ✈️ Información del vuelo
+                    </p>
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="font-bold text-white">{passengerSessions[0].ciudadOrigen}</span>
+                        <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        <span className="font-bold text-white">{passengerSessions[0].ciudadDestino}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-2">
+                        <span className="text-slate-400">Salida:</span>{" "}
+                        <span className="font-semibold">{formatDate(passengerSessions[0].salida)}</span>
+                    </p>
+                    </div>
+                )}
 
             {/* Cards por pasajero */}
             <div className="space-y-4">
