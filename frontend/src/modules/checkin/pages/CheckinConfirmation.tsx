@@ -84,18 +84,48 @@ const CheckinConfirmation: React.FC = () => {
     });
   };
 
-  const qrData = JSON.stringify({
-    airline: 'SWOKOWSKY',
-    ticketId: state.ticketId,
-    passenger: state.pasajero?.nombre || 'Pasajero',
-    dni: state.pasajero?.dni || '',
-    seat: state.asiento,
-    flight: state.vuelo?.id || 0,
-    from: state.vuelo?.origen?.codigo || '',
-    to: state.vuelo?.destino?.codigo || '',
-    departure: state.vuelo?.salida || '',
-    reservationCode: state.codigoReserva || '',
-  });
+  // Generar URL para el QR con query parameters
+  // En desarrollo local, usa VITE_FRONTEND_URL para acceso desde teléfonos
+  // En producción, usa window.location.origin automáticamente
+  const getBaseUrl = () => {
+    // En producción, usar el dominio real
+    if (!import.meta.env.DEV) {
+      return window.location.origin;
+    }
+    
+    // En desarrollo, si hay una URL configurada, usarla
+    if (import.meta.env.VITE_FRONTEND_URL) {
+      return import.meta.env.VITE_FRONTEND_URL;
+    }
+    
+    // Si no hay URL configurada, usar la URL actual (funciona si accedes desde la IP)
+    // Si el hostname no es localhost, usar el origin actual
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return window.location.origin;
+    }
+    
+    // Fallback a localhost
+    return window.location.origin;
+  };
+
+  const generateBoardingPassUrl = (passengerName?: string, passengerDni?: string, seat?: string, ticketId?: number) => {
+    const baseUrl = getBaseUrl();
+    const params = new URLSearchParams({
+      ticketId: (ticketId || state.ticketId).toString(),
+      pasajero: encodeURIComponent(passengerName || state.pasajero?.nombre || 'Pasajero'),
+      dni: passengerDni || state.pasajero?.dni || '',
+      asiento: seat || state.asiento,
+      vuelo: (state.vuelo?.id || state.ticketId).toString(),
+      origen: state.vuelo?.origen?.codigo || '',
+      destino: state.vuelo?.destino?.codigo || '',
+      salida: state.vuelo?.salida || '',
+      reserva: state.codigoReserva || '',
+    });
+    return `${baseUrl}/checkin/boarding-pass?${params.toString()}`;
+  };
+
+  const qrUrl = generateBoardingPassUrl();
 
   const recommendations = [
     {
@@ -235,26 +265,44 @@ const CheckinConfirmation: React.FC = () => {
                     ✓ Todos los check-in completados
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-4">
                   {state.allSeats.map((passenger, index) => (
                     <div 
                       key={index}
-                      className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 flex items-center justify-between"
+                      className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">
-                          <span className="text-emerald-300 font-bold text-sm">{index + 1}</span>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">
+                            <span className="text-emerald-300 font-bold text-sm">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="text-white font-semibold text-sm">{passenger.nombre}</p>
+                            {passenger.dni && (
+                              <p className="text-slate-400 text-xs">DNI: {passenger.dni}</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-white font-semibold text-sm">{passenger.nombre}</p>
-                          {passenger.dni && (
-                            <p className="text-slate-400 text-xs">DNI: {passenger.dni}</p>
-                          )}
+                        <div className="text-center bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-400/40 rounded-xl px-4 py-2">
+                          <p className="text-xs text-emerald-300 uppercase">Asiento</p>
+                          <p className="text-xl font-bold text-white">{passenger.asiento}</p>
                         </div>
                       </div>
-                      <div className="text-center bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-400/40 rounded-xl px-4 py-2">
-                        <p className="text-xs text-emerald-300 uppercase">Asiento</p>
-                        <p className="text-xl font-bold text-white">{passenger.asiento}</p>
+                      {/* QR individual para cada pasajero */}
+                      <div className="flex justify-center pt-2 border-t border-slate-700/50">
+                        <div className="flex flex-col items-center mt-3">
+                          <div className="bg-white p-2 rounded-lg">
+                            <QRCodeSVG 
+                              value={generateBoardingPassUrl(passenger.nombre, passenger.dni, passenger.asiento, passenger.ticketId)} 
+                              size={80} 
+                              level="M" 
+                              includeMargin={false} 
+                              bgColor="#ffffff" 
+                              fgColor="#0a1628" 
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">Tarjeta de embarque</p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -344,9 +392,9 @@ const CheckinConfirmation: React.FC = () => {
 
             <div className="flex flex-col items-center">
               <div className="bg-white p-4 rounded-xl shadow-lg">
-                <QRCodeSVG value={qrData} size={140} level="H" includeMargin={false} bgColor="#ffffff" fgColor="#0a1628" />
+                <QRCodeSVG value={qrUrl} size={140} level="H" includeMargin={false} bgColor="#ffffff" fgColor="#0a1628" />
               </div>
-              <p className="text-center text-xs text-slate-500 mt-3">Escanea este código en el aeropuerto</p>
+              <p className="text-center text-xs text-slate-500 mt-3">Escanea este código para ver tu tarjeta de embarque</p>
               <p className="text-center text-xs text-slate-600 mt-1">Ticket #{state.ticketId}</p>
             </div>
           </div>
