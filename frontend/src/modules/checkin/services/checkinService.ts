@@ -43,6 +43,8 @@ export interface CheckinSessionData {
   salida: string;
   extraBag: boolean;
   clase: 'primera' | 'economica'; // Clase del ticket
+  ciudadOrigen?: string; // ⬅️ Asegúrate de tener esto
+  ciudadDestino?: string; // ⬅️ Asegúrate de tener esto
 }
 
 const CHECKIN_SESSION_KEY = 'checkin_session';
