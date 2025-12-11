@@ -14,7 +14,14 @@ export interface ValidateCheckinResponse {
   asientoComprado: string | null;
   asientoAsignado: string | null;
   salida: string;
-  clase: 'primera' | 'economica'; // Clase del ticket
+  clase: 'primera_clase' | 'economica'; // Clase del ticket
+  ciudadOrigen: string;
+  ciudadDestino: string;
+  codigoOrigen: string;
+  codigoDestino: string;
+  aeropuertoOrigen: string;
+  aeropuertoDestino: string;
+  llegada: string;
 }
 
 export interface SeatMapResponse {
@@ -30,6 +37,9 @@ export interface ConfirmCheckinResponse {
   message: string;
   ticketId: number;
   asiento: string;
+  pasajero?: PassengerInfo;
+  vuelo: any;
+  codigoReserva:any;
 }
 
 // Datos guardados en localStorage durante el proceso de check-in
@@ -42,7 +52,9 @@ export interface CheckinSessionData {
   asientoAsignado: string | null;
   salida: string;
   extraBag: boolean;
-  clase: 'primera' | 'economica'; // Clase del ticket
+  clase: 'primera_clase' | 'economica'; // Clase del ticket
+  ciudadOrigen?: string; // ⬅️ Asegúrate de tener esto
+  ciudadDestino?: string; // ⬅️ Asegúrate de tener esto
 }
 
 const CHECKIN_SESSION_KEY = 'checkin_session';
@@ -56,6 +68,7 @@ export const checkinService = {
     const response = await api.post<ValidateCheckinResponse>('/checkin/validate', {
       codigo_unico,
       dni,
+      
     });
     return response.data;
   },

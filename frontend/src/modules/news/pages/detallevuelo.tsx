@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Plane, Calendar, MapPin, Tag, ShoppingCart } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import AddToCartButton from "../../../common/AddToCartButton";
 import { ClassSelectorModal } from "../../flightsearch/components/ClassSelectorModal";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-toastify";
+import api from "../../../api/axios";
 
 export interface Noticia {
   titulo: string;
@@ -106,9 +106,7 @@ export default function DetalleVuelo() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data } = await axios.get<Noticia>(
-          `http://localhost:3000/api/v1/news/${id}`
-        );
+        const { data } = await api.get<Noticia>(`/news/${id}`);
         setVuelo(data);
       } catch (err: any) {
         console.error("❌ Error API DetalleVuelo:", err);

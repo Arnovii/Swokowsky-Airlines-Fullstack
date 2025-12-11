@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "postbuild": "cp -R src/mail/templates dist/src/mail/templates || true",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nodemon --watch 'src/**/*' --ext ts --exec 'ts-node' src/main.ts --legacy-watch",
@@ -41,6 +42,7 @@
     "nodemon": "^3.1.10",
     "npm": "^11.6.0",
     "prisma": "^6.15.0",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1"

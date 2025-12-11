@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Eye, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
+import api from '../../../api/axios';
 
 interface NewsArticle {
   id?: number | string;
@@ -33,12 +33,12 @@ interface NewsArticle {
 const parseFlightDateTime = (fecha: string, hora: string): Date => {
   const [dia, mes, anio] = fecha.split('/').map(Number);
   let [horas, minutos] = hora.split(':').map(Number);
-  
+
   if (horas === 24) {
     horas = 0;
     return new Date(anio, mes - 1, dia + 1, horas, minutos);
   }
-  
+
   return new Date(anio, mes - 1, dia, horas, minutos);
 };
 
@@ -52,20 +52,20 @@ const shouldShowNews = (noticia: NewsArticle, now: Date): boolean => {
         noticia.fecha_partida_colombia,
         noticia.hora_partida_colombia
       );
-      
+
       const oneHourBefore = new Date(flightTime.getTime() - 60 * 60 * 1000);
-      
+
       if (now >= oneHourBefore) {
         return false;
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error parseando fecha/hora:', error);
       return true;
     }
   }
-  
+
   return true;
 };
 
@@ -77,7 +77,7 @@ const FeaturedNews: React.FC = () => {
 
   useEffect(() => {
     fetchFeaturedNews();
-    
+
     // Refrescar cada 5 minutos
     const interval = setInterval(fetchFeaturedNews, 5 * 60 * 1000);
     return () => clearInterval(interval);
@@ -87,22 +87,21 @@ const FeaturedNews: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Llamar directamente al endpoint de noticias
-      const { data } = await axios.get<NewsArticle[]>(
-        'http://localhost:3000/api/v1/news'
-      );
-      
+      const { data } = await api.get<NewsArticle[]>('/news');
+
+
       const now = new Date();
-      
+
       // Filtrar noticias según fecha/hora del vuelo
       const filteredNews = data.filter(noticia => shouldShowNews(noticia, now));
-      
+
       // Tomar solo las primeras 6
       setNews(filteredNews.slice(0, 6));
-      
+
       console.log(`✅ FeaturedNews: ${filteredNews.length} noticias visibles de ${data.length} totales`);
-      
+
     } catch (err: any) {
       setError(err.message || 'Error al cargar noticias');
       console.error('Error fetching featured news:', err);
@@ -345,9 +344,8 @@ const FeaturedNews: React.FC = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentSlide(i)}
-                    className={`w-3 h-3 rounded-full transition-all ${
-                      currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
-                    }`}
+                    className={`w-3 h-3 rounded-full transition-all ${currentSlide === i ? 'bg-[#0e254d] scale-125' : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
                   />
                 ))}
               </div>

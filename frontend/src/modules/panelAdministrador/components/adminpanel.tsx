@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import api from "../../../api/axios";
 
 interface Aeropuerto {
   id_aeropuerto: number;
@@ -44,10 +44,10 @@ export const AdminPanel: React.FC = () => {
   const [vueloSeleccionado, setVueloSeleccionado] = useState<Vuelo | null>(null);
 
   useEffect(() => {
-    axios
-      .get<Vuelo[]>("http://localhost:3000/api/v1/flights")
-      .then((res) => setVuelos(res.data))
-      .catch((err) => setError(err.message))
+    api
+      .get<Vuelo[]>("/flights")
+      .then((res: any) => setVuelos(res.data))
+      .catch((err: any) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -92,8 +92,8 @@ export const AdminPanel: React.FC = () => {
 
     try {
       // Llamar al backend para cancelar el vuelo usando PATCH
-      await axios.patch(`http://localhost:3000/api/v1/flights/${vueloSeleccionado.id_vuelo}`, {
-        estado: "Cancelado"
+      await api.patch(`/flights/${vueloSeleccionado.id_vuelo}`, {
+        estado: "Cancelado",
       });
 
       // Actualizar el estado local: cambiar estado a "Cancelado" en vez de eliminar
@@ -337,11 +337,10 @@ function TabButton({
   return (
     <button
       onClick={() => setTab(label)}
-      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${
-        active
-          ? `${colors[color]} text-white shadow-md`
-          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
-      }`}
+      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border ${active
+        ? `${colors[color]} text-white shadow-md`
+        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+        }`}
     >
       {label}
     </button>

@@ -15,8 +15,16 @@ dni: string;
 }
 
 interface PassengerSession extends CheckinSessionData {
-extraBag: boolean; // maleta adicional por pasajero
-selectedSeat?: string | null; // asiento seleccionado en el modal
+    extraBag: boolean;
+    selectedSeat?: string | null;
+    ciudadOrigen?: string;
+    ciudadDestino?: string;
+    hasChangedSeat?: boolean;
+    codigoOrigen?: string;
+    codigoDestino?: string;
+    aeropuertoOrigen?: string;
+    aeropuertoDestino?: string;
+    llegada?: string;
 }
 
 // Estado del modal de mapa de asientos
@@ -136,9 +144,12 @@ try {
     extraBag: false,
     clase: response.clase, // 'primera_clase' o 'economica'
     // Inicializar selectedSeat con el asiento ya asignado (para que no sea obligatorio cambiarlo)
+    ciudadOrigen: response.ciudadOrigen, // ⬅️ Agregar esto
+    ciudadDestino: response.ciudadDestino, // ⬅️ Agregar esto
     selectedSeat: response.asientoAsignado || response.asientoComprado,
+    hasChangedSeat: false,
     }));
-
+    
     setPassengerSessions(sessions);
 
     toast.success("✅ Todos los pasajeros fueron validados correctamente", {
@@ -192,112 +203,132 @@ passengerIndex: null,
 
 // Cuando el pasajero confirma un asiento en el modal
 const handleSeatConfirmed = (seatId: string) => {
-if (seatModal.passengerIndex === null) return;
+  if (seatModal.passengerIndex === null) return;
 
-const index = seatModal.passengerIndex;
+  const index = seatModal.passengerIndex;
+  const currentPassenger = passengerSessions[index];
 
-// ✅ Validar que el asiento no esté seleccionado por otro pasajero del grupo
-const otherPassengerWithSameSeat = passengerSessions.find(
-(p, i) => i !== index && p.selectedSeat === seatId
-);
+  const otherPassengerWithSameSeat = passengerSessions.find(
+    (p, i) => i !== index && p.selectedSeat === seatId
+  );
 
-if (otherPassengerWithSameSeat) {
-toast.error(`❌ El asiento ${seatId} ya fue seleccionado por ${otherPassengerWithSameSeat.pasajero.nombre}`, {
-    position: 'top-center',
-});
-return;
-}
+  if (otherPassengerWithSameSeat) {
+    toast.error(`❌ El asiento ${seatId} ya fue seleccionado por ${otherPassengerWithSameSeat.pasajero.nombre}`, {
+      position: 'top-center',
+    });
+    return;
+  }
 
-setPassengerSessions((prev) =>
-prev.map((p, i) =>
-    i === index ? { ...p, selectedSeat: seatId } : p
-)
-);
+  const originalSeat = currentPassenger.asientoAsignado || currentPassenger.asientoComprado;
+  const seatChanged = seatId !== originalSeat;
+
+  setPassengerSessions((prev) =>
+    prev.map((p, i) =>
+      i === index ? { 
+        ...p, 
+        selectedSeat: seatId,
+        hasChangedSeat: seatChanged ? true : p.hasChangedSeat
+      } : p
+    )
+  );
+
+  if (seatChanged) {
+    toast.success(`✅ Asiento cambiado a ${seatId}. No podrás cambiarlo nuevamente.`, {
+      position: 'top-center',
+    });
+  }
 };
 
 // Confirmar check-in final para todos los pasajeros
 const [confirmingAll, setConfirmingAll] = useState(false);
 
 const handleConfirmAllCheckins = async () => {
-// Verificar que todos tienen asiento seleccionado
-const missingSeats = passengerSessions.filter((p) => !p.selectedSeat);
-if (missingSeats.length > 0) {
-toast.warning(`⚠️ Faltan ${missingSeats.length} pasajero(s) por seleccionar asiento`, {
-    position: 'top-center',
-});
-return;
-}
-
-setConfirmingAll(true);
-
-try {
-// Procesar check-in para cada pasajero
-for (let i = 0; i < passengerSessions.length; i++) {
-    const passenger = passengerSessions[i];
-    
-    // Asignar asiento
-    await checkinService.assignSeat(
-    passenger.codigo_unico,
-    passenger.ticketId,
-    passenger.selectedSeat!
-    );
-    
-    // Confirmar check-in
-    await checkinService.confirmCheckin(
-    passenger.codigo_unico,
-    passenger.ticketId
-    );
-    
-    toast.success(`✅ Check-in completado para ${passenger.pasajero.nombre}`, {
-    position: 'top-center',
-    autoClose: 2000,
+  // Verificar que todos tienen asiento seleccionado
+  const missingSeats = passengerSessions.filter((p) => !p.selectedSeat);
+  if (missingSeats.length > 0) {
+    toast.warning(`⚠️ Faltan ${missingSeats.length} pasajero(s) por seleccionar asiento`, {
+      position: 'top-center',
     });
-}
+    return;
+  }
 
-// Navegar a la página de confirmación con los datos del primer pasajero
-// (o podrías crear una página de confirmación grupal)
-const firstPassenger = passengerSessions[0];
+  setConfirmingAll(true);
 
-// Obtener datos completos del último check-in para la página de confirmación
-const result = await checkinService.confirmCheckin(
-    firstPassenger.codigo_unico,
-    firstPassenger.ticketId
-).catch(() => null);
+  try {
+    // Procesar check-in para cada pasajero
+    for (let i = 0; i < passengerSessions.length; i++) {
+      const passenger = passengerSessions[i];
+      
+      // Asignar asiento
+      await checkinService.assignSeat(
+        passenger.codigo_unico,
+        passenger.ticketId,
+        passenger.selectedSeat!
+      );
+      
+      // Confirmar check-in
+      await checkinService.confirmCheckin(
+        passenger.codigo_unico,
+        passenger.ticketId
+      );
+      
+      toast.success(`✅ Check-in completado para ${passenger.pasajero.nombre}`, {
+        position: 'top-center',
+        autoClose: 2000,
+      });
+    }
 
-toast.success('🎉 ¡Check-in grupal completado exitosamente!', {
-    position: 'top-center',
-    autoClose: 3000,
-});
+    const firstPassenger = passengerSessions[0];
 
-// Navegar a confirmación
-navigate('/checkin/confirmacion', {
-    state: {
-    checkinCompleted: true,
-    ticketId: firstPassenger.ticketId,
-    asiento: firstPassenger.selectedSeat,
-    pasajero: firstPassenger.pasajero,
-    vuelo: result?.vuelo,
-    codigoReserva: result?.codigoReserva,
-    totalPassengers: passengerSessions.length,
-    allSeats: passengerSessions.map(p => ({
-        nombre: p.pasajero.nombre,
-        asiento: p.selectedSeat,
-        dni: p.pasajero.dni,
-        ticketId: p.ticketId,
-    })),
-    },
-    replace: true,
-});
+    toast.success('🎉 ¡Check-in grupal completado exitosamente!', {
+      position: 'top-center',
+      autoClose: 3000,
+    });
 
-} catch (err: unknown) {
-console.error('Error en check-in grupal:', err);
-const error = err as { response?: { data?: { message?: string } } };
-const message = error?.response?.data?.message || 'Error al confirmar el check-in';
-toast.error(`❌ ${message}`, { position: 'top-center' });
-} finally {
-setConfirmingAll(false);
-}
+    // Navegar a confirmación con toda la información del vuelo
+    navigate('/checkin/confirmacion', {
+      state: {
+        checkinCompleted: true,
+        ticketId: firstPassenger.ticketId,
+        asiento: firstPassenger.selectedSeat,
+        pasajero: firstPassenger.pasajero,
+        vuelo: {
+          id: firstPassenger.id_vuelo,
+          origen: {
+            codigo: firstPassenger.codigoOrigen || '',
+            ciudad: firstPassenger.ciudadOrigen || '',
+            aeropuerto: firstPassenger.aeropuertoOrigen || '',
+          },
+          destino: {
+            codigo: firstPassenger.codigoDestino || '',
+            ciudad: firstPassenger.ciudadDestino || '',
+            aeropuerto: firstPassenger.aeropuertoDestino || '',
+          },
+          salida: firstPassenger.salida,
+          llegada: firstPassenger.llegada || firstPassenger.salida,
+        },
+        codigoReserva: firstPassenger.codigo_unico,
+        totalPassengers: passengerSessions.length,
+        allSeats: passengerSessions.map(p => ({
+          nombre: p.pasajero.nombre,
+          asiento: p.selectedSeat,
+          dni: p.pasajero.dni,
+          ticketId: p.ticketId,
+        })),
+      },
+      replace: true,
+    });
+
+  } catch (err: unknown) {
+    console.error('Error en check-in grupal:', err);
+    const error = err as { response?: { data?: { message?: string } } };
+    const message = error?.response?.data?.message || 'Error al confirmar el check-in';
+    toast.error(`❌ ${message}`, { position: 'top-center' });
+  } finally {
+    setConfirmingAll(false);
+  }
 };
+
 
 const stepsConfig = [
 { id: 1, label: "Código de reserva" },
@@ -334,6 +365,26 @@ return (
         Ingresa el código de tu reserva y los documentos de identidad de
         los pasajeros para continuar con el proceso de check-in.
         </p>
+
+        {/* Información del vuelo (común para todos) */}
+{passengerSessions[0] && (
+  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4">
+    <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide mb-2">
+      ✈️ Información del vuelo
+    </p>
+    <div className="flex items-center gap-2 text-sm">
+      <span className="font-bold text-white">{passengerSessions[0].ciudadOrigen}</span>
+      <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      </svg>
+      <span className="font-bold text-white">{passengerSessions[0].ciudadDestino}</span>
+    </div>
+    <p className="text-xs text-slate-300 mt-2">
+      <span className="text-slate-400">Salida:</span>{" "}
+      <span className="font-semibold">{formatDate(passengerSessions[0].salida)}</span>
+    </p>
+  </div>
+)}
     </div>
 
     {/* Stepper */}
@@ -541,6 +592,26 @@ return (
                 algún error, contacta con soporte antes de continuar.
             </p>
 
+            {/* Información del vuelo (común para todos) */}
+                {passengerSessions[0] && (
+                    <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide mb-2">
+                        ✈️ Información del vuelo
+                    </p>
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="font-bold text-white">{passengerSessions[0].ciudadOrigen}</span>
+                        <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        <span className="font-bold text-white">{passengerSessions[0].ciudadDestino}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-2">
+                        <span className="text-slate-400">Salida:</span>{" "}
+                        <span className="font-semibold">{formatDate(passengerSessions[0].salida)}</span>
+                    </p>
+                    </div>
+                )}
+
             {/* Cards por pasajero */}
             <div className="space-y-4">
                 {passengerSessions.map((p, index) => (
@@ -739,6 +810,7 @@ return (
             <div className="mt-4 space-y-3">
                 {passengerSessions.map((p, index) => {
                 const seatWasChanged = p.selectedSeat && p.selectedSeat !== p.asientoAsignado;
+                const canChangeAgain = !p.hasChangedSeat;
                 return (
                 <div
                     key={p.ticketId}
@@ -757,21 +829,25 @@ return (
                     </p>
                     {p.selectedSeat ? (
                         <p className="text-xs text-emerald-300 font-semibold">
-                        ✓ Asiento: <span className="text-emerald-200 font-mono text-sm">{p.selectedSeat}</span>
-                        {seatWasChanged && <span className="text-amber-300 ml-2">(cambiado desde {p.asientoAsignado})</span>}
+                ✓ Asiento: <span className="text-emerald-200 font-mono text-sm">{p.selectedSeat}</span>
+                {seatWasChanged && <span className="text-amber-300 ml-2">(cambiado desde {p.asientoAsignado})</span>}
                         </p>
                     ) : (
-                        <p className="text-xs text-slate-500">
-                        Sin asiento seleccionado
-                        </p>
+                    <p className="text-xs text-slate-500">Sin asiento seleccionado</p>
+                )}
+                {!canChangeAgain && (
+                    <p className="text-xs text-red-400 mt-1">
+                    🔒 Ya no puedes cambiar este asiento
+                    </p>
                     )}
                     </div>
                     <button
                     type="button"
                     onClick={() => handleOpenSeatModal(index)}
+                    disabled={!canChangeAgain}
                     className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-md bg-slate-600 text-white hover:bg-slate-500 shadow-slate-500/30"
                     >
-                    Cambiar asiento
+                    {canChangeAgain ? 'Cambiar asiento' : 'Asiento bloqueado'}
                     </button>
                 </div>
                 );
@@ -800,18 +876,14 @@ return (
             </div>
 
             <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-4 mt-4">
-                <p className="text-xs font-semibold text-cyan-300 mb-2">
-                ℹ️ Información
-                </p>
-                <ul className="text-xs text-slate-300 list-disc list-inside space-y-1">
+            <p className="text-xs font-semibold text-cyan-300 mb-2">
+                ℹ️ Información importante
+            </p>
+            <ul className="text-xs text-slate-300 list-disc list-inside space-y-1">
                 <li>Cada pasajero ya tiene un asiento asignado. <strong className="text-cyan-300">No es obligatorio cambiarlo.</strong></li>
-                <li>
-                    Si deseas otro asiento, presiona "Cambiar asiento" en cualquier pasajero.
-                </li>
-                <li>
-                    Cuando estés listo, presiona el botón para confirmar el check-in.
-                </li>
-                </ul>
+                <li><strong className="text-amber-300">Solo puedes cambiar el asiento UNA VEZ por pasajero.</strong> Elige con cuidado.</li>
+                <li>Cuando estés listo, presiona el botón para confirmar el check-in.</li>
+            </ul>
             </div>
             </div>
 
