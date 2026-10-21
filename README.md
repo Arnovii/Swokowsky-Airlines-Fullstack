@@ -86,4 +86,4 @@ Developed collaboratively as part of a university software engineering project.
 
 ## 📄 License
 
-This project was developed for educational purposes. Add a license if you intend to distribute or reuse the source code publicly.
+This project was developed for educational purposes.
