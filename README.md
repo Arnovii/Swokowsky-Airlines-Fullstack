@@ -62,31 +62,6 @@ The platform distinguishes between three user roles:
 
 Access to protected resources is controlled by the backend according to the user's permissions.
 
-## 🚀 Getting Started
-
-To run the project locally, you will need Node.js, a package manager, Docker, and a MySQL database environment.
-
-1. Clone the repository:
-
-   ```bash
-   git clone <YOUR_REPOSITORY_URL>
-   cd <YOUR_PROJECT_DIRECTORY>
-   ```
-
-2. Install the frontend and backend dependencies in their respective project directories:
-
-   ```bash
-   npm install
-   ```
-
-3. Configure the environment variables required by the frontend and backend, including the database connection and authentication settings.
-
-4. Start the application services using the project's Docker configuration, or run the frontend and backend separately using their respective development scripts.
-
-5. Ensure the database is available and the Prisma schema has been applied before using the application.
-
-> **Note:** Adapt these instructions to the actual scripts and directory structure in your repository.
-
 ## 🎯 Project Objectives
 
 This project provided practical experience in:
